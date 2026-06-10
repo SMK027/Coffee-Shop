@@ -11,6 +11,8 @@ RUN apt-get update && apt-get install -y \
     git \
     curl \
     cron \
+    nodejs \
+    npm \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install gd pdo pdo_mysql zip bcmath pcntl exif \
     && a2enmod rewrite remoteip \
@@ -46,6 +48,9 @@ COPY . .
 
 # Installer TOUTES les dépendances (y compris dev)
 RUN composer install --optimize-autoloader
+
+# Installer les dépendances JS et compiler les assets
+RUN npm install --ignore-scripts && npm run build
 
 # Permissions Laravel
 RUN chown -R www-data:www-data /var/www/html \

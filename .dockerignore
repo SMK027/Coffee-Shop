@@ -1,0 +1,27 @@
+# Dossiers de données (volumes Docker)
+data/
+storage/app/
+storage/logs/
+
+# Dépendances
+node_modules/
+vendor/
+
+# Assets compilés
+public/build/
+public/hot/
+
+# Fichiers sensibles
+.env
+.env.*
+!.env.example
+
+# Git
+.git/
+.gitignore
+
+# Fichiers IDE
+.idea/
+.vscode/
+.cursor/
+*.log
