@@ -154,7 +154,9 @@
             let results       = [];
 
             function open() {
-                results  = filterDrinks(searchInput.value);
+                // Si une boisson est déjà sélectionnée, afficher toutes les boissons
+                // (le label complet "Catégorie · Nom" ne matche aucun filtre)
+                results  = hiddenInput.value ? drinks : filterDrinks(searchInput.value);
                 activeIdx = -1;
                 renderDropdown(dropdown, results, activeIdx);
             }
@@ -219,8 +221,14 @@
             searchInput.addEventListener('blur', () => {
                 setTimeout(() => {
                     close();
-                    /* Si le texte ne correspond plus à la boisson sélectionnée, reset */
-                    if (!hiddenInput.value) searchInput.value = '';
+                    if (hiddenInput.value) {
+                        // Restaure le label si une boisson est sélectionnée
+                        // (l'utilisateur a pu taper sans valider)
+                        const selected = drinks.find(d => d.id == hiddenInput.value);
+                        if (selected) searchInput.value = selected.category + ' · ' + selected.name;
+                    } else {
+                        searchInput.value = '';
+                    }
                 }, 160);
             });
         }
