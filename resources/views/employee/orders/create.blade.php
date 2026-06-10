@@ -49,7 +49,7 @@
                 @endphp
 
                 <div id="items-container" class="space-y-3 mb-4">
-                    <div class="item-row flex gap-3 items-start">
+                    <div class="item-row flex gap-3 items-start" {{ $oldDrinkId0 ? 'value="'.$oldDrinkId0.'"' : '' }}>
                         <div class="flex-1 relative">
                             <input type="hidden" name="items[0][drink_id]" class="drink-id-input" value="{{ $oldDrinkId0 ?? '' }}">
                             <input type="text"
@@ -154,9 +154,8 @@
             let results       = [];
 
             function open() {
-                // Si une boisson est déjà sélectionnée, afficher toutes les boissons
-                // (le label complet "Catégorie · Nom" ne matche aucun filtre)
-                results  = hiddenInput.value ? drinks : filterDrinks(searchInput.value);
+                // Source de vérité : attribut value sur le div de la ligne
+                results  = row.getAttribute('value') ? drinks : filterDrinks(searchInput.value);
                 activeIdx = -1;
                 renderDropdown(dropdown, results, activeIdx);
             }
@@ -167,6 +166,7 @@
             }
 
             function pick(drink) {
+                row.setAttribute('value', drink.id);
                 hiddenInput.value = drink.id;
                 searchInput.value = drink.category + ' · ' + drink.name;
                 searchInput.classList.remove('border-red-400', 'bg-red-50');
@@ -178,6 +178,7 @@
             searchInput.addEventListener('focus', open);
 
             searchInput.addEventListener('input', () => {
+                row.removeAttribute('value');
                 hiddenInput.value = '';
                 results   = filterDrinks(searchInput.value);
                 activeIdx = -1;
@@ -221,12 +222,14 @@
             searchInput.addEventListener('blur', () => {
                 setTimeout(() => {
                     close();
-                    if (hiddenInput.value) {
-                        // Restaure le label si une boisson est sélectionnée
-                        // (l'utilisateur a pu taper sans valider)
-                        const selected = drinks.find(d => d.id == hiddenInput.value);
+                    const selectedId = row.getAttribute('value');
+                    if (selectedId) {
+                        // Restaure le label depuis l'attribut value de la ligne
+                        const selected = drinks.find(d => d.id == selectedId);
                         if (selected) searchInput.value = selected.category + ' · ' + selected.name;
+                        hiddenInput.value = selectedId; // resync au cas où
                     } else {
+                        hiddenInput.value = '';
                         searchInput.value = '';
                     }
                 }, 160);
@@ -315,6 +318,8 @@
             document.querySelectorAll('.item-row').forEach(row => {
                 const hidden = row.querySelector('.drink-id-input');
                 const search = row.querySelector('.drink-search');
+                // Resync le hidden input depuis l'attribut value du row avant validation
+                if (row.getAttribute('value')) hidden.value = row.getAttribute('value');
                 if (!hidden.value) {
                     search.classList.add('border-red-400', 'bg-red-50');
                     search.classList.remove('border-stone-300');
