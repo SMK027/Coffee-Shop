@@ -41,23 +41,33 @@ class OrderController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'customer_name' => ['required', 'string', 'max:100'],
-            'notes'         => ['nullable', 'string', 'max:500'],
-            'items'         => ['required', 'array', 'min:1'],
-            'items.*.drink_id'  => ['required', 'exists:drinks,id'],
+            'customer_name'     => ['required', 'string', 'max:100'],
+            'notes'             => ['nullable', 'string', 'max:500'],
+            'items'             => ['required', 'array', 'min:1'],
+            'items.*.drink_id'  => ['required', 'integer', 'exists:drinks,id'],
             'items.*.quantity'  => ['required', 'integer', 'min:1', 'max:20'],
         ]);
 
-        $total = 0;
+        // Filtre les lignes sans boisson sélectionnée (sécurité côté serveur)
+        $rawItems = collect($validated['items'])->filter(
+            fn($item) => !empty($item['drink_id'])
+        );
+
+        if ($rawItems->isEmpty()) {
+            return back()
+                ->withInput()
+                ->withErrors(['items' => 'Veuillez sélectionner au moins une boisson.']);
+        }
+
+        $total      = 0;
         $orderItems = [];
 
-        foreach ($validated['items'] as $item) {
-            $drink = Drink::findOrFail($item['drink_id']);
-            $subtotal = $drink->price * $item['quantity'];
-            $total += $subtotal;
+        foreach ($rawItems as $item) {
+            $drink      = Drink::findOrFail($item['drink_id']);
+            $total      += $drink->price * $item['quantity'];
             $orderItems[] = [
                 'drink_id'   => $drink->id,
-                'quantity'   => $item['quantity'],
+                'quantity'   => (int) $item['quantity'],
                 'unit_price' => $drink->price,
             ];
         }

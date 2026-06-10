@@ -7,6 +7,7 @@ use App\Http\Controllers\Employee\DrinkController;
 use App\Http\Controllers\Employee\TestimonialController;
 use App\Http\Controllers\Employee\ContactController;
 use App\Http\Controllers\Employee\StatsController;
+use App\Http\Controllers\Employee\UserController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
@@ -26,7 +27,7 @@ Route::post('/temoignages', [HomeController::class, 'submitTestimonial'])->name(
 | Interface Employé (authentification requise)
 |--------------------------------------------------------------------------
 */
-Route::prefix('espace-employe')->name('employee.')->middleware(['auth'])->group(function () {
+Route::prefix('espace-employe')->name('employee.')->middleware(['auth', 'employee'])->group(function () {
 
     Route::get('/tableau-de-bord', [DashboardController::class, 'index'])->name('dashboard');
 
@@ -60,6 +61,14 @@ Route::prefix('espace-employe')->name('employee.')->middleware(['auth'])->group(
 
     // Statistiques
     Route::get('/statistiques', [StatsController::class, 'index'])->name('stats.index');
+
+    // Gestion des employés (admin uniquement)
+    Route::get('/employes', [UserController::class, 'index'])->name('users.index');
+    Route::get('/employes/nouveau', [UserController::class, 'create'])->name('users.create');
+    Route::post('/employes', [UserController::class, 'store'])->name('users.store');
+    Route::get('/employes/{user}/modifier', [UserController::class, 'edit'])->name('users.edit');
+    Route::put('/employes/{user}', [UserController::class, 'update'])->name('users.update');
+    Route::delete('/employes/{user}', [UserController::class, 'destroy'])->name('users.destroy');
 
     // Profil
     Route::get('/profil', [ProfileController::class, 'edit'])->name('profile.edit');
