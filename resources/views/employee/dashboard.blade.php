@@ -79,29 +79,27 @@
         @else
             <div class="divide-y divide-stone-50">
                 @foreach($recent_orders as $order)
-                <div class="px-6 py-4 flex items-center justify-between hover:bg-stone-50 transition-colors">
-                    <div class="flex items-center gap-4">
-                        <div>
-                            <p class="font-medium text-stone-800 text-sm">{{ $order->customer_name }}</p>
-                            <p class="text-xs text-stone-500">{{ $order->items->count() }} article(s) · {{ number_format($order->total_amount, 2, ',', ' ') }} €</p>
-                        </div>
+                <a href="{{ route('employee.orders.show', $order) }}" class="px-4 sm:px-6 py-3 sm:py-4 flex items-center gap-3 hover:bg-stone-50 transition-colors">
+                    @php
+                        $statusColors = [
+                            'pending'   => 'bg-stone-100 text-stone-600',
+                            'preparing' => 'bg-amber-100 text-amber-700',
+                            'serving'   => 'bg-blue-100 text-blue-700',
+                            'completed' => 'bg-green-100 text-green-700',
+                            'cancelled' => 'bg-red-100 text-red-700',
+                        ];
+                    @endphp
+                    <div class="flex-1 min-w-0">
+                        <p class="font-medium text-stone-800 text-sm truncate">{{ $order->customer_name }}</p>
+                        <p class="text-xs text-stone-500">{{ $order->items->count() }} article(s) · {{ number_format($order->total_amount, 2, ',', ' ') }} €</p>
                     </div>
-                    <div class="flex items-center gap-3">
-                        @php
-                            $statusColors = [
-                                'pending'   => 'bg-stone-100 text-stone-600',
-                                'preparing' => 'bg-amber-100 text-amber-700',
-                                'serving'   => 'bg-blue-100 text-blue-700',
-                                'completed' => 'bg-green-100 text-green-700',
-                                'cancelled' => 'bg-red-100 text-red-700',
-                            ];
-                        @endphp
+                    <div class="flex items-center gap-2 flex-shrink-0">
                         <span class="px-2.5 py-1 rounded-full text-xs font-medium {{ $statusColors[$order->status] ?? 'bg-stone-100 text-stone-600' }}">
                             {{ $order->status_label }}
                         </span>
-                        <a href="{{ route('employee.orders.show', $order) }}" class="text-amber-600 hover:text-amber-700 text-xs font-medium">Gérer</a>
+                        <svg class="w-4 h-4 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                     </div>
-                </div>
+                </a>
                 @endforeach
             </div>
         @endif

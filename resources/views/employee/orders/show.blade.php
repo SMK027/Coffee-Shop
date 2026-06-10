@@ -3,11 +3,11 @@
         <a href="{{ route('employee.orders.index') }}" class="text-stone-500 hover:text-stone-700 text-sm">← Retour</a>
     </x-slot>
 
-    <div class="grid lg:grid-cols-3 gap-6">
+    <div class="grid lg:grid-cols-3 gap-4 sm:gap-6">
 
         {{-- Détail commande --}}
-        <div class="lg:col-span-2 space-y-6">
-            <div class="bg-white rounded-xl shadow-sm border border-stone-100 p-6">
+        <div class="lg:col-span-2 space-y-4 sm:space-y-6">
+        <div class="bg-white rounded-xl shadow-sm border border-stone-100 p-4 sm:p-6">
                 <h2 class="font-semibold text-stone-800 mb-4">Articles commandés</h2>
                 <div class="divide-y divide-stone-100">
                     @foreach($order->items as $item)
@@ -37,8 +37,8 @@
         </div>
 
         {{-- Statut et actions --}}
-        <div class="space-y-6">
-            <div class="bg-white rounded-xl shadow-sm border border-stone-100 p-6">
+        <div class="space-y-4 sm:space-y-6">
+            <div class="bg-white rounded-xl shadow-sm border border-stone-100 p-4 sm:p-6">
                 <h2 class="font-semibold text-stone-800 mb-4">Informations</h2>
                 <dl class="space-y-3 text-sm">
                     <div>
@@ -66,7 +66,7 @@
 
             {{-- Changement de statut --}}
             @if(!in_array($order->status, ['completed', 'cancelled']))
-            <div class="bg-white rounded-xl shadow-sm border border-stone-100 p-6">
+            <div class="bg-white rounded-xl shadow-sm border border-stone-100 p-4 sm:p-6">
                 <h2 class="font-semibold text-stone-800 mb-4">Changer le statut</h2>
                 @php
                     $nextStatuses = [
@@ -86,7 +86,7 @@
                     <form action="{{ route('employee.orders.status', $order) }}" method="POST">
                         @csrf @method('PATCH')
                         <input type="hidden" name="status" value="{{ $status }}">
-                        <button type="submit" class="w-full py-2.5 px-4 rounded-lg text-sm font-medium transition-colors {{ $buttonColors[$status] ?? '' }}">
+            <button type="submit" class="w-full py-3 sm:py-2.5 px-4 rounded-lg text-sm font-medium transition-colors {{ $buttonColors[$status] ?? '' }}">
                             {{ $label }}
                         </button>
                     </form>
@@ -94,7 +94,7 @@
                 </div>
             </div>
             @else
-            <div class="bg-white rounded-xl shadow-sm border border-stone-100 p-6">
+            <div class="bg-white rounded-xl shadow-sm border border-stone-100 p-4 sm:p-6">
                 <p class="text-sm text-stone-500 text-center">
                     Cette commande est <strong class="{{ $order->status === 'completed' ? 'text-green-600' : 'text-red-600' }}">{{ $order->status_label }}</strong>.
                 </p>

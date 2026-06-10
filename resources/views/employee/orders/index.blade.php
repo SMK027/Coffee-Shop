@@ -1,13 +1,14 @@
 <x-employee-layout title="Commandes">
     <x-slot name="headerActions">
-        <a href="{{ route('employee.orders.create') }}" class="bg-amber-700 hover:bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            Nouvelle commande
+        <a href="{{ route('employee.orders.create') }}" class="bg-amber-700 hover:bg-amber-600 text-white px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 sm:gap-2">
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            <span class="hidden sm:inline">Nouvelle commande</span>
+            <span class="sm:hidden">Nouveau</span>
         </a>
     </x-slot>
 
     {{-- Filtres --}}
-    <div class="bg-white rounded-xl p-4 shadow-sm border border-stone-100 mb-6 flex flex-wrap gap-2">
+    <div class="bg-white rounded-xl p-3 sm:p-4 shadow-sm border border-stone-100 mb-4 sm:mb-6 flex flex-wrap gap-2">
         @php
             $statuses = ['all' => 'Toutes'] + \App\Models\Order::STATUS_LABELS;
         @endphp
@@ -20,14 +21,15 @@
         @endforeach
     </div>
 
-    {{-- Tableau des commandes --}}
+    {{-- Tableau desktop / cards mobile --}}
     <div class="bg-white rounded-xl shadow-sm border border-stone-100 overflow-hidden">
         @if($orders->isEmpty())
             <div class="px-6 py-16 text-center text-stone-500">
                 <p>Aucune commande trouvée.</p>
             </div>
         @else
-            <div class="overflow-x-auto">
+            {{-- Vue desktop (tableau) --}}
+            <div class="hidden sm:block overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead class="bg-stone-50 border-b border-stone-100">
                         <tr>
@@ -70,8 +72,42 @@
                     </tbody>
                 </table>
             </div>
+
+            {{-- Vue mobile (cards) --}}
+            <div class="sm:hidden divide-y divide-stone-100">
+                @foreach($orders as $order)
+                @php
+                    $statusColors = [
+                        'pending'   => 'bg-stone-100 text-stone-600',
+                        'preparing' => 'bg-amber-100 text-amber-700',
+                        'serving'   => 'bg-blue-100 text-blue-700',
+                        'completed' => 'bg-green-100 text-green-700',
+                        'cancelled' => 'bg-red-100 text-red-700',
+                    ];
+                @endphp
+                <a href="{{ route('employee.orders.show', $order) }}" class="flex items-center gap-3 px-4 py-3.5 hover:bg-stone-50 transition-colors">
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 mb-0.5">
+                            <span class="font-mono text-xs text-stone-400">#{{ str_pad($order->id, 4, '0', STR_PAD_LEFT) }}</span>
+                            <span class="px-2 py-0.5 rounded-full text-xs font-medium {{ $statusColors[$order->status] ?? '' }}">
+                                {{ $order->status_label }}
+                            </span>
+                        </div>
+                        <p class="font-medium text-stone-800 text-sm truncate">{{ $order->customer_name }}</p>
+                        <p class="text-xs text-stone-400 mt-0.5">{{ $order->items->count() }} article(s) · {{ $order->created_at->format('d/m H:i') }}</p>
+                    </div>
+                    <div class="text-right flex-shrink-0">
+                        <p class="font-semibold text-stone-800 text-sm">{{ number_format($order->total_amount, 2, ',', ' ') }} €</p>
+                        <svg class="w-4 h-4 text-stone-400 ml-auto mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                        </svg>
+                    </div>
+                </a>
+                @endforeach
+            </div>
+
             @if($orders->hasPages())
-                <div class="px-5 py-4 border-t border-stone-100">
+                <div class="px-4 sm:px-5 py-4 border-t border-stone-100">
                     {{ $orders->withQueryString()->links() }}
                 </div>
             @endif
