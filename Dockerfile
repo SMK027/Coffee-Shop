@@ -48,6 +48,16 @@ COPY . .
 # Installer les dépendances PHP (sans dev)
 RUN composer install --no-dev --optimize-autoloader
 
+# ── Build des assets Vite (Node temporaire, non inclus dans l'image finale) ──
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get install -y nodejs \
+    && npm ci --ignore-scripts \
+    && npm run build \
+    && apt-get purge -y nodejs npm \
+    && apt-get autoremove -y \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* node_modules
+
 # Permissions Laravel (storage + bootstrap/cache)
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html \
