@@ -35,33 +35,8 @@ services:
       - "traefik.http.routers.app.tls.certresolver=le"
       - "traefik.http.services.app.loadbalancer.server.port=80"
       - "traefik.docker.network=proxy"
-    depends_on:
-      db:
-        condition: service_healthy
     networks:
       - proxy
-      - app_network
-    restart: unless-stopped
-
-  db:
-    image: mariadb:10.11
-    container_name: app_db
-    command: --default-time-zone='+02:00'
-    environment:
-      MYSQL_ROOT_PASSWORD: root_password
-      MYSQL_DATABASE: ${DB_NAME:-app_db}
-      MYSQL_USER: ${DB_USER:-app_user}
-      MYSQL_PASSWORD: ${DB_PASS:-app_password}
-    ports:
-      - "3307:3306"
-    volumes:
-      - ./data/mysql:/var/lib/mysql
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
       - app_network
     restart: unless-stopped
 
