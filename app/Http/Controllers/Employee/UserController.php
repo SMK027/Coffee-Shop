@@ -36,7 +36,6 @@ class UserController extends Controller
             'name'     => ['required', 'string', 'max:100'],
             'username' => ['required', 'string', 'max:50', 'alpha_dash', 'unique:users,username'],
             'email'    => ['required', 'email', 'max:150', 'unique:users,email'],
-            'password' => ['required', 'confirmed', Password::min(8)->letters()->numbers()],
             'global_role' => ['required', Rule::in(
                 auth()->user()->isSuperAdmin()
                     ? ['admin', 'superadmin']
@@ -44,15 +43,28 @@ class UserController extends Controller
             )],
         ], [
             'username.alpha_dash' => 'Le nom d\'utilisateur ne peut contenir que des lettres, chiffres, tirets et underscores.',
-            'password.confirmed'  => 'La confirmation du mot de passe ne correspond pas.',
         ]);
 
-        $validated['password'] = Hash::make($validated['password']);
+        // Mot de passe aléatoire — l'utilisateur le définira via le lien envoyé par email
+        $validated['password'] = Hash::make(Str::random(32));
 
-        User::create($validated);
+        $user = User::create($validated);
+
+        // Génère un token de premier accès et envoie le mail d'invitation
+        $plainToken = Str::random(64);
+
+        EmployeePasswordReset::create([
+            'user_id'    => $user->id,
+            'token'      => hash('sha256', $plainToken),
+            'created_at' => now(),
+        ]);
+
+        $resetUrl = route('employee.password.form', ['token' => $plainToken]);
+
+        Mail::to($user->email)->send(new EmployeePasswordResetMail($user, $resetUrl, isNewAccount: true));
 
         return redirect()->route('employee.users.index')
-            ->with('success', 'Compte employé créé avec succès.');
+            ->with('success', "Compte créé. Un email d'invitation a été envoyé à {$user->email}.");
     }
 
     public function edit(User $user)

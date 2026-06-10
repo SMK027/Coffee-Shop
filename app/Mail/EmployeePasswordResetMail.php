@@ -16,13 +16,16 @@ class EmployeePasswordResetMail extends Mailable
     public function __construct(
         public readonly User   $employee,
         public readonly string $resetUrl,
+        public readonly bool   $isNewAccount = false,
     ) {}
 
     public function envelope(): Envelope
     {
-        return new Envelope(
-            subject: 'Réinitialisation de votre mot de passe — Coffee Shop',
-        );
+        $subject = $this->isNewAccount
+            ? 'Bienvenue — Définissez votre mot de passe Coffee Shop'
+            : 'Réinitialisation de votre mot de passe — Coffee Shop';
+
+        return new Envelope(subject: $subject);
     }
 
     public function content(): Content

@@ -27,13 +27,14 @@
         @error('email')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
     </div>
 
+    {{-- Mot de passe : champ visible uniquement en modification --}}
+    @if(isset($user))
     <div class="grid sm:grid-cols-2 gap-5">
         <div>
             <label for="password" class="block text-sm font-medium text-stone-700 mb-1.5">
-                Mot de passe {{ isset($user) ? '(laisser vide pour conserver)' : '*' }}
+                Mot de passe (laisser vide pour conserver)
             </label>
             <input type="password" name="password" id="password"
-                   {{ !isset($user) ? 'required' : '' }}
                    autocomplete="new-password"
                    class="w-full border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
             <p class="text-xs text-stone-400 mt-1">Minimum 8 caractères, avec lettres et chiffres.</p>
@@ -42,11 +43,19 @@
         <div>
             <label for="password_confirmation" class="block text-sm font-medium text-stone-700 mb-1.5">Confirmer le mot de passe</label>
             <input type="password" name="password_confirmation" id="password_confirmation"
-                   {{ !isset($user) ? 'required' : '' }}
                    autocomplete="new-password"
                    class="w-full border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
         </div>
     </div>
+    @else
+    {{-- À la création, un lien de définition du mot de passe est envoyé par email --}}
+    <div class="flex items-start gap-3 bg-sky-50 border border-sky-200 rounded-lg px-4 py-3 text-sm text-sky-700">
+        <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+        </svg>
+        <span>Un email sera envoyé à l'adresse renseignée avec un lien pour définir le mot de passe. Ce lien est valable <strong>30 minutes</strong>.</span>
+    </div>
+    @endif
 
     @if(auth()->user()->isSuperAdmin())
     <div>

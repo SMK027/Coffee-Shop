@@ -36,10 +36,17 @@
         </div>
         <div class="body">
             <p>Bonjour <strong>{{ $employee->name }}</strong>,</p>
+            @if($isNewAccount)
+            <p>
+                Un compte employé vient d'être créé pour vous sur l'espace <strong>Coffee Shop</strong>.
+                Cliquez sur le bouton ci-dessous pour définir votre mot de passe et accéder à votre espace.
+            </p>
+            @else
             <p>
                 Un super administrateur a déclenché une réinitialisation de votre mot de passe.
                 Cliquez sur le bouton ci-dessous pour définir un nouveau mot de passe.
             </p>
+            @endif
 
             <div class="btn-wrap">
                 <a href="{{ $resetUrl }}" class="btn">Définir mon nouveau mot de passe</a>
