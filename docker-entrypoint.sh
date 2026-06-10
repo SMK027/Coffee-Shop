@@ -19,6 +19,16 @@ echo "[entrypoint] Exécution des migrations..."
 php artisan migrate --force
 echo "[entrypoint] Migrations terminées."
 
+# Seeding initial : exécuté une seule fois si la table users est vide
+USER_COUNT=$(php artisan tinker --execute="echo App\Models\User::count();" 2>/dev/null | tr -d '[:space:]')
+if [ "$USER_COUNT" = "0" ]; then
+    echo "[entrypoint] Première installation détectée — exécution des seeders..."
+    php artisan db:seed --force
+    echo "[entrypoint] Seeders terminés."
+else
+    echo "[entrypoint] Base de données déjà peuplée (${USER_COUNT} utilisateur(s)) — seeders ignorés."
+fi
+
 # Optimiser les caches (config, routes, vues)
 php artisan config:cache
 php artisan route:cache

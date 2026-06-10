@@ -27,6 +27,10 @@ services:
       - MAIL_ENCRYPTION=${SMTP_ENCRYPTION}
       - MAIL_FROM_ADDRESS=${MAIL_FROM_ADDRESS}
       - MAIL_FROM_NAME=${MAIL_FROM_NAME}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@app.local}
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      - ADMIN_NAME=${ADMIN_NAME:-Administrateur}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-password}
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.app.rule=Host(`coffee.leofranz.fr`)"
