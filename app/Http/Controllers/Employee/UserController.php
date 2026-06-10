@@ -11,7 +11,6 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules\Password;
 
 class UserController extends Controller
 {
@@ -87,19 +86,12 @@ class UserController extends Controller
             'name'     => ['required', 'string', 'max:100'],
             'username' => ['required', 'string', 'max:50', 'alpha_dash', Rule::unique('users', 'username')->ignore($user->id)],
             'email'    => ['required', 'email', 'max:150', Rule::unique('users', 'email')->ignore($user->id)],
-            'password' => ['nullable', 'confirmed', Password::min(8)->letters()->numbers()],
             'global_role' => ['required', Rule::in(
                 auth()->user()->isSuperAdmin()
                     ? ['admin', 'superadmin']
                     : ['admin']
             )],
         ]);
-
-        if (empty($validated['password'])) {
-            unset($validated['password']);
-        } else {
-            $validated['password'] = Hash::make($validated['password']);
-        }
 
         $user->update($validated);
 
