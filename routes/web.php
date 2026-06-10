@@ -8,6 +8,7 @@ use App\Http\Controllers\Employee\TestimonialController;
 use App\Http\Controllers\Employee\ContactController;
 use App\Http\Controllers\Employee\StatsController;
 use App\Http\Controllers\Employee\UserController;
+use App\Http\Controllers\Auth\EmployeePasswordResetController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
@@ -69,6 +70,7 @@ Route::prefix('espace-employe')->name('employee.')->middleware(['auth', 'employe
     Route::get('/employes/{user}/modifier', [UserController::class, 'edit'])->name('users.edit');
     Route::put('/employes/{user}', [UserController::class, 'update'])->name('users.update');
     Route::delete('/employes/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+    Route::post('/employes/{user}/reset-mdp', [UserController::class, 'sendResetLink'])->name('users.reset-link');
 
     // Profil
     Route::get('/profil', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -77,3 +79,13 @@ Route::prefix('espace-employe')->name('employee.')->middleware(['auth', 'employe
 });
 
 require __DIR__.'/auth.php';
+
+/*
+|--------------------------------------------------------------------------
+| Réinitialisation de mot de passe employé (lien email, public)
+|--------------------------------------------------------------------------
+*/
+Route::get('/reset-employe/{token}', [EmployeePasswordResetController::class, 'showForm'])
+    ->name('employee.password.form');
+Route::post('/reset-employe/{token}', [EmployeePasswordResetController::class, 'reset'])
+    ->name('employee.password.reset');

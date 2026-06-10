@@ -6,6 +6,17 @@
         </a>
     </x-slot>
 
+    @if(session('success'))
+        <div class="mb-4 bg-green-50 border border-green-200 rounded-lg px-4 py-3 text-sm text-green-700">
+            {{ session('success') }}
+        </div>
+    @endif
+    @if(session('error'))
+        <div class="mb-4 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
+            {{ session('error') }}
+        </div>
+    @endif
+
     <div class="bg-white rounded-xl shadow-sm border border-stone-100 overflow-hidden">
         @if($users->isEmpty())
             <div class="px-6 py-16 text-center text-stone-500">
@@ -61,6 +72,17 @@
                                        class="text-amber-600 hover:text-amber-700 text-xs font-medium px-2 py-1 rounded hover:bg-amber-50 transition-colors">
                                         Modifier
                                     </a>
+                                    {{-- Lien de reset : superadmin uniquement, pas sur son propre compte --}}
+                                    @if(auth()->user()->isSuperAdmin() && $user->id !== auth()->id())
+                                        <form action="{{ route('employee.users.reset-link', $user) }}" method="POST"
+                                              onsubmit="return confirm('Envoyer un lien de réinitialisation de mot de passe à {{ addslashes($user->name) }} ({{ addslashes($user->email) }}) ?')">
+                                            @csrf
+                                            <button type="submit" class="text-sky-500 hover:text-sky-700 text-xs font-medium px-2 py-1 rounded hover:bg-sky-50 transition-colors"
+                                                    title="Envoyer un lien de réinitialisation par email">
+                                                Reset MDP
+                                            </button>
+                                        </form>
+                                    @endif
                                     @if($user->id !== auth()->id())
                                         <form action="{{ route('employee.users.destroy', $user) }}" method="POST"
                                               onsubmit="return confirm('Supprimer le compte de {{ addslashes($user->name) }} ?')">

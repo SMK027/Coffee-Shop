@@ -3,9 +3,13 @@
 namespace App\Http\Controllers\Employee;
 
 use App\Http\Controllers\Controller;
+use App\Mail\EmployeePasswordResetMail;
+use App\Models\EmployeePasswordReset;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 
@@ -106,5 +110,36 @@ class UserController extends Controller
 
         return redirect()->route('employee.users.index')
             ->with('success', 'Compte supprimé avec succès.');
+    }
+
+    /**
+     * Génère un token de reset à usage unique (30 min) et envoie le lien par email.
+     * Réservé aux super administrateurs.
+     */
+    public function sendResetLink(User $user)
+    {
+        if (!auth()->user()->isSuperAdmin()) {
+            abort(403);
+        }
+
+        // Invalide tous les tokens non utilisés précédents pour cet utilisateur
+        EmployeePasswordReset::where('user_id', $user->id)
+            ->whereNull('used_at')
+            ->delete();
+
+        // Génère un token brut de 64 caractères
+        $plainToken = Str::random(64);
+
+        EmployeePasswordReset::create([
+            'user_id'    => $user->id,
+            'token'      => hash('sha256', $plainToken),
+            'created_at' => now(),
+        ]);
+
+        $resetUrl = route('employee.password.form', ['token' => $plainToken]);
+
+        Mail::to($user->email)->send(new EmployeePasswordResetMail($user, $resetUrl));
+
+        return back()->with('success', "Un lien de réinitialisation a été envoyé à {$user->email}. Il expire dans 30 minutes.");
     }
 }
