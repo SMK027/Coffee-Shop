@@ -4,8 +4,6 @@ services:
   app:
     build: .
     container_name: app_web
-    ports:
-      - "8099:80"
     volumes:
       - ./storage:/var/www/html/storage
     environment:
@@ -15,8 +13,8 @@ services:
       - APP_DEBUG=false
       - APP_URL=${APP_URL}
       - DB_CONNECTION=mysql
-      - DB_HOST=db
-      - DB_PORT=3306
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT:-3306}
       - DB_DATABASE=${DB_NAME}
       - DB_USERNAME=${DB_USER}
       - DB_PASSWORD=${DB_PASS}
@@ -37,13 +35,11 @@ services:
       - "traefik.docker.network=proxy"
     networks:
       - proxy
-      - app_network
+      - db_internal
     restart: unless-stopped
 
 networks:
   proxy:
     external: true
-  app_network:
-    driver: bridge
   db_internal:
     external: true
