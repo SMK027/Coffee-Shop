@@ -36,6 +36,7 @@
                                class="w-full border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none font-mono tracking-wider">
                         @error('loyalty_card_number')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
                     </div>
+                    <div id="loyalty-check-status" class="mt-3 hidden rounded-lg border px-3 py-2 text-xs"></div>
                 </div>
 
                 {{-- Nom du client (masqué si carte passée) --}}
@@ -139,6 +140,7 @@
     <script>
     (function () {
         const drinks = @json($drinksData);
+        const loyaltyCheckUrl = @json(route('employee.orders.loyalty-check'));
         let itemCount = 1;
 
         /* ── Bascule carte de fidélité / nom du client ─────────── */
@@ -147,6 +149,95 @@
             const loyaltyBlk  = document.getElementById('loyalty-block');
             const nameBlk     = document.getElementById('customer-name-block');
             const nameInput   = document.getElementById('customer_name');
+            const cardInput   = document.getElementById('loyalty_card_number');
+            const statusBox   = document.getElementById('loyalty-check-status');
+            const employeeTgl = document.getElementById('is_employee_order');
+            let debounceTimer = null;
+            let requestSeq    = 0;
+
+            function setStatus(type, message) {
+                if (!statusBox) return;
+                statusBox.classList.remove(
+                    'hidden',
+                    'bg-amber-100', 'border-amber-200', 'text-amber-800',
+                    'bg-green-100', 'border-green-200', 'text-green-800',
+                    'bg-red-100', 'border-red-200', 'text-red-700'
+                );
+
+                if (type === 'loading') {
+                    statusBox.classList.add('bg-amber-100', 'border-amber-200', 'text-amber-800');
+                } else if (type === 'success') {
+                    statusBox.classList.add('bg-green-100', 'border-green-200', 'text-green-800');
+                } else if (type === 'error') {
+                    statusBox.classList.add('bg-red-100', 'border-red-200', 'text-red-700');
+                }
+
+                statusBox.textContent = message;
+            }
+
+            function clearStatus() {
+                if (!statusBox) return;
+                statusBox.classList.add('hidden');
+                statusBox.textContent = '';
+            }
+
+            async function checkCard() {
+                const raw = (cardInput?.value || '').trim();
+                const normalized = raw.replace(/\s+/g, '');
+
+                if (!toggle.checked || normalized.length < 8) {
+                    clearStatus();
+                    return;
+                }
+
+                setStatus('loading', 'Verification de la carte en cours...');
+                const seq = ++requestSeq;
+
+                try {
+                    const res = await fetch(`${loyaltyCheckUrl}?card_number=${encodeURIComponent(raw)}`, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json',
+                        },
+                    });
+
+                    if (seq !== requestSeq) return;
+
+                    if (!res.ok) {
+                        setStatus('error', 'Verification impossible pour le moment.');
+                        return;
+                    }
+
+                    const data = await res.json();
+                    if (!data.found) {
+                        setStatus('error', data.message || 'Carte introuvable.');
+                        return;
+                    }
+
+                    const card = data.card || {};
+                    if (card.has_employee_benefits && employeeTgl) {
+                        employeeTgl.checked = true;
+                        updateTotal();
+                    }
+
+                    const benefitsMsg = card.has_employee_benefits
+                        ? ' Avantage employe detecte.'
+                        : '';
+
+                    setStatus(
+                        'success',
+                        `Carte valide: ${card.full_name} - ${card.points} pts.${benefitsMsg}`
+                    );
+                } catch (_) {
+                    if (seq !== requestSeq) return;
+                    setStatus('error', 'Verification impossible pour le moment.');
+                }
+            }
+
+            function queueCheck() {
+                if (debounceTimer) clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(checkCard, 350);
+            }
 
             function sync() {
                 const useLoyalty = toggle.checked;
@@ -154,9 +245,18 @@
                 nameBlk.classList.toggle('hidden', useLoyalty);
                 // Le nom n'est requis que si la carte n'est pas utilisée
                 if (nameInput) nameInput.required = !useLoyalty;
+                if (!useLoyalty) {
+                    clearStatus();
+                } else {
+                    queueCheck();
+                }
             }
 
             toggle.addEventListener('change', sync);
+            if (cardInput) {
+                cardInput.addEventListener('input', queueCheck);
+                cardInput.addEventListener('blur', checkCard);
+            }
             sync();
         })();
 

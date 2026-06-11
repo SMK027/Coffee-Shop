@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\Drink;
 use App\Models\LoyaltyCard;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -54,6 +55,32 @@ class OrderController extends Controller
         $drinks = Drink::available()->with('category')->orderBy('category_id')->orderBy('sort_order')->get();
 
         return view('employee.orders.create', compact('drinks'));
+    }
+
+    public function checkLoyaltyCard(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'card_number' => ['required', 'string', 'max:20'],
+        ]);
+
+        $cardNumber = str_replace(' ', '', $validated['card_number']);
+        $card = LoyaltyCard::where('card_number', $cardNumber)->first();
+
+        if (!$card) {
+            return response()->json([
+                'found' => false,
+                'message' => 'Aucune carte ne correspond a ce numero.',
+            ]);
+        }
+
+        return response()->json([
+            'found' => true,
+            'card' => [
+                'full_name' => $card->full_name,
+                'points' => (int) $card->points,
+                'has_employee_benefits' => (bool) $card->hasEmployeeBenefits(),
+            ],
+        ]);
     }
 
     public function store(Request $request)
