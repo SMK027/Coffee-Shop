@@ -259,8 +259,9 @@ class OrderController extends Controller
                 $locked = LoyaltyDiscount::whereKey($discount->id)->lockForUpdate()->first();
 
                 if (!$locked || !$locked->isValidForUse()) {
+                    $discountName = $locked ? $locked->name : '?';
                     throw ValidationException::withMessages([
-                        'loyalty_discount_ids' => "La réduction « {$locked->name ?? '?'} » n'est plus disponible.",
+                        'loyalty_discount_ids' => "La réduction « {$discountName} » n'est plus disponible.",
                     ]);
                 }
 
