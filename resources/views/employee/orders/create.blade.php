@@ -140,7 +140,7 @@
     <script>
     (function () {
         const drinks = @json($drinksData);
-        const loyaltyCheckUrl = @json(route('employee.orders.loyalty-check'));
+        const loyaltyCheckUrl = @json(url('/espace-employe/commandes/verification-carte-fidelite'));
         let itemCount = 1;
 
         /* ── Bascule carte de fidélité / nom du client ─────────── */
