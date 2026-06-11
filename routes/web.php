@@ -10,6 +10,7 @@ use App\Http\Controllers\Employee\ContactController;
 use App\Http\Controllers\Employee\StatsController;
 use App\Http\Controllers\Employee\UserController;
 use App\Http\Controllers\Employee\LoyaltyController as EmployeeLoyaltyController;
+use App\Http\Controllers\Employee\LoyaltyDiscountController;
 use App\Http\Controllers\Auth\EmployeePasswordResetController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
@@ -86,6 +87,11 @@ Route::prefix('espace-employe')->name('employee.')->middleware(['auth', 'employe
     Route::patch('/fidelite/{loyaltyCard}/avantages-salaries', [EmployeeLoyaltyController::class, 'updateEmployeeBenefits'])->name('loyalty.benefits.update');
     Route::patch('/fidelite/{loyaltyCard}/titulaire', [EmployeeLoyaltyController::class, 'updateHolder'])->name('loyalty.holder.update');
     Route::post('/fidelite/{loyaltyCard}/ajuster-points', [EmployeeLoyaltyController::class, 'adjustPoints'])->name('loyalty.points.adjust');
+    Route::get('/fidelite/reductions', [LoyaltyDiscountController::class, 'index'])->name('loyalty-discounts.index');
+    Route::get('/fidelite/reductions/nouvelle', [LoyaltyDiscountController::class, 'create'])->name('loyalty-discounts.create');
+    Route::post('/fidelite/reductions', [LoyaltyDiscountController::class, 'store'])->name('loyalty-discounts.store');
+    Route::get('/fidelite/reductions/{loyaltyDiscount}/modifier', [LoyaltyDiscountController::class, 'edit'])->name('loyalty-discounts.edit');
+    Route::put('/fidelite/reductions/{loyaltyDiscount}', [LoyaltyDiscountController::class, 'update'])->name('loyalty-discounts.update');
     Route::get('/fidelite/{loyaltyCard}', [EmployeeLoyaltyController::class, 'show'])->name('loyalty.show');
 
     // Gestion des employés (admin uniquement)

@@ -24,15 +24,23 @@
                     @endforeach
                 </div>
                 <div class="mt-4 pt-4 border-t border-stone-100 space-y-1.5">
-                    @if($order->discount_amount > 0)
+                    @if($order->discount_amount > 0 || $order->loyalty_discount_amount > 0)
                     <div class="flex justify-between text-sm text-stone-500">
                         <span>Sous-total</span>
-                        <span>{{ number_format($order->total_amount + $order->discount_amount, 2, ',', ' ') }} €</span>
+                        <span>{{ number_format($order->total_amount + $order->discount_amount + $order->loyalty_discount_amount, 2, ',', ' ') }} €</span>
                     </div>
+                    @if($order->discount_amount > 0)
                     <div class="flex justify-between text-sm text-green-700">
                         <span>Réduction salarié (-15%)</span>
                         <span>-{{ number_format($order->discount_amount, 2, ',', ' ') }} €</span>
                     </div>
+                    @endif
+                    @if($order->loyalty_discount_amount > 0)
+                    <div class="flex justify-between text-sm text-blue-700">
+                        <span>Reduction fidelite</span>
+                        <span>-{{ number_format($order->loyalty_discount_amount, 2, ',', ' ') }} €</span>
+                    </div>
+                    @endif
                     @endif
                     <div class="flex justify-between">
                         <span class="font-semibold text-stone-800">Total</span>
@@ -68,6 +76,12 @@
                         <dt class="text-stone-500">Carte de fidélité</dt>
                         <dd class="font-medium text-amber-700 font-mono">{{ chunk_split($order->loyaltyCard->card_number, 4, ' ') }}</dd>
                     </div>
+                    @if($order->loyaltyDiscount)
+                    <div>
+                        <dt class="text-stone-500">Reduction fidelite</dt>
+                        <dd class="font-medium text-blue-700">{{ $order->loyaltyDiscount->name }} ({{ $order->loyalty_points_spent }} points)</dd>
+                    </div>
+                    @endif
                     @if($order->points_credited)
                     <div>
                         <dt class="text-stone-500">Points crédités</dt>

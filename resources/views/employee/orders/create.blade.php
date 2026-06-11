@@ -37,6 +37,26 @@
                         @error('loyalty_card_number')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
                     </div>
                     <div id="loyalty-check-status" class="mt-3 hidden rounded-lg border px-3 py-2 text-xs"></div>
+
+                    <div class="mt-4">
+                        <label for="loyalty_discount_id" class="block text-sm font-medium text-stone-700 mb-1.5">Reduction contre points</label>
+                        <select name="loyalty_discount_id" id="loyalty_discount_id"
+                                class="w-full border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
+                            <option value="">Aucune reduction</option>
+                            @foreach($discounts as $discount)
+                                <option value="{{ $discount->id }}"
+                                        data-points-cost="{{ $discount->points_cost }}"
+                                        data-type="{{ $discount->discount_type }}"
+                                        data-value="{{ (float) $discount->discount_value }}"
+                                        data-employee-only="{{ $discount->employee_only ? '1' : '0' }}"
+                                        @selected((string) old('loyalty_discount_id') === (string) $discount->id)>
+                                    {{ $discount->name }} - {{ $discount->points_cost }} pts - {{ $discount->display_value }}{{ $discount->employee_only ? ' (salaries)' : '' }}
+                                </option>
+                            @endforeach
+                        </select>
+                        <p id="loyalty-discount-hint" class="text-xs text-stone-500 mt-1">Selectionnez une carte fidelite valide pour utiliser une reduction.</p>
+                        @error('loyalty_discount_id')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                    </div>
                 </div>
 
                 {{-- Nom du client (masqué si carte passée) --}}
@@ -110,6 +130,10 @@
                         <span>Réduction salarié (-15%)</span>
                         <span id="discount-display">0,00 €</span>
                     </div>
+                    <div id="loyalty-discount-line" class="hidden justify-between text-blue-700">
+                        <span id="loyalty-discount-label">Reduction fidelite</span>
+                        <span id="loyalty-discount-display">0,00 €</span>
+                    </div>
                     <div class="flex justify-between font-semibold">
                         <span>Total estimé</span>
                         <span id="total-display">0,00 €</span>
@@ -135,11 +159,20 @@
             'price'    => (float) $d->price,
             'category' => $d->category->name,
         ]);
+        $discountsData = $discounts->map(fn($discount) => [
+            'id' => $discount->id,
+            'name' => $discount->name,
+            'points_cost' => (int) $discount->points_cost,
+            'discount_type' => $discount->discount_type,
+            'discount_value' => (float) $discount->discount_value,
+            'employee_only' => (bool) $discount->employee_only,
+        ]);
     @endphp
 
     <script>
     (function () {
         const drinks = @json($drinksData);
+        const discounts = @json($discountsData);
         const loyaltyCheckUrl = @json(url('/espace-employe/commandes/verification-carte-fidelite'));
         let itemCount = 1;
 
@@ -152,6 +185,9 @@
             const cardInput   = document.getElementById('loyalty_card_number');
             const statusBox   = document.getElementById('loyalty-check-status');
             const employeeTgl = document.getElementById('is_employee_order');
+            const discountSelect = document.getElementById('loyalty_discount_id');
+            const discountHint = document.getElementById('loyalty-discount-hint');
+            let currentCard = null;
             let debounceTimer = null;
             let requestSeq    = 0;
 
@@ -181,12 +217,56 @@
                 statusBox.textContent = '';
             }
 
+            function selectedDiscount() {
+                if (!discountSelect || !discountSelect.value) return null;
+                return discounts.find(d => String(d.id) === String(discountSelect.value)) || null;
+            }
+
+            function refreshDiscountEligibility() {
+                if (!discountSelect) return;
+
+                const discount = selectedDiscount();
+
+                if (!toggle.checked || !currentCard) {
+                    discountSelect.disabled = true;
+                    discountHint.textContent = 'Selectionnez une carte fidelite valide pour utiliser une reduction.';
+                    if (discountSelect.value) discountSelect.value = '';
+                    updateTotal();
+                    return;
+                }
+
+                discountSelect.disabled = false;
+
+                if (!discount) {
+                    discountHint.textContent = 'Selectionnez une reduction si le client souhaite echanger ses points.';
+                    updateTotal();
+                    return;
+                }
+
+                if (discount.employee_only && !currentCard.has_employee_benefits) {
+                    discountHint.textContent = 'Cette reduction est reservee aux salaries.';
+                    discountSelect.value = '';
+                    updateTotal();
+                    return;
+                }
+
+                if (currentCard.points < discount.points_cost) {
+                    discountHint.textContent = `Points insuffisants (${discount.points_cost} pts requis).`;
+                } else {
+                    discountHint.textContent = `Reduction disponible: ${discount.points_cost} pts.`;
+                }
+
+                updateTotal();
+            }
+
             async function checkCard() {
                 const raw = (cardInput?.value || '').trim();
                 const normalized = raw.replace(/\s+/g, '');
 
                 if (!toggle.checked || normalized.length < 8) {
+                    currentCard = null;
                     clearStatus();
+                    refreshDiscountEligibility();
                     return;
                 }
 
@@ -210,11 +290,14 @@
 
                     const data = await res.json();
                     if (!data.found) {
+                        currentCard = null;
                         setStatus('error', data.message || 'Carte introuvable.');
+                        refreshDiscountEligibility();
                         return;
                     }
 
                     const card = data.card || {};
+                    currentCard = card;
                     if (card.has_employee_benefits && employeeTgl) {
                         employeeTgl.checked = true;
                         updateTotal();
@@ -228,9 +311,12 @@
                         'success',
                         `Carte valide: ${card.full_name} - ${card.points} pts.${benefitsMsg}`
                     );
+                    refreshDiscountEligibility();
                 } catch (_) {
                     if (seq !== requestSeq) return;
+                    currentCard = null;
                     setStatus('error', 'Verification impossible pour le moment.');
+                    refreshDiscountEligibility();
                 }
             }
 
@@ -246,13 +332,16 @@
                 // Le nom n'est requis que si la carte n'est pas utilisée
                 if (nameInput) nameInput.required = !useLoyalty;
                 if (!useLoyalty) {
+                    currentCard = null;
                     clearStatus();
+                    refreshDiscountEligibility();
                 } else {
                     queueCheck();
                 }
             }
 
             toggle.addEventListener('change', sync);
+            discountSelect?.addEventListener('change', refreshDiscountEligibility);
             if (cardInput) {
                 cardInput.addEventListener('input', queueCheck);
                 cardInput.addEventListener('blur', checkCard);
@@ -458,15 +547,45 @@
 
             const empToggle  = document.getElementById('is_employee_order');
             const isEmployee = empToggle && empToggle.checked;
-            const discount   = isEmployee ? subtotal * EMPLOYEE_DISCOUNT_RATE : 0;
-            const total      = subtotal - discount;
+            const employeeDiscount = isEmployee ? subtotal * EMPLOYEE_DISCOUNT_RATE : 0;
+            const subtotalAfterEmployeeDiscount = subtotal - employeeDiscount;
+
+            const discountSelect = document.getElementById('loyalty_discount_id');
+            const selected = discountSelect && discountSelect.value
+                ? discounts.find(d => String(d.id) === String(discountSelect.value))
+                : null;
+            let loyaltyDiscount = 0;
+            if (selected) {
+                if (selected.discount_type === 'percent') {
+                    loyaltyDiscount = subtotalAfterEmployeeDiscount * (selected.discount_value / 100);
+                } else {
+                    loyaltyDiscount = Math.min(subtotalAfterEmployeeDiscount, selected.discount_value);
+                }
+            }
+
+            const total = Math.max(0, subtotalAfterEmployeeDiscount - loyaltyDiscount);
 
             const discountLine = document.getElementById('discount-line');
             if (discountLine) {
                 discountLine.classList.toggle('hidden', !isEmployee);
                 discountLine.classList.toggle('flex', isEmployee);
                 document.getElementById('discount-display').textContent =
-                    '-' + discount.toFixed(2).replace('.', ',') + ' €';
+                    '-' + employeeDiscount.toFixed(2).replace('.', ',') + ' €';
+            }
+
+            const loyaltyLine = document.getElementById('loyalty-discount-line');
+            if (loyaltyLine) {
+                const active = loyaltyDiscount > 0.001;
+                loyaltyLine.classList.toggle('hidden', !active);
+                loyaltyLine.classList.toggle('flex', active);
+                if (active) {
+                    const label = selected && selected.discount_type === 'percent'
+                        ? `Reduction fidelite (-${selected.discount_value}%)`
+                        : 'Reduction fidelite';
+                    document.getElementById('loyalty-discount-label').textContent = label;
+                }
+                document.getElementById('loyalty-discount-display').textContent =
+                    '-' + loyaltyDiscount.toFixed(2).replace('.', ',') + ' €';
             }
 
             document.getElementById('total-display').textContent =
@@ -492,6 +611,15 @@
         /* ── Validation avant soumission ───────────────────────── */
         document.getElementById('order-form').addEventListener('submit', e => {
             let invalid = false;
+            const useLoyalty = document.getElementById('use_loyalty');
+            const discountSelect = document.getElementById('loyalty_discount_id');
+            if (discountSelect && discountSelect.value && !(useLoyalty && useLoyalty.checked)) {
+                e.preventDefault();
+                useLoyalty.checked = true;
+                useLoyalty.dispatchEvent(new Event('change'));
+                return;
+            }
+
             document.querySelectorAll('.item-row').forEach(row => {
                 const hidden = row.querySelector('.drink-id-input');
                 const search = row.querySelector('.drink-search');
