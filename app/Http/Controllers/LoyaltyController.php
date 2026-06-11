@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\LoyaltyCard;
 use App\Models\LoyaltyPinReset;
+use App\Models\Order;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -83,7 +84,33 @@ class LoyaltyController extends Controller
 
         $card->load(['orders' => fn ($q) => $q->latest()]);
 
+        // Ouvre une session de consultation pour accéder au détail des commandes
+        // de cette carte uniquement.
+        $request->session()->put('loyalty_balance_card_id', $card->id);
+
         return view('visitor.loyalty.balance', compact('card'));
+    }
+
+    /**
+     * Détail d'une commande depuis l'espace client fidélité.
+     */
+    public function showOrder(Request $request, Order $order)
+    {
+        $allowedCardId = (int) $request->session()->get('loyalty_balance_card_id');
+
+        if (!$allowedCardId) {
+            return redirect()->route('loyalty.balance.form')
+                ->with('error', 'Veuillez d\'abord consulter votre carte pour accéder aux détails des commandes.');
+        }
+
+        if ((int) $order->loyalty_card_id !== $allowedCardId) {
+            return redirect()->route('loyalty.balance.form')
+                ->with('error', 'Cette commande n\'est pas accessible avec la carte actuellement consultée.');
+        }
+
+        $order->load(['items.drink']);
+
+        return view('visitor.loyalty.order-show', compact('order'));
     }
 
     /**

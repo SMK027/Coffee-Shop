@@ -24,10 +24,13 @@
                     @else
                         <ul class="divide-y divide-stone-50">
                             @foreach($card->orders as $order)
-                            <li class="flex items-center justify-between px-5 py-3">
+                            <li class="flex items-center justify-between px-5 py-3 gap-3">
                                 <div>
                                     <p class="font-medium text-stone-800 text-sm">Commande #{{ str_pad($order->id, 4, '0', STR_PAD_LEFT) }}</p>
                                     <p class="text-xs text-stone-400">{{ $order->created_at->format('d/m/Y à H:i') }} · {{ $order->status_label }}</p>
+                                    <a href="{{ route('loyalty.balance.order.show', $order) }}" class="inline-block mt-1 text-xs font-medium text-amber-700 hover:text-amber-600 underline">
+                                        Voir le détail
+                                    </a>
                                 </div>
                                 <div class="text-right">
                                     <p class="text-sm font-medium text-stone-800">{{ number_format($order->total_amount, 2, ',', ' ') }} €</p>

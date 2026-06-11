@@ -30,6 +30,7 @@ Route::get('/fidelite', [LoyaltyController::class, 'create'])->name('loyalty.cre
 Route::post('/fidelite', [LoyaltyController::class, 'store'])->name('loyalty.store');
 Route::get('/fidelite/mes-points', [LoyaltyController::class, 'showBalanceForm'])->name('loyalty.balance.form');
 Route::post('/fidelite/mes-points', [LoyaltyController::class, 'balance'])->name('loyalty.balance');
+Route::get('/fidelite/mes-points/commande/{order}', [LoyaltyController::class, 'showOrder'])->name('loyalty.balance.order.show');
 Route::get('/fidelite/reinitialiser-pin/{token}', [LoyaltyController::class, 'showPinResetForm'])->name('loyalty.pin.form');
 Route::post('/fidelite/reinitialiser-pin/{token}', [LoyaltyController::class, 'resetPin'])->name('loyalty.pin.reset');
 
