@@ -21,7 +21,7 @@
         </div>
 
         <div>
-            <label for="points_cost" class="block text-sm font-medium text-stone-700 mb-1.5">Cout en points *</label>
+            <label for="points_cost" class="block text-sm font-medium text-stone-700 mb-1.5">Coût en points *</label>
             <input type="number" name="points_cost" id="points_cost" min="1" required
                    value="{{ old('points_cost', $discount->points_cost ?? '') }}"
                    class="w-full border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
@@ -46,7 +46,7 @@
         </div>
 
         <div>
-            <label for="quantity_limit" class="block text-sm font-medium text-stone-700 mb-1.5">Quantite max</label>
+            <label for="quantity_limit" class="block text-sm font-medium text-stone-700 mb-1.5">Quantité max</label>
             <input type="number" name="quantity_limit" id="quantity_limit" min="1"
                    value="{{ old('quantity_limit', $discount->quantity_limit ?? '') }}"
                    class="w-full border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
@@ -63,7 +63,7 @@
         </div>
 
         <div>
-            <label for="starts_at" class="block text-sm font-medium text-stone-700 mb-1.5">Debut</label>
+            <label for="starts_at" class="block text-sm font-medium text-stone-700 mb-1.5">Début</label>
             <input type="datetime-local" name="starts_at" id="starts_at"
                    value="{{ old('starts_at', isset($discount->starts_at) ? $discount->starts_at->format('Y-m-d\\TH:i') : '') }}"
                    class="w-full border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">

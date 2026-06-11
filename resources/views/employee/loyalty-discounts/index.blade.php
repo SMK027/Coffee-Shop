@@ -1,81 +1,129 @@
 <x-employee-layout title="Réductions fidélité">
     <x-slot name="headerActions">
-        <a href="{{ route('employee.loyalty-discounts.create') }}" class="bg-amber-700 hover:bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-            Nouvelle réduction
+        <a href="{{ route('employee.loyalty-discounts.create') }}" class="bg-amber-700 hover:bg-amber-600 text-white px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 sm:gap-2">
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            <span class="hidden sm:inline">Nouvelle réduction</span>
+            <span class="sm:hidden">Nouveau</span>
         </a>
     </x-slot>
 
     <div class="bg-white rounded-xl shadow-sm border border-stone-100 overflow-hidden">
-        <div class="overflow-x-auto">
-            <table class="min-w-full text-sm">
-                <thead class="bg-stone-50 text-stone-600">
-                    <tr>
-                        <th class="px-4 py-3 text-left font-medium">Réduction</th>
-                        <th class="px-4 py-3 text-left font-medium">Cout</th>
-                        <th class="px-4 py-3 text-left font-medium">Valeur</th>
-                        <th class="px-4 py-3 text-left font-medium">Disponibilité</th>
-                        <th class="px-4 py-3 text-left font-medium">Statut</th>
-                        <th class="px-4 py-3 text-right font-medium">Actions</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-stone-100">
-                    @forelse($discounts as $discount)
+
+        @if($discounts->isEmpty())
+            <div class="px-6 py-16 text-center text-stone-500">
+                <p>Aucune réduction configurée.</p>
+            </div>
+        @else
+
+            {{-- Vue desktop --}}
+            <div class="hidden sm:block overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="bg-stone-50 border-b border-stone-100">
+                        <tr>
+                            <th class="px-5 py-3 text-left font-medium text-stone-600">Réduction</th>
+                            <th class="px-5 py-3 text-left font-medium text-stone-600">Coût</th>
+                            <th class="px-5 py-3 text-left font-medium text-stone-600">Valeur</th>
+                            <th class="px-5 py-3 text-left font-medium text-stone-600">Disponibilité</th>
+                            <th class="px-5 py-3 text-left font-medium text-stone-600">Statut</th>
+                            <th class="px-5 py-3 text-right font-medium text-stone-600">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-stone-50">
+                        @foreach($discounts as $discount)
                         @php
-                            $isValid = $discount->isValidForUse();
+                            $isValid   = $discount->isValidForUse();
                             $isSoldOut = $discount->isSoldOut();
                         @endphp
-                        <tr>
-                            <td class="px-4 py-3 align-top">
+                        <tr class="hover:bg-stone-50 transition-colors">
+                            <td class="px-5 py-3">
                                 <p class="font-medium text-stone-800">{{ $discount->name }}</p>
                                 @if($discount->description)
-                                    <p class="text-xs text-stone-500 mt-1">{{ $discount->description }}</p>
+                                    <p class="text-xs text-stone-500 mt-0.5 max-w-xs truncate">{{ $discount->description }}</p>
                                 @endif
                                 @if($discount->employee_only)
-                                    <span class="inline-flex mt-2 px-2 py-0.5 rounded bg-blue-100 text-blue-700 text-xs">Réservée salariés</span>
+                                    <span class="inline-flex mt-1 px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs font-medium">Salariés</span>
                                 @endif
                             </td>
-                            <td class="px-4 py-3 align-top text-stone-700">{{ $discount->points_cost }} pts</td>
-                            <td class="px-4 py-3 align-top text-stone-700">{{ $discount->display_value }}</td>
-                            <td class="px-4 py-3 align-top text-stone-600">
+                            <td class="px-5 py-3 text-stone-700 whitespace-nowrap">{{ $discount->points_cost }} pts</td>
+                            <td class="px-5 py-3 text-stone-700 whitespace-nowrap">{{ $discount->display_value }}</td>
+                            <td class="px-5 py-3 text-stone-600 text-xs leading-relaxed">
                                 @if($discount->is_permanent)
-                                    Permanente
+                                    <span class="text-stone-500">Permanente</span>
                                 @else
-                                    {{ optional($discount->starts_at)->format('d/m/Y H:i') ?? 'Maintenant' }}
+                                    <span>{{ optional($discount->starts_at)->format('d/m/Y H:i') ?? '—' }}</span>
                                     <br>
-                                    {{ optional($discount->ends_at)->format('d/m/Y H:i') ?? 'Sans fin' }}
+                                    <span>→ {{ optional($discount->ends_at)->format('d/m/Y H:i') ?? 'Sans fin' }}</span>
                                 @endif
-                                <div class="mt-1 text-xs">
+                                <p class="mt-0.5 text-stone-400">
                                     @if($discount->quantity_limit)
-                                        Stock: {{ $discount->remaining_quantity }} / {{ $discount->quantity_limit }}
+                                        {{ $discount->remaining_quantity }} / {{ $discount->quantity_limit }} restant(s)
                                     @else
-                                        Stock: illimité
+                                        Stock illimité
                                     @endif
-                                </div>
+                                </p>
                             </td>
-                            <td class="px-4 py-3 align-top">
+                            <td class="px-5 py-3">
                                 @if(!$discount->is_active)
-                                    <span class="inline-flex px-2 py-0.5 rounded bg-stone-200 text-stone-700 text-xs">Desactivee</span>
+                                    <span class="px-2.5 py-1 rounded-full text-xs font-medium bg-stone-100 text-stone-600">Désactivée</span>
                                 @elseif($isSoldOut)
-                                    <span class="inline-flex px-2 py-0.5 rounded bg-red-100 text-red-700 text-xs">Soldée</span>
+                                    <span class="px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">Soldée</span>
                                 @elseif($isValid)
-                                    <span class="inline-flex px-2 py-0.5 rounded bg-green-100 text-green-700 text-xs">Active</span>
+                                    <span class="px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">Active</span>
                                 @else
-                                    <span class="inline-flex px-2 py-0.5 rounded bg-amber-100 text-amber-700 text-xs">Hors plage</span>
+                                    <span class="px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">Hors plage</span>
                                 @endif
                             </td>
-                            <td class="px-4 py-3 align-top text-right">
-                                <a href="{{ route('employee.loyalty-discounts.edit', $discount) }}" class="text-amber-700 hover:text-amber-600 font-medium">Modifier</a>
+                            <td class="px-5 py-3 text-right">
+                                <a href="{{ route('employee.loyalty-discounts.edit', $discount) }}" class="text-amber-700 hover:text-amber-600 font-medium text-xs">Modifier →</a>
                             </td>
                         </tr>
-                    @empty
-                        <tr>
-                            <td colspan="6" class="px-4 py-10 text-center text-stone-500">Aucune réduction configurée.</td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-    </div>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
 
-    <div class="mt-4">{{ $discounts->links() }}</div>
+            {{-- Vue mobile --}}
+            <div class="sm:hidden divide-y divide-stone-100">
+                @foreach($discounts as $discount)
+                @php
+                    $isValid   = $discount->isValidForUse();
+                    $isSoldOut = $discount->isSoldOut();
+                @endphp
+                <a href="{{ route('employee.loyalty-discounts.edit', $discount) }}" class="block px-4 py-3.5 hover:bg-stone-50 transition-colors">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <p class="font-medium text-stone-800 text-sm truncate">{{ $discount->name }}</p>
+                            <p class="text-xs text-stone-500 mt-0.5">{{ $discount->points_cost }} pts → {{ $discount->display_value }}</p>
+                            @if($discount->employee_only)
+                                <span class="inline-flex mt-1 px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs font-medium">Salariés</span>
+                            @endif
+                        </div>
+                        <div class="flex-shrink-0 flex flex-col items-end gap-1">
+                            @if(!$discount->is_active)
+                                <span class="px-2.5 py-1 rounded-full text-xs font-medium bg-stone-100 text-stone-600">Désactivée</span>
+                            @elseif($isSoldOut)
+                                <span class="px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">Soldée</span>
+                            @elseif($isValid)
+                                <span class="px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">Active</span>
+                            @else
+                                <span class="px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">Hors plage</span>
+                            @endif
+                            <svg class="w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                            </svg>
+                        </div>
+                    </div>
+                </a>
+                @endforeach
+            </div>
+
+            @if($discounts->hasPages())
+                <div class="px-5 py-4 border-t border-stone-100">
+                    {{ $discounts->links() }}
+                </div>
+            @endif
+
+        @endif
+    </div>
 </x-employee-layout>
+
