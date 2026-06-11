@@ -52,6 +52,10 @@
                             <td class="px-5 py-3 text-right font-bold text-amber-700">{{ $card->points }}</td>
                             <td class="px-5 py-3 text-right">
                                 <a href="{{ route('employee.loyalty.show', $card) }}" class="text-amber-700 hover:text-amber-600 font-medium">Détail</a>
+                                @if(auth()->user()->isSuperAdmin())
+                                    <span class="mx-1 text-stone-300">|</span>
+                                    <a href="{{ route('employee.loyalty.show', $card) }}#points-adjustment" class="text-green-700 hover:text-green-600 font-medium">Ajuster les points</a>
+                                @endif
                             </td>
                         </tr>
                         @endforeach
@@ -69,6 +73,9 @@
                     </div>
                     <p class="text-xs font-mono text-stone-500">{{ chunk_split($card->card_number, 4, ' ') }}</p>
                     <p class="text-xs text-stone-400">{{ $card->email }} · {{ $card->orders_count }} commande(s)</p>
+                    @if(auth()->user()->isSuperAdmin())
+                        <p class="text-xs text-green-700 mt-1">Ajustement de points disponible sur la fiche de détail</p>
+                    @endif
                 </a>
                 @endforeach
             </div>

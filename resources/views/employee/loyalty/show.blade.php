@@ -11,7 +11,7 @@
                 <p class="text-amber-300 text-xs uppercase tracking-wider mb-2">Solde de points</p>
                 <p class="text-5xl font-bold">{{ $loyaltyCard->points }}</p>
             </div>
-            <div class="bg-white rounded-xl shadow-sm border border-stone-100 p-4 sm:p-6">
+            <div id="points-adjustment" class="bg-white rounded-xl shadow-sm border border-stone-100 p-4 sm:p-6">
                 <h2 class="font-semibold text-stone-800 mb-4">Titulaire</h2>
                 <dl class="space-y-3 text-sm">
                     <div><dt class="text-stone-500">Nom complet</dt><dd class="font-medium text-stone-800">{{ $loyaltyCard->full_name }}</dd></div>
