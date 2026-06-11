@@ -14,6 +14,17 @@ fi
 # Lien symbolique storage → public/storage
 php artisan storage:link --no-interaction 2>/dev/null || true
 
+# En local, reconstruire les assets si le dossier build est absent/incomplet.
+# Cela évite un affichage cassé quand un volume Docker masque public/build.
+if [ "$APP_ENV" = "local" ]; then
+    if [ ! -s /var/www/html/public/build/manifest.json ] || [ ! -d /var/www/html/public/build/assets ] || [ -z "$(ls -A /var/www/html/public/build/assets 2>/dev/null)" ]; then
+        echo "[entrypoint] Build assets local manquant/incomplet — reconstruction..."
+        npm install --ignore-scripts
+        npm run build
+        echo "[entrypoint] Assets Vite reconstruits."
+    fi
+fi
+
 # Exécuter les migrations
 echo "[entrypoint] Exécution des migrations..."
 php artisan migrate --force
