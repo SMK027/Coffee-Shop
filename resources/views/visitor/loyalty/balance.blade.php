@@ -14,6 +14,54 @@
                     <p class="text-amber-300 text-xs font-mono mt-1">{{ chunk_split($card->card_number, 4, ' ') }}</p>
                 </div>
 
+                {{-- Historique des points --}}
+                <div class="bg-white rounded-2xl shadow-sm border border-stone-100 overflow-hidden mb-6">
+                    <h2 class="font-semibold text-stone-800 px-5 py-4 border-b border-stone-100">Historique de mes points</h2>
+                    @if($card->pointAdjustments->isEmpty())
+                        <div class="px-5 py-10 text-center text-stone-500 text-sm">
+                            <p>Aucun mouvement de points pour le moment.</p>
+                        </div>
+                    @else
+                        <ul class="divide-y divide-stone-50">
+                            @foreach($card->pointAdjustments as $adj)
+                            @php
+                                $isCredit = $adj->isCredit();
+                                $source   = $adj->source;
+                            @endphp
+                            <li class="flex items-start justify-between gap-3 px-5 py-3">
+                                <div class="flex items-start gap-2.5 min-w-0">
+                                    <div class="flex-shrink-0 mt-0.5 w-6 h-6 rounded-full flex items-center justify-center {{ $isCredit ? 'bg-green-100' : 'bg-red-100' }}">
+                                        @if($isCredit)
+                                            <svg class="w-3 h-3 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
+                                        @else
+                                            <svg class="w-3 h-3 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M20 12H4"/></svg>
+                                        @endif
+                                    </div>
+                                    <div class="min-w-0">
+                                        <div class="flex flex-wrap items-center gap-1.5">
+                                            <span class="text-sm font-medium {{ $isCredit ? 'text-green-700' : 'text-red-700' }}">
+                                                {{ $isCredit ? '+' : '−' }}{{ $adj->points }} pts
+                                            </span>
+                                            @if($source === 'order_debit')
+                                                <span class="px-1.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">R&eacute;duction</span>
+                                            @elseif($source === 'order_credit')
+                                                <span class="px-1.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">Points gagn&eacute;s</span>
+                                            @else
+                                                <span class="px-1.5 py-0.5 rounded-full text-xs font-medium bg-stone-100 text-stone-600">Ajustement</span>
+                                            @endif
+                                        </div>
+                                        <p class="text-xs text-stone-400 mt-0.5">{{ $adj->created_at->format('d/m/Y \à H:i') }}</p>
+                                    </div>
+                                </div>
+                                <div class="text-right flex-shrink-0">
+                                    <p class="text-xs text-stone-400">Solde : {{ $adj->balance_after }}</p>
+                                </div>
+                            </li>
+                            @endforeach
+                        </ul>
+                    @endif
+                </div>
+
                 {{-- Historique des commandes --}}
                 <div class="bg-white rounded-2xl shadow-sm border border-stone-100 overflow-hidden mb-6">
                     <h2 class="font-semibold text-stone-800 px-5 py-4 border-b border-stone-100">Historique de mes commandes</h2>
