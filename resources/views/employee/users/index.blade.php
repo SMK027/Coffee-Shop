@@ -17,6 +17,24 @@
         </div>
     @endif
 
+    <form id="users-search-form" method="GET" action="{{ route('employee.users.index') }}" class="bg-white rounded-xl p-4 shadow-sm border border-stone-100 mb-4 flex flex-wrap gap-2 items-center">
+        <input
+            type="text"
+            name="q"
+            id="users-search-input"
+            value="{{ request('q') }}"
+            placeholder="Rechercher un employé (nom, identifiant, email, rôle)…"
+            oninput="clearTimeout(this._debounce); this._debounce = setTimeout(() => this.form.submit(), 300);"
+            class="flex-1 min-w-[220px] border border-stone-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+            autocomplete="off"
+        >
+        @if(request()->filled('q'))
+            <a href="{{ route('employee.users.index') }}" class="bg-stone-100 hover:bg-stone-200 text-stone-600 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                Effacer
+            </a>
+        @endif
+    </form>
+
     <div class="bg-white rounded-xl shadow-sm border border-stone-100 overflow-hidden">
         @if($users->isEmpty())
             <div class="px-6 py-16 text-center text-stone-500">

@@ -6,6 +6,24 @@
         </a>
     </x-slot>
 
+    <form id="drinks-search-form" method="GET" action="{{ route('employee.drinks.index') }}" class="bg-white rounded-xl p-4 shadow-sm border border-stone-100 mb-4 flex flex-wrap gap-2 items-center">
+        <input
+            type="text"
+            name="q"
+            id="drinks-search-input"
+            value="{{ request('q') }}"
+            placeholder="Rechercher une boisson (nom, description)…"
+            oninput="clearTimeout(this._debounce); this._debounce = setTimeout(() => this.form.submit(), 300);"
+            class="flex-1 min-w-[220px] border border-stone-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+            autocomplete="off"
+        >
+        @if(request()->filled('q'))
+            <a href="{{ route('employee.drinks.index') }}" class="bg-stone-100 hover:bg-stone-200 text-stone-600 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                Effacer
+            </a>
+        @endif
+    </form>
+
     @foreach($categories as $category)
     <div class="bg-white rounded-xl shadow-sm border border-stone-100 mb-6 overflow-hidden">
         <div class="px-6 py-4 bg-stone-50 border-b border-stone-100">
@@ -61,7 +79,7 @@
 
     @if($categories->isEmpty())
         <div class="bg-white rounded-xl shadow-sm border border-stone-100 px-6 py-16 text-center text-stone-500">
-            <p>Aucune catégorie trouvée. Les données initiales doivent être générées.</p>
+            <p>{{ request()->filled('q') ? 'Aucune boisson ne correspond à votre recherche.' : 'Aucune catégorie trouvée. Les données initiales doivent être générées.' }}</p>
         </div>
     @endif
 

@@ -13,9 +13,20 @@ class ContactController extends Controller
     public function index(Request $request)
     {
         $query = Contact::with('handler')->latest();
+        $search = trim((string) $request->query('q', ''));
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);
+        }
+
+        if ($search !== '') {
+            $query->where(function ($filter) use ($search) {
+                $filter->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('subject', 'like', "%{$search}%")
+                    ->orWhere('message', 'like', "%{$search}%")
+                    ->orWhere('reply', 'like', "%{$search}%");
+            });
         }
 
         $contacts = $query->paginate(20);

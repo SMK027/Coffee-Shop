@@ -15,9 +15,24 @@ class OrderController extends Controller
     public function index(Request $request)
     {
         $query = Order::with('items.drink', 'handler')->latest();
+        $search = trim((string) $request->query('q', ''));
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);
+        }
+
+        if ($search !== '') {
+            $query->where(function ($filter) use ($search) {
+                $filter->where('customer_name', 'like', "%{$search}%")
+                    ->orWhere('notes', 'like', "%{$search}%")
+                    ->orWhereHas('items.drink', function ($drinkQuery) use ($search) {
+                        $drinkQuery->where('name', 'like', "%{$search}%");
+                    });
+
+                if (ctype_digit($search)) {
+                    $filter->orWhere('id', (int) $search);
+                }
+            });
         }
 
         $orders = $query->paginate(20);

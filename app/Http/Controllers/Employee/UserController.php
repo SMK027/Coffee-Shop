@@ -14,9 +14,19 @@ use Illuminate\Validation\Rule;
 
 class UserController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $search = trim((string) $request->query('q', ''));
+
         $users = User::whereIn('global_role', ['superadmin', 'admin'])
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($filter) use ($search) {
+                    $filter->where('name', 'like', "%{$search}%")
+                        ->orWhere('username', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%")
+                        ->orWhere('global_role', 'like', "%{$search}%");
+                });
+            })
             ->orderBy('global_role')
             ->orderBy('name')
             ->get();

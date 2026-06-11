@@ -1,9 +1,30 @@
 <x-employee-layout title="Messages de contact">
 
+    <form id="contacts-search-form" method="GET" action="{{ route('employee.contacts.index') }}" class="bg-white rounded-xl p-4 shadow-sm border border-stone-100 mb-4 flex flex-wrap gap-2 items-center">
+        <input
+            type="text"
+            name="q"
+            id="contacts-search-input"
+            value="{{ request('q') }}"
+            placeholder="Rechercher (nom, email, sujet, message)…"
+            oninput="clearTimeout(this._debounce); this._debounce = setTimeout(() => this.form.submit(), 300);"
+            class="flex-1 min-w-[220px] border border-stone-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+            autocomplete="off"
+        >
+        @if(request()->filled('status'))
+            <input type="hidden" name="status" value="{{ request('status') }}">
+        @endif
+        @if(request()->filled('q'))
+            <a href="{{ route('employee.contacts.index', request()->filled('status') ? ['status' => request('status')] : []) }}" class="bg-stone-100 hover:bg-stone-200 text-stone-600 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                Effacer
+            </a>
+        @endif
+    </form>
+
     {{-- Filtres --}}
     <div class="bg-white rounded-xl p-4 shadow-sm border border-stone-100 mb-6 flex flex-wrap gap-2">
         @foreach(['all' => 'Tous'] + $statusLabels as $key => $label)
-            <a href="{{ route('employee.contacts.index', $key !== 'all' ? ['status' => $key] : []) }}"
+            <a href="{{ route('employee.contacts.index', array_filter(['status' => $key !== 'all' ? $key : null, 'q' => request('q')])) }}"
                class="px-4 py-1.5 rounded-full text-sm font-medium transition-colors
                       {{ (request('status', 'all') === $key) ? 'bg-amber-700 text-white' : 'bg-stone-100 text-stone-600 hover:bg-stone-200' }}">
                 {{ $label }}

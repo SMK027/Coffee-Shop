@@ -10,9 +10,31 @@ use Illuminate\Support\Str;
 
 class DrinkController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $categories = DrinkCategory::with('drinks')->orderBy('sort_order')->get();
+        $search = trim((string) $request->query('q', ''));
+
+        $categoriesQuery = DrinkCategory::query()->orderBy('sort_order');
+
+        if ($search !== '') {
+            $categoriesQuery->whereHas('drinks', function ($drinkQuery) use ($search) {
+                $drinkQuery->where('name', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%");
+            });
+        }
+
+        $categories = $categoriesQuery
+            ->with(['drinks' => function ($drinkQuery) use ($search) {
+                if ($search !== '') {
+                    $drinkQuery->where(function ($filter) use ($search) {
+                        $filter->where('name', 'like', "%{$search}%")
+                            ->orWhere('description', 'like', "%{$search}%");
+                    });
+                }
+
+                $drinkQuery->orderBy('sort_order');
+            }])
+            ->get();
 
         return view('employee.drinks.index', compact('categories'));
     }
