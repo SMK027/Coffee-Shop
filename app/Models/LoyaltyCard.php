@@ -4,13 +4,14 @@ namespace App\Models;
 
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
 class LoyaltyCard extends Model
 {
     protected $fillable = [
-        'card_number', 'last_name', 'first_name', 'email', 'phone', 'birth_date', 'pin', 'points',
+        'card_number', 'last_name', 'first_name', 'email', 'phone', 'birth_date', 'pin', 'points', 'user_id',
     ];
 
     protected $hidden = ['pin'];
@@ -32,6 +33,24 @@ class LoyaltyCard extends Model
     public function pinResets(): HasMany
     {
         return $this->hasMany(LoyaltyPinReset::class);
+    }
+
+    /**
+     * Compte employé (salarié) auquel la carte est éventuellement rattachée.
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    /**
+     * La carte bénéficie des avantages salariés tant qu'elle est rattachée
+     * à un compte employé existant. Le lien est rompu automatiquement à la
+     * suppression du compte (clé étrangère nullOnDelete).
+     */
+    public function hasEmployeeBenefits(): bool
+    {
+        return $this->user_id !== null;
     }
 
     public function getFullNameAttribute(): string

@@ -19,8 +19,56 @@
                     <div><dt class="text-stone-500">Téléphone</dt><dd class="text-stone-800">{{ $loyaltyCard->phone }}</dd></div>
                     <div><dt class="text-stone-500">Date de naissance</dt><dd class="text-stone-800">{{ $loyaltyCard->birth_date->format('d/m/Y') }} ({{ $loyaltyCard->age }} ans)</dd></div>
                     <div><dt class="text-stone-500">Carte créée le</dt><dd class="text-stone-800">{{ $loyaltyCard->created_at->format('d/m/Y') }}</dd></div>
+                    <div>
+                        <dt class="text-stone-500">Avantages salariés</dt>
+                        <dd>
+                            @if($loyaltyCard->hasEmployeeBenefits())
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                                    Actifs · {{ $loyaltyCard->user->name }}
+                                </span>
+                            @else
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-stone-100 text-stone-500">Aucun</span>
+                            @endif
+                        </dd>
+                    </div>
                 </dl>
             </div>
+
+            @if(auth()->user()->isSuperAdmin())
+            <div class="bg-white rounded-xl shadow-sm border border-stone-100 p-4 sm:p-6">
+                <h2 class="font-semibold text-stone-800 mb-2">Avantages salariés</h2>
+                <p class="text-sm text-stone-500 mb-4">
+                    Rattachez cette carte à un compte employé pour appliquer automatiquement
+                    la réduction salarié de 15% sur ses commandes. Les avantages sont retirés
+                    automatiquement si le compte est supprimé.
+                </p>
+                <form action="{{ route('employee.loyalty.benefits.update', $loyaltyCard) }}" method="POST" id="benefits-form">
+                    @csrf @method('PATCH')
+
+                    <label class="flex items-center gap-3 cursor-pointer select-none mb-4">
+                        <input type="checkbox" name="employee_benefits" id="employee_benefits" value="1"
+                               {{ $loyaltyCard->hasEmployeeBenefits() ? 'checked' : '' }}
+                               class="h-4 w-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500">
+                        <span class="text-sm font-medium text-stone-700">Carte détenue par un salarié</span>
+                    </label>
+
+                    <div id="employee-picker" class="{{ $loyaltyCard->hasEmployeeBenefits() ? '' : 'hidden' }} relative mb-4">
+                        <label for="employee_search" class="block text-sm font-medium text-stone-700 mb-1.5">Employé titulaire</label>
+                        <input type="hidden" name="user_id" id="employee_user_id" value="{{ $loyaltyCard->user_id }}">
+                        <input type="text" id="employee_search" autocomplete="off"
+                               value="{{ $loyaltyCard->user ? $loyaltyCard->user->name . ' · ' . $loyaltyCard->user->email : '' }}"
+                               placeholder="Rechercher un employé…"
+                               class="w-full border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
+                        <ul id="employee-dropdown" class="hidden absolute z-20 w-full bg-white border border-stone-200 rounded-lg shadow-lg mt-1 max-h-56 overflow-y-auto"></ul>
+                        @error('user_id')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                    </div>
+
+                    <button type="submit" class="w-full bg-amber-700 hover:bg-amber-600 text-white px-4 py-2.5 rounded-lg font-medium text-sm transition-colors">
+                        Enregistrer les avantages
+                    </button>
+                </form>
+            </div>
+            @endif
 
             @if(auth()->user()->isSuperAdmin())
             <div class="bg-white rounded-xl shadow-sm border border-stone-100 p-4 sm:p-6">
@@ -68,5 +116,74 @@
             </div>
         </div>
     </div>
+
+    @if(auth()->user()->isSuperAdmin())
+    <script>
+    (function () {
+        const toggle   = document.getElementById('employee_benefits');
+        const picker   = document.getElementById('employee-picker');
+        const search   = document.getElementById('employee_search');
+        const hidden    = document.getElementById('employee_user_id');
+        const dropdown = document.getElementById('employee-dropdown');
+        const searchUrl = @json(route('employee.loyalty.employees.search'));
+        let debounce;
+
+        toggle.addEventListener('change', () => {
+            picker.classList.toggle('hidden', !toggle.checked);
+            if (!toggle.checked) {
+                hidden.value = '';
+                search.value = '';
+                closeDropdown();
+            }
+        });
+
+        function closeDropdown() {
+            dropdown.classList.add('hidden');
+            dropdown.innerHTML = '';
+        }
+
+        function render(results) {
+            dropdown.innerHTML = '';
+            if (!results.length) {
+                dropdown.innerHTML = '<li class="px-3 py-2.5 text-sm text-stone-400 italic">Aucun employé trouvé</li>';
+                dropdown.classList.remove('hidden');
+                return;
+            }
+            results.forEach(u => {
+                const li = document.createElement('li');
+                li.className = 'px-3 py-2.5 cursor-pointer text-sm hover:bg-stone-50';
+                li.innerHTML = `<span class="font-medium text-stone-800">${u.name}</span>
+                                <span class="block text-xs text-stone-400">${u.email}</span>`;
+                li.addEventListener('click', () => {
+                    hidden.value = u.id;
+                    search.value = u.name + ' · ' + u.email;
+                    closeDropdown();
+                });
+                dropdown.appendChild(li);
+            });
+            dropdown.classList.remove('hidden');
+        }
+
+        search.addEventListener('input', () => {
+            // Toute saisie manuelle invalide la sélection précédente
+            hidden.value = '';
+            const q = search.value.trim();
+            clearTimeout(debounce);
+            debounce = setTimeout(() => {
+                fetch(searchUrl + '?q=' + encodeURIComponent(q), {
+                    headers: { 'Accept': 'application/json' },
+                })
+                    .then(r => r.json())
+                    .then(render)
+                    .catch(closeDropdown);
+            }, 200);
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!picker.contains(e.target)) closeDropdown();
+        });
+    })();
+    </script>
+    @endif
 
 </x-employee-layout>

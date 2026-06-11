@@ -7,9 +7,11 @@ use App\Mail\LoyaltyPinResetMail;
 use App\Models\LoyaltyCard;
 use App\Models\LoyaltyPinReset;
 use App\Models\Setting;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class LoyaltyController extends Controller
 {
@@ -40,9 +42,63 @@ class LoyaltyController extends Controller
      */
     public function show(LoyaltyCard $loyaltyCard)
     {
-        $loyaltyCard->load(['orders' => fn ($q) => $q->latest()]);
+        $loyaltyCard->load(['orders' => fn ($q) => $q->latest(), 'user']);
 
         return view('employee.loyalty.show', compact('loyaltyCard'));
+    }
+
+    /**
+     * Recherche d'employés pour l'autocomplétion (rattachement carte ↔ salarié).
+     * Réservé aux super administrateurs.
+     */
+    public function searchEmployees(Request $request)
+    {
+        abort_unless(auth()->user()->isSuperAdmin(), 403);
+
+        $search = $request->string('q')->trim()->value();
+
+        $users = User::whereIn('global_role', ['superadmin', 'admin'])
+            ->when($search, function ($q) use ($search) {
+                $q->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                      ->orWhere('username', 'like', "%{$search}%")
+                      ->orWhere('email', 'like', "%{$search}%");
+                });
+            })
+            ->orderBy('name')
+            ->limit(10)
+            ->get(['id', 'name', 'email']);
+
+        return response()->json($users);
+    }
+
+    /**
+     * Active ou désactive les avantages salariés d'une carte en la rattachant
+     * (ou non) à un compte employé. Réservé aux super administrateurs.
+     */
+    public function updateEmployeeBenefits(Request $request, LoyaltyCard $loyaltyCard)
+    {
+        abort_unless(auth()->user()->isSuperAdmin(), 403);
+
+        $hasBenefits = $request->boolean('employee_benefits');
+
+        $validated = $request->validate([
+            'user_id' => [Rule::requiredIf($hasBenefits), 'nullable', 'integer', 'exists:users,id'],
+        ], [
+            'user_id.required' => 'Veuillez sélectionner l\'employé titulaire de la carte.',
+        ]);
+
+        if ($hasBenefits) {
+            $loyaltyCard->update(['user_id' => $validated['user_id']]);
+
+            $employee = User::find($validated['user_id']);
+
+            return back()->with('success', "Avantages salariés activés : carte rattachée à {$employee->name}.");
+        }
+
+        $loyaltyCard->update(['user_id' => null]);
+
+        return back()->with('success', 'Avantages salariés désactivés pour cette carte.');
     }
 
     /**

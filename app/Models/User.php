@@ -39,4 +39,12 @@ class User extends Authenticatable
     {
         return $this->global_role === 'superadmin';
     }
+
+    /**
+     * Cartes de fidélité rattachées à ce compte employé (avantages salariés).
+     */
+    public function loyaltyCards(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(LoyaltyCard::class);
+    }
 }

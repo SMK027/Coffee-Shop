@@ -71,6 +71,11 @@ class OrderController extends Controller
                     'loyalty_card_number' => 'Aucune carte de fidélité ne correspond à ce numéro.',
                 ]);
             }
+
+            // La carte d'un salarié déclenche automatiquement la réduction employé.
+            if ($loyaltyCard->hasEmployeeBenefits()) {
+                $isEmployeeOrder = true;
+            }
         }
 
         // Filtre les lignes sans boisson sélectionnée (sécurité côté serveur)
