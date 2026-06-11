@@ -123,4 +123,28 @@ class DrinkController extends Controller
 
         return redirect()->back()->with('success', 'Disponibilité mise à jour.');
     }
+
+    /**
+     * Désactive en masse des boissons sélectionnées.
+     */
+    public function bulkDisable(Request $request)
+    {
+        $validated = $request->validate([
+            'drink_ids'   => ['required', 'array', 'min:1'],
+            'drink_ids.*' => ['integer', 'distinct', 'exists:drinks,id'],
+        ], [
+            'drink_ids.required' => 'Veuillez sélectionner au moins une boisson à désactiver.',
+            'drink_ids.min'      => 'Veuillez sélectionner au moins une boisson à désactiver.',
+        ]);
+
+        $updated = Drink::whereIn('id', $validated['drink_ids'])
+            ->where('available', true)
+            ->update(['available' => false]);
+
+        if ($updated === 0) {
+            return back()->with('success', 'Aucune boisson active à désactiver parmi la sélection.');
+        }
+
+        return back()->with('success', "{$updated} boisson(s) désactivée(s) avec succès.");
+    }
 }

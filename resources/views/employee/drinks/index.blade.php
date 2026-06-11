@@ -24,6 +24,23 @@
         @endif
     </form>
 
+    <form id="bulk-disable-form" method="POST" action="{{ route('employee.drinks.bulk-disable') }}" class="bg-white rounded-xl p-4 shadow-sm border border-stone-100 mb-4 flex flex-wrap items-center gap-2 sm:gap-3">
+        @csrf
+        <div class="text-sm text-stone-600">
+            <span id="bulk-selected-count" class="font-semibold text-stone-800">0</span>
+            boisson(s) sélectionnée(s)
+        </div>
+        <button
+            type="submit"
+            id="bulk-disable-submit"
+            disabled
+            onclick="return confirm('Désactiver toutes les boissons sélectionnées ?');"
+            class="bg-red-600 hover:bg-red-500 disabled:bg-stone-300 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+        >
+            Désactiver la sélection
+        </button>
+    </form>
+
     @foreach($categories as $category)
     <div class="bg-white rounded-xl shadow-sm border border-stone-100 mb-6 overflow-hidden">
         <div class="px-6 py-4 bg-stone-50 border-b border-stone-100">
@@ -35,6 +52,15 @@
             <div class="divide-y divide-stone-50">
                 @foreach($category->drinks as $drink)
                 <div class="px-4 sm:px-6 py-3 sm:py-4 flex items-center gap-3 sm:gap-4">
+                    <label class="flex items-center" title="Sélectionner pour la désactivation en masse">
+                        <input
+                            type="checkbox"
+                            class="drink-bulk-checkbox h-4 w-4 rounded border-stone-300 text-red-600 focus:ring-red-500"
+                            form="bulk-disable-form"
+                            name="drink_ids[]"
+                            value="{{ $drink->id }}"
+                        >
+                    </label>
                     <div class="flex-1 min-w-0">
                         <div class="flex items-center gap-2 flex-wrap">
                             <p class="font-medium text-stone-800 text-sm">{{ $drink->name }}</p>
@@ -82,5 +108,22 @@
             <p>{{ request()->filled('q') ? 'Aucune boisson ne correspond à votre recherche.' : 'Aucune catégorie trouvée. Les données initiales doivent être générées.' }}</p>
         </div>
     @endif
+
+    <script>
+    (function () {
+        const checkboxes = Array.from(document.querySelectorAll('.drink-bulk-checkbox'));
+        const countEl = document.getElementById('bulk-selected-count');
+        const submitEl = document.getElementById('bulk-disable-submit');
+
+        function refreshBulkState() {
+            const checked = checkboxes.filter((cb) => cb.checked).length;
+            if (countEl) countEl.textContent = String(checked);
+            if (submitEl) submitEl.disabled = checked === 0;
+        }
+
+        checkboxes.forEach((cb) => cb.addEventListener('change', refreshBulkState));
+        refreshBulkState();
+    })();
+    </script>
 
 </x-employee-layout>
