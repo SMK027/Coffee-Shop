@@ -274,9 +274,10 @@ class OrderController extends Controller
                     ]);
                 }
 
-                /* Recalcule le montant à partir du locked pour cohérence (le solde peut avoir bougé) */
-                $computedAmount = $row['discount_amount'];
-                // Recalcul du plafond éventuel dans la transaction
+                /* Recalcule le montant depuis locked (cohérence en cas de concurrence) */
+                $discountRow    = collect($discountRows)->firstWhere('loyalty_discount_id', $locked->id);
+                $computedAmount = $discountRow ? (float) $discountRow['discount_amount'] : 0.0;
+                // Réapplique le plafond éventuel
                 if ($locked->discount_type === LoyaltyDiscount::TYPE_PERCENT && $locked->max_discount_amount !== null) {
                     $computedAmount = min($computedAmount, round((float) $locked->max_discount_amount, 2));
                 }
