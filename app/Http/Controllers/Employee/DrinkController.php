@@ -147,4 +147,28 @@ class DrinkController extends Controller
 
         return back()->with('success', "{$updated} boisson(s) désactivée(s) avec succès.");
     }
+
+    /**
+     * Réactive en masse des boissons sélectionnées.
+     */
+    public function bulkEnable(Request $request)
+    {
+        $validated = $request->validate([
+            'drink_ids'   => ['required', 'array', 'min:1'],
+            'drink_ids.*' => ['integer', 'distinct', 'exists:drinks,id'],
+        ], [
+            'drink_ids.required' => 'Veuillez sélectionner au moins une boisson à réactiver.',
+            'drink_ids.min'      => 'Veuillez sélectionner au moins une boisson à réactiver.',
+        ]);
+
+        $updated = Drink::whereIn('id', $validated['drink_ids'])
+            ->where('available', false)
+            ->update(['available' => true]);
+
+        if ($updated === 0) {
+            return back()->with('success', 'Aucune boisson indisponible à réactiver parmi la sélection.');
+        }
+
+        return back()->with('success', "{$updated} boisson(s) réactivée(s) avec succès.");
+    }
 }

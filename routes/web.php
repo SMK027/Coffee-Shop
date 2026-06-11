@@ -55,6 +55,7 @@ Route::prefix('espace-employe')->name('employee.')->middleware(['auth', 'employe
     Route::get('/boissons/nouvelle', [DrinkController::class, 'create'])->name('drinks.create');
     Route::post('/boissons', [DrinkController::class, 'store'])->name('drinks.store');
     Route::post('/boissons/desactivation-masse', [DrinkController::class, 'bulkDisable'])->name('drinks.bulk-disable');
+    Route::post('/boissons/reactivation-masse', [DrinkController::class, 'bulkEnable'])->name('drinks.bulk-enable');
     Route::get('/boissons/{drink}/modifier', [DrinkController::class, 'edit'])->name('drinks.edit');
     Route::put('/boissons/{drink}', [DrinkController::class, 'update'])->name('drinks.update');
     Route::delete('/boissons/{drink}', [DrinkController::class, 'destroy'])->name('drinks.destroy');

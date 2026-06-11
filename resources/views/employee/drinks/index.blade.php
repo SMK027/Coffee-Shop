@@ -24,8 +24,22 @@
         @endif
     </form>
 
-    <form id="bulk-disable-form" method="POST" action="{{ route('employee.drinks.bulk-disable') }}" class="bg-white rounded-xl p-4 shadow-sm border border-stone-100 mb-4 flex flex-wrap items-center gap-2 sm:gap-3">
+    <form id="bulk-disable-form" method="POST" action="{{ route('employee.drinks.bulk-disable') }}" data-disable-action="{{ route('employee.drinks.bulk-disable') }}" data-enable-action="{{ route('employee.drinks.bulk-enable') }}" class="bg-white rounded-xl p-4 shadow-sm border border-stone-100 mb-4 flex flex-wrap items-center gap-2 sm:gap-3">
         @csrf
+        <button
+            type="button"
+            id="bulk-select-all"
+            class="bg-stone-100 hover:bg-stone-200 text-stone-700 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
+        >
+            Tout sélectionner
+        </button>
+        <button
+            type="button"
+            id="bulk-unselect-all"
+            class="bg-stone-100 hover:bg-stone-200 text-stone-700 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
+        >
+            Tout décocher
+        </button>
         <div class="text-sm text-stone-600">
             <span id="bulk-selected-count" class="font-semibold text-stone-800">0</span>
             boisson(s) sélectionnée(s)
@@ -59,6 +73,7 @@
                             form="bulk-disable-form"
                             name="drink_ids[]"
                             value="{{ $drink->id }}"
+                            data-available="{{ $drink->available ? '1' : '0' }}"
                         >
                     </label>
                     <div class="flex-1 min-w-0">
@@ -111,17 +126,68 @@
 
     <script>
     (function () {
+        const form = document.getElementById('bulk-disable-form');
         const checkboxes = Array.from(document.querySelectorAll('.drink-bulk-checkbox'));
         const countEl = document.getElementById('bulk-selected-count');
         const submitEl = document.getElementById('bulk-disable-submit');
+        const selectAllEl = document.getElementById('bulk-select-all');
+        const unselectAllEl = document.getElementById('bulk-unselect-all');
+
+        if (!form || !submitEl || !countEl) return;
+
+        const disableAction = form.dataset.disableAction;
+        const enableAction = form.dataset.enableAction;
+
+        function setDisableMode() {
+            form.action = disableAction;
+            submitEl.textContent = 'Désactiver la sélection';
+            submitEl.classList.remove('bg-green-600', 'hover:bg-green-500');
+            submitEl.classList.add('bg-red-600', 'hover:bg-red-500');
+            submitEl.onclick = () => confirm('Désactiver toutes les boissons sélectionnées ?');
+        }
+
+        function setEnableMode() {
+            form.action = enableAction;
+            submitEl.textContent = 'Réactiver la sélection';
+            submitEl.classList.remove('bg-red-600', 'hover:bg-red-500');
+            submitEl.classList.add('bg-green-600', 'hover:bg-green-500');
+            submitEl.onclick = () => confirm('Réactiver toutes les boissons sélectionnées ?');
+        }
 
         function refreshBulkState() {
-            const checked = checkboxes.filter((cb) => cb.checked).length;
-            if (countEl) countEl.textContent = String(checked);
-            if (submitEl) submitEl.disabled = checked === 0;
+            const selected = checkboxes.filter((cb) => cb.checked);
+            const checked = selected.length;
+            countEl.textContent = String(checked);
+            submitEl.disabled = checked === 0;
+
+            const allSelectedUnavailable = checked > 0 && selected.every((cb) => cb.dataset.available === '0');
+            if (allSelectedUnavailable) {
+                setEnableMode();
+            } else {
+                setDisableMode();
+            }
         }
 
         checkboxes.forEach((cb) => cb.addEventListener('change', refreshBulkState));
+
+        if (selectAllEl) {
+            selectAllEl.addEventListener('click', () => {
+                checkboxes.forEach((cb) => {
+                    cb.checked = true;
+                });
+                refreshBulkState();
+            });
+        }
+
+        if (unselectAllEl) {
+            unselectAllEl.addEventListener('click', () => {
+                checkboxes.forEach((cb) => {
+                    cb.checked = false;
+                });
+                refreshBulkState();
+            });
+        }
+
         refreshBulkState();
     })();
     </script>
