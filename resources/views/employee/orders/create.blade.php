@@ -159,13 +159,13 @@
                 </button>
 
                 <div class="mt-5 pt-4 border-t border-stone-100 space-y-1.5 text-sm">
-                    <div id="discount-line" class="hidden justify-between text-green-700">
-                        <span>Réduction salarié (-15%)</span>
-                        <span id="discount-display">0,00 €</span>
-                    </div>
                     <div id="loyalty-discount-line" class="hidden justify-between text-blue-700">
                         <span id="loyalty-discount-label">Réduction fidélité</span>
                         <span id="loyalty-discount-display">0,00 €</span>
+                    </div>
+                    <div id="discount-line" class="hidden justify-between text-green-700">
+                        <span>Réduction salarié (-15%)</span>
+                        <span id="discount-display">0,00 €</span>
                     </div>
                     <div class="flex justify-between font-semibold">
                         <span>Total estimé</span>
@@ -642,11 +642,9 @@
 
             const empToggle  = document.getElementById('is_employee_order');
             const isEmployee = empToggle && empToggle.checked;
-            const employeeDiscount      = isEmployee ? subtotal * EMPLOYEE_DISCOUNT_RATE : 0;
-            const subtotalAfterEmployee = subtotal - employeeDiscount;
 
-            /* Réductions fidélité : application séquentielle sur le solde restant */
-            let remaining            = subtotalAfterEmployee;
+            /* 1. Réductions fidélité sur le prix brut */
+            let remaining            = subtotal;
             let totalLoyaltyDiscount = 0;
             let checkedCount         = 0;
             document.querySelectorAll('.discount-checkbox:checked').forEach(cb => {
@@ -667,15 +665,11 @@
                 checkedCount++;
             });
             totalLoyaltyDiscount = Math.round(totalLoyaltyDiscount * 100) / 100;
-            const total = Math.max(0, subtotalAfterEmployee - totalLoyaltyDiscount);
+            const subtotalAfterLoyalty = Math.max(0, subtotal - totalLoyaltyDiscount);
 
-            const discountLine = document.getElementById('discount-line');
-            if (discountLine) {
-                discountLine.classList.toggle('hidden', !isEmployee);
-                discountLine.classList.toggle('flex', isEmployee);
-                document.getElementById('discount-display').textContent =
-                    '-' + employeeDiscount.toFixed(2).replace('.', ',') + ' €';
-            }
+            /* 2. Réduction salarié sur le solde après fidélité */
+            const employeeDiscount = isEmployee ? Math.round(subtotalAfterLoyalty * EMPLOYEE_DISCOUNT_RATE * 100) / 100 : 0;
+            const total = Math.max(0, subtotalAfterLoyalty - employeeDiscount);
 
             const loyaltyLine = document.getElementById('loyalty-discount-line');
             if (loyaltyLine) {
@@ -686,6 +680,14 @@
                     checkedCount > 1 ? `Réductions fidélité (×${checkedCount})` : 'Réduction fidélité';
                 document.getElementById('loyalty-discount-display').textContent =
                     '-' + totalLoyaltyDiscount.toFixed(2).replace('.', ',') + ' €';
+            }
+
+            const discountLine = document.getElementById('discount-line');
+            if (discountLine) {
+                discountLine.classList.toggle('hidden', !isEmployee);
+                discountLine.classList.toggle('flex', isEmployee);
+                document.getElementById('discount-display').textContent =
+                    '-' + employeeDiscount.toFixed(2).replace('.', ',') + ' €';
             }
 
             document.getElementById('total-display').textContent =

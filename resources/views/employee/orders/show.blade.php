@@ -29,16 +29,16 @@
                         <span>Sous-total</span>
                         <span>{{ number_format($order->total_amount + $order->discount_amount + $order->loyalty_discount_amount, 2, ',', ' ') }} €</span>
                     </div>
-                    @if($order->discount_amount > 0)
-                    <div class="flex justify-between text-sm text-green-700">
-                        <span>Réduction salarié (-15%)</span>
-                        <span>-{{ number_format($order->discount_amount, 2, ',', ' ') }} €</span>
-                    </div>
-                    @endif
                     @if($order->loyalty_discount_amount > 0)
                     <div class="flex justify-between text-sm text-blue-700">
                         <span>Réduction{{ $order->loyaltyDiscounts->count() > 1 ? 's' : '' }} fidélité</span>
                         <span>-{{ number_format($order->loyalty_discount_amount, 2, ',', ' ') }} €</span>
+                    </div>
+                    @endif
+                    @if($order->discount_amount > 0)
+                    <div class="flex justify-between text-sm text-green-700">
+                        <span>Réduction salarié (-15%)</span>
+                        <span>-{{ number_format($order->discount_amount, 2, ',', ' ') }} €</span>
                     </div>
                     @endif
                     @endif

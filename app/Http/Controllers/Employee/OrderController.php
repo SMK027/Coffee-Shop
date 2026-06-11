@@ -214,14 +214,11 @@ class OrderController extends Controller
             ];
         }
 
-        $employeeDiscount      = $isEmployeeOrder ? round($subtotal * Order::EMPLOYEE_DISCOUNT_RATE, 2) : 0;
-        $subtotalAfterEmployee = round($subtotal - $employeeDiscount, 2);
-
-        // Calcul des réductions fidélité (application séquentielle sur le solde restant)
+        // 1. Réductions fidélité appliquées en premier sur le prix brut.
         $discountRows       = [];
         $totalLoyaltyPoints = 0;
         $totalLoyaltyAmount = 0;
-        $remaining          = $subtotalAfterEmployee;
+        $remaining          = $subtotal;
 
         foreach ($loyaltyDiscounts as $discount) {
             if ($discount->discount_type === LoyaltyDiscount::TYPE_PERCENT) {
@@ -242,8 +239,12 @@ class OrderController extends Controller
             $totalLoyaltyAmount += $amount;
         }
 
-        $totalLoyaltyAmount = round($totalLoyaltyAmount, 2);
-        $total              = round(max(0.0, $subtotalAfterEmployee - $totalLoyaltyAmount), 2);
+        $totalLoyaltyAmount    = round($totalLoyaltyAmount, 2);
+        $subtotalAfterLoyalty  = round(max(0.0, $subtotal - $totalLoyaltyAmount), 2);
+
+        // 2. Réduction salarié appliquée sur le solde après réductions fidélité.
+        $employeeDiscount = $isEmployeeOrder ? round($subtotalAfterLoyalty * Order::EMPLOYEE_DISCOUNT_RATE, 2) : 0;
+        $total            = round(max(0.0, $subtotalAfterLoyalty - $employeeDiscount), 2);
 
         $order = DB::transaction(function () use (
             $validated, $loyaltyCard, $isEmployeeOrder, $total,
