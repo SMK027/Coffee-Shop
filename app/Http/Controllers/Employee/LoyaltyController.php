@@ -54,6 +54,25 @@ class LoyaltyController extends Controller
     }
 
     /**
+     * Met à jour les informations du titulaire d'une carte de fidélité.
+     */
+    public function updateHolder(Request $request, LoyaltyCard $loyaltyCard)
+    {
+        $validated = $request->validate([
+            'first_name' => ['required', 'string', 'max:100'],
+            'last_name'  => ['required', 'string', 'max:100'],
+            'email'      => ['required', 'email', 'max:150', Rule::unique('loyalty_cards', 'email')->ignore($loyaltyCard->id)],
+            'phone'      => ['required', 'string', 'max:30', 'regex:/^[0-9 +().-]{6,30}$/'],
+        ], [
+            'phone.regex' => 'Le numéro de téléphone n\'est pas valide.',
+        ]);
+
+        $loyaltyCard->update($validated);
+
+        return back()->with('success', 'Les informations du titulaire ont été mises à jour.');
+    }
+
+    /**
      * Ajuste manuellement le solde de points d'une carte (crédit ou débit).
      * Chaque opération est tracée. Réservé aux super administrateurs.
      */

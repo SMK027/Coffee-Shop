@@ -11,7 +11,7 @@
                 <p class="text-amber-300 text-xs uppercase tracking-wider mb-2">Solde de points</p>
                 <p class="text-5xl font-bold">{{ $loyaltyCard->points }}</p>
             </div>
-            <div id="points-adjustment" class="bg-white rounded-xl shadow-sm border border-stone-100 p-4 sm:p-6">
+            <div class="bg-white rounded-xl shadow-sm border border-stone-100 p-4 sm:p-6">
                 <h2 class="font-semibold text-stone-800 mb-4">Titulaire</h2>
                 <dl class="space-y-3 text-sm">
                     <div><dt class="text-stone-500">Nom complet</dt><dd class="font-medium text-stone-800">{{ $loyaltyCard->full_name }}</dd></div>
@@ -32,6 +32,75 @@
                         </dd>
                     </div>
                 </dl>
+
+                <div class="mt-5 pt-5 border-t border-stone-100">
+                    <h3 class="text-sm font-semibold text-stone-800 mb-3">Modifier les informations du titulaire</h3>
+                    <form action="{{ route('employee.loyalty.holder.update', $loyaltyCard) }}" method="POST" class="space-y-3">
+                        @csrf
+                        @method('PATCH')
+
+                        <div class="grid sm:grid-cols-2 gap-3">
+                            <div>
+                                <label for="holder_first_name" class="block text-sm font-medium text-stone-700 mb-1">Prénom</label>
+                                <input
+                                    type="text"
+                                    id="holder_first_name"
+                                    name="first_name"
+                                    value="{{ old('first_name', $loyaltyCard->first_name) }}"
+                                    required
+                                    maxlength="100"
+                                    class="w-full border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+                                >
+                                @error('first_name')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                            </div>
+                            <div>
+                                <label for="holder_last_name" class="block text-sm font-medium text-stone-700 mb-1">Nom</label>
+                                <input
+                                    type="text"
+                                    id="holder_last_name"
+                                    name="last_name"
+                                    value="{{ old('last_name', $loyaltyCard->last_name) }}"
+                                    required
+                                    maxlength="100"
+                                    class="w-full border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+                                >
+                                @error('last_name')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="holder_email" class="block text-sm font-medium text-stone-700 mb-1">Email</label>
+                            <input
+                                type="email"
+                                id="holder_email"
+                                name="email"
+                                value="{{ old('email', $loyaltyCard->email) }}"
+                                required
+                                maxlength="150"
+                                class="w-full border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+                            >
+                            @error('email')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                        </div>
+
+                        <div>
+                            <label for="holder_phone" class="block text-sm font-medium text-stone-700 mb-1">Téléphone</label>
+                            <input
+                                type="text"
+                                id="holder_phone"
+                                name="phone"
+                                value="{{ old('phone', $loyaltyCard->phone) }}"
+                                required
+                                maxlength="30"
+                                class="w-full border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+                            >
+                            @error('phone')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                        </div>
+
+                        <button type="submit" class="w-full bg-amber-700 hover:bg-amber-600 text-white px-4 py-2.5 rounded-lg font-medium text-sm transition-colors">
+                            Enregistrer les informations
+                        </button>
+                    </form>
+                </div>
             </div>
 
             @if(auth()->user()->isSuperAdmin())
@@ -89,7 +158,7 @@
             @endif
 
             @if(auth()->user()->isSuperAdmin())
-            <div class="bg-white rounded-xl shadow-sm border border-stone-100 p-4 sm:p-6">
+            <div id="points-adjustment" class="bg-white rounded-xl shadow-sm border border-stone-100 p-4 sm:p-6">
                 <h2 class="font-semibold text-stone-800 mb-2">Ajuster les points</h2>
                 <p class="text-sm text-stone-500 mb-4">
                     Créditez ou débitez manuellement le solde de points de cette carte.
