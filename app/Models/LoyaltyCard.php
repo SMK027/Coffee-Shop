@@ -36,6 +36,14 @@ class LoyaltyCard extends Model
     }
 
     /**
+     * Ajustements manuels de points (débit/crédit) réalisés par les super admins.
+     */
+    public function pointAdjustments(): HasMany
+    {
+        return $this->hasMany(LoyaltyPointAdjustment::class);
+    }
+
+    /**
      * Compte employé (salarié) auquel la carte est éventuellement rattachée.
      */
     public function user(): BelongsTo

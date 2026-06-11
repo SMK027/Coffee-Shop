@@ -80,6 +80,7 @@ Route::prefix('espace-employe')->name('employee.')->middleware(['auth', 'employe
     Route::get('/fidelite/employes/recherche', [EmployeeLoyaltyController::class, 'searchEmployees'])->name('loyalty.employees.search');
     Route::post('/fidelite/{loyaltyCard}/reset-pin', [EmployeeLoyaltyController::class, 'sendPinReset'])->name('loyalty.pin.send');
     Route::patch('/fidelite/{loyaltyCard}/avantages-salaries', [EmployeeLoyaltyController::class, 'updateEmployeeBenefits'])->name('loyalty.benefits.update');
+    Route::post('/fidelite/{loyaltyCard}/ajuster-points', [EmployeeLoyaltyController::class, 'adjustPoints'])->name('loyalty.points.adjust');
     Route::get('/fidelite/{loyaltyCard}', [EmployeeLoyaltyController::class, 'show'])->name('loyalty.show');
 
     // Gestion des employés (admin uniquement)

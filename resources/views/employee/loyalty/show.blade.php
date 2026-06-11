@@ -87,6 +87,49 @@
                 </form>
             </div>
             @endif
+
+            @if(auth()->user()->isSuperAdmin())
+            <div class="bg-white rounded-xl shadow-sm border border-stone-100 p-4 sm:p-6">
+                <h2 class="font-semibold text-stone-800 mb-2">Ajuster les points</h2>
+                <p class="text-sm text-stone-500 mb-4">
+                    Créditez ou débitez manuellement le solde de points de cette carte.
+                    Chaque opération est enregistrée dans l'historique ci-dessous.
+                </p>
+                <form action="{{ route('employee.loyalty.points.adjust', $loyaltyCard) }}" method="POST" class="space-y-4">
+                    @csrf
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="flex items-center justify-center gap-2 cursor-pointer border border-stone-300 rounded-lg px-3 py-2.5 text-sm font-medium has-[:checked]:bg-green-50 has-[:checked]:border-green-400 has-[:checked]:text-green-700 transition-colors">
+                            <input type="radio" name="type" value="credit" class="text-green-600 focus:ring-green-500" {{ old('type', 'credit') === 'credit' ? 'checked' : '' }}>
+                            Créditer
+                        </label>
+                        <label class="flex items-center justify-center gap-2 cursor-pointer border border-stone-300 rounded-lg px-3 py-2.5 text-sm font-medium has-[:checked]:bg-red-50 has-[:checked]:border-red-400 has-[:checked]:text-red-700 transition-colors">
+                            <input type="radio" name="type" value="debit" class="text-red-600 focus:ring-red-500" {{ old('type') === 'debit' ? 'checked' : '' }}>
+                            Débiter
+                        </label>
+                    </div>
+                    @error('type')<p class="text-red-500 text-xs">{{ $message }}</p>@enderror
+
+                    <div>
+                        <label for="points" class="block text-sm font-medium text-stone-700 mb-1.5">Nombre de points</label>
+                        <input type="number" name="points" id="points" min="1" max="100000" required value="{{ old('points') }}"
+                               class="w-full border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
+                        @error('points')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                    </div>
+
+                    <div>
+                        <label for="reason" class="block text-sm font-medium text-stone-700 mb-1.5">Motif (optionnel)</label>
+                        <input type="text" name="reason" id="reason" maxlength="255" value="{{ old('reason') }}"
+                               placeholder="Ex. geste commercial, correction…"
+                               class="w-full border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
+                        @error('reason')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                    </div>
+
+                    <button type="submit" class="w-full bg-amber-700 hover:bg-amber-600 text-white px-4 py-2.5 rounded-lg font-medium text-sm transition-colors">
+                        Appliquer l'ajustement
+                    </button>
+                </form>
+            </div>
+            @endif
         </div>
 
         {{-- Commandes raccordées --}}
@@ -114,6 +157,38 @@
                     </div>
                 @endif
             </div>
+
+            @if(auth()->user()->isSuperAdmin())
+            <div class="bg-white rounded-xl shadow-sm border border-stone-100 overflow-hidden mt-4 sm:mt-6">
+                <h2 class="font-semibold text-stone-800 px-4 sm:px-6 py-4 border-b border-stone-100">Historique des ajustements de points</h2>
+                @if($loyaltyCard->pointAdjustments->isEmpty())
+                    <div class="px-6 py-12 text-center text-stone-500"><p>Aucun ajustement manuel pour cette carte.</p></div>
+                @else
+                    <div class="divide-y divide-stone-50">
+                        @foreach($loyaltyCard->pointAdjustments as $adjustment)
+                        <div class="flex items-center justify-between px-4 sm:px-6 py-3">
+                            <div>
+                                <p class="font-medium text-sm {{ $adjustment->isCredit() ? 'text-green-700' : 'text-red-700' }}">
+                                    {{ $adjustment->isCredit() ? 'Crédit' : 'Débit' }} de {{ $adjustment->points }} pts
+                                </p>
+                                <p class="text-xs text-stone-400">
+                                    {{ $adjustment->created_at->format('d/m/Y à H:i') }}
+                                    @if($adjustment->user) · par {{ $adjustment->user->name }} @endif
+                                    @if($adjustment->reason) · {{ $adjustment->reason }} @endif
+                                </p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-sm font-semibold {{ $adjustment->isCredit() ? 'text-green-700' : 'text-red-700' }}">
+                                    {{ $adjustment->isCredit() ? '+' : '−' }}{{ $adjustment->points }}
+                                </p>
+                                <p class="text-xs text-stone-400">Solde : {{ $adjustment->balance_after }}</p>
+                            </div>
+                        </div>
+                        @endforeach
+                    </div>
+                @endif
+            </div>
+            @endif
         </div>
     </div>
 

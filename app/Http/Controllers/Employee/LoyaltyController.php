@@ -6,9 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Mail\LoyaltyPinResetMail;
 use App\Models\LoyaltyCard;
 use App\Models\LoyaltyPinReset;
+use App\Models\LoyaltyPointAdjustment;
 use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -42,9 +44,57 @@ class LoyaltyController extends Controller
      */
     public function show(LoyaltyCard $loyaltyCard)
     {
-        $loyaltyCard->load(['orders' => fn ($q) => $q->latest(), 'user']);
+        $loyaltyCard->load([
+            'orders' => fn ($q) => $q->latest(),
+            'user',
+            'pointAdjustments' => fn ($q) => $q->with('user')->latest(),
+        ]);
 
         return view('employee.loyalty.show', compact('loyaltyCard'));
+    }
+
+    /**
+     * Ajuste manuellement le solde de points d'une carte (crédit ou débit).
+     * Chaque opération est tracée. Réservé aux super administrateurs.
+     */
+    public function adjustPoints(Request $request, LoyaltyCard $loyaltyCard)
+    {
+        abort_unless(auth()->user()->isSuperAdmin(), 403);
+
+        $validated = $request->validate([
+            'type'   => ['required', Rule::in([LoyaltyPointAdjustment::TYPE_CREDIT, LoyaltyPointAdjustment::TYPE_DEBIT])],
+            'points' => ['required', 'integer', 'min:1', 'max:100000'],
+            'reason' => ['nullable', 'string', 'max:255'],
+        ], [
+            'points.min' => 'Le nombre de points doit être d’au moins 1.',
+        ]);
+
+        $isCredit = $validated['type'] === LoyaltyPointAdjustment::TYPE_CREDIT;
+        $delta    = $isCredit ? $validated['points'] : -$validated['points'];
+
+        if (!$isCredit && $validated['points'] > $loyaltyCard->points) {
+            return back()->withInput()->withErrors([
+                'points' => "Solde insuffisant : la carte ne dispose que de {$loyaltyCard->points} point(s).",
+            ]);
+        }
+
+        DB::transaction(function () use ($loyaltyCard, $delta, $isCredit, $validated) {
+            $loyaltyCard->increment('points', $delta);
+            $loyaltyCard->refresh();
+
+            LoyaltyPointAdjustment::create([
+                'loyalty_card_id' => $loyaltyCard->id,
+                'user_id'         => auth()->id(),
+                'type'            => $validated['type'],
+                'points'          => $validated['points'],
+                'balance_after'   => $loyaltyCard->points,
+                'reason'          => $validated['reason'] ?? null,
+            ]);
+        });
+
+        $verb = $isCredit ? 'crédités' : 'débités';
+
+        return back()->with('success', "{$validated['points']} point(s) {$verb}. Nouveau solde : {$loyaltyCard->points} point(s).");
     }
 
     /**
