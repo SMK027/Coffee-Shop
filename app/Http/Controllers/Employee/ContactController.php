@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Employee;
 
 use App\Http\Controllers\Controller;
+use App\Mail\ContactReplyMail;
 use App\Models\Contact;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 
 class ContactController extends Controller
 {
@@ -46,8 +48,11 @@ class ContactController extends Controller
             'replied_at'  => now(),
         ]);
 
+        // Envoie la réponse par email à l'auteur du message de contact.
+        Mail::to($contact->email)->send(new ContactReplyMail($contact, $validated['reply']));
+
         return redirect()->route('employee.contacts.show', $contact)
-            ->with('success', 'Réponse enregistrée avec succès.');
+            ->with('success', "Réponse enregistrée et envoyée par email à {$contact->email}.");
     }
 
     public function archive(Contact $contact)
