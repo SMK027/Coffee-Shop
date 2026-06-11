@@ -19,12 +19,12 @@
                     <span class="text-sm font-medium text-stone-700">Le client passe sa carte de fidélité</span>
                 </label>
 
-                {{-- Commande employé : réduction immédiate de 15% --}}
+                {{-- Commande salarié : réduction immédiate de 15% --}}
                 <label class="flex items-center gap-3 cursor-pointer select-none">
                     <input type="checkbox" name="is_employee_order" id="is_employee_order" value="1"
                            {{ old('is_employee_order') ? 'checked' : '' }}
                            class="h-4 w-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500">
-                    <span class="text-sm font-medium text-stone-700">Commande employé (réduction immédiate de 15%)</span>
+                    <span class="text-sm font-medium text-stone-700">Commande salarié (réduction immédiate de 15%)</span>
                 </label>
 
                 {{-- Bloc carte de fidélité --}}
@@ -107,7 +107,7 @@
 
                 <div class="mt-5 pt-4 border-t border-stone-100 space-y-1.5 text-sm">
                     <div id="discount-line" class="hidden justify-between text-green-700">
-                        <span>Réduction employé (-15%)</span>
+                        <span>Réduction salarié (-15%)</span>
                         <span id="discount-display">0,00 €</span>
                     </div>
                     <div class="flex justify-between font-semibold">
@@ -473,7 +473,7 @@
                 total.toFixed(2).replace('.', ',') + ' €';
         }
 
-        /* ── Recalcul lors du basculement « commande employé » ── */
+        /* ── Recalcul lors du basculement « commande salarié » ── */
         (function () {
             const empToggle = document.getElementById('is_employee_order');
             if (empToggle) empToggle.addEventListener('change', updateTotal);

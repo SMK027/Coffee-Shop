@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $title ?? 'Espace Employé' }} | {{ config('app.name', 'Le Coffee Shop') }}</title>
+    <title>{{ $title ?? 'Espace Salarié' }} | {{ config('app.name', 'Le Coffee Shop') }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="bg-stone-100 font-sans">
@@ -37,7 +37,7 @@
                     </svg>
                 </button>
             </div>
-            <p class="px-6 pt-2 pb-1 text-amber-300 text-xs">Espace Employé</p>
+            <p class="px-6 pt-2 pb-1 text-amber-300 text-xs">Espace Salarié</p>
 
             <nav class="flex-1 overflow-y-auto px-3 py-3">
                 @php
@@ -66,7 +66,7 @@
                         </li>
                     @endforeach
 
-                    {{-- Gestion des employés : admin uniquement --}}
+                    {{-- Gestion des salariés : admin uniquement --}}
                     <li>
                         <a href="{{ route('employee.users.index') }}"
                            class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium
@@ -74,7 +74,7 @@
                             <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
                             </svg>
-                            Employés
+                            Salariés
                         </a>
                     </li>
                 </ul>
@@ -121,7 +121,7 @@
                 </button>
 
                 <div class="flex-1 min-w-0">
-                    <h1 class="text-lg sm:text-xl font-semibold text-stone-800 truncate">{{ $title ?? 'Espace Employé' }}</h1>
+                    <h1 class="text-lg sm:text-xl font-semibold text-stone-800 truncate">{{ $title ?? 'Espace Salarié' }}</h1>
                     @isset($subtitle)
                         <p class="text-xs sm:text-sm text-stone-500 truncate">{{ $subtitle }}</p>
                     @endisset

@@ -44,7 +44,7 @@ class LoyaltyCard extends Model
     }
 
     /**
-     * Compte employé (salarié) auquel la carte est éventuellement rattachée.
+     * Compte salarié (salarié) auquel la carte est éventuellement rattachée.
      */
     public function user(): BelongsTo
     {
@@ -53,7 +53,7 @@ class LoyaltyCard extends Model
 
     /**
      * La carte bénéficie des avantages salariés tant qu'elle est rattachée
-     * à un compte employé existant. Le lien est rompu automatiquement à la
+     * à un compte salarié existant. Le lien est rompu automatiquement à la
      * suppression du compte (clé étrangère nullOnDelete).
      */
     public function hasEmployeeBenefits(): bool

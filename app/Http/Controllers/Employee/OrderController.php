@@ -114,7 +114,7 @@ class OrderController extends Controller
                 ]);
             }
 
-            // La carte d'un salarié déclenche automatiquement la réduction employé.
+            // La carte d'un salarié déclenche automatiquement la réduction salarié.
             if ($loyaltyCard->hasEmployeeBenefits()) {
                 $isEmployeeOrder = true;
             }
@@ -144,7 +144,7 @@ class OrderController extends Controller
             ];
         }
 
-        // Réduction immédiate de 15% pour les commandes des employés.
+        // Réduction immédiate de 15% pour les commandes des salariés.
         $discount = $isEmployeeOrder ? round($total * Order::EMPLOYEE_DISCOUNT_RATE, 2) : 0;
         $total    = round($total - $discount, 2);
 

@@ -41,7 +41,7 @@ class User extends Authenticatable
     }
 
     /**
-     * Cartes de fidélité rattachées à ce compte employé (avantages salariés).
+     * Cartes de fidélité rattachées à ce compte salarié (avantages salariés).
      */
     public function loyaltyCards(): \Illuminate\Database\Eloquent\Relations\HasMany
     {

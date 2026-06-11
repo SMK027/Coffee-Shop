@@ -117,7 +117,7 @@ class LoyaltyController extends Controller
     }
 
     /**
-     * Recherche d'employés pour l'autocomplétion (rattachement carte ↔ salarié).
+     * Recherche d'salariés pour l'autocomplétion (rattachement carte ↔ salarié).
      * Réservé aux super administrateurs.
      */
     public function searchEmployees(Request $request)
@@ -143,7 +143,7 @@ class LoyaltyController extends Controller
 
     /**
      * Active ou désactive les avantages salariés d'une carte en la rattachant
-     * (ou non) à un compte employé. Réservé aux super administrateurs.
+     * (ou non) à un compte salarié. Réservé aux super administrateurs.
      */
     public function updateEmployeeBenefits(Request $request, LoyaltyCard $loyaltyCard)
     {
@@ -154,7 +154,7 @@ class LoyaltyController extends Controller
         $validated = $request->validate([
             'user_id' => [Rule::requiredIf($hasBenefits), 'nullable', 'integer', 'exists:users,id'],
         ], [
-            'user_id.required' => 'Veuillez sélectionner l\'employé titulaire de la carte.',
+            'user_id.required' => 'Veuillez sélectionner l\'salarié titulaire de la carte.',
         ]);
 
         if ($hasBenefits) {

@@ -37,7 +37,7 @@ class Order extends Model
         'cancelled' => 'Annulée',
     ];
 
-    /** Taux de réduction immédiate accordé sur les commandes des employés. */
+    /** Taux de réduction immédiate accordé sur les commandes des salariés. */
     const EMPLOYEE_DISCOUNT_RATE = 0.15;
 
     public function items(): HasMany

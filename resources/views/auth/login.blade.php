@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connexion Employés | {{ config('app.name', 'Le Coffee Shop') }}</title>
+    <title>Connexion Salariés | {{ config('app.name', 'Le Coffee Shop') }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="bg-amber-950 min-h-screen flex items-center justify-center p-4">
@@ -13,7 +13,7 @@
                 <path d="M20 3H4v10c0 2.21 1.79 4 4 4h6c2.21 0 4-1.79 4-4v-3h2c1.11 0 2-.89 2-2V5c0-1.11-.89-2-2-2zm0 5h-2V5h2v3zM4 19h16v2H4z"/>
                 <path d="M18 3c0-1.1-.9-2-2-2H8C6.9 1 6 1.9 6 3v2h12V3z"/>
             </svg>
-            <h1 class="text-2xl font-bold text-white">Espace Employé</h1>
+            <h1 class="text-2xl font-bold text-white">Espace Salarié</h1>
             <p class="text-amber-300 text-sm mt-1">Le Coffee Shop</p>
         </div>
 

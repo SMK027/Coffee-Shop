@@ -107,7 +107,7 @@
             <div class="bg-white rounded-xl shadow-sm border border-stone-100 p-4 sm:p-6">
                 <h2 class="font-semibold text-stone-800 mb-2">Avantages salariés</h2>
                 <p class="text-sm text-stone-500 mb-4">
-                    Rattachez cette carte à un compte employé pour appliquer automatiquement
+                    Rattachez cette carte à un compte salarié pour appliquer automatiquement
                     la réduction salarié de 15% sur ses commandes. Les avantages sont retirés
                     automatiquement si le compte est supprimé.
                 </p>
@@ -122,11 +122,11 @@
                     </label>
 
                     <div id="employee-picker" class="{{ $loyaltyCard->hasEmployeeBenefits() ? '' : 'hidden' }} relative mb-4">
-                        <label for="employee_search" class="block text-sm font-medium text-stone-700 mb-1.5">Employé titulaire</label>
+                        <label for="employee_search" class="block text-sm font-medium text-stone-700 mb-1.5">Salarié titulaire</label>
                         <input type="hidden" name="user_id" id="employee_user_id" value="{{ $loyaltyCard->user_id }}">
                         <input type="text" id="employee_search" autocomplete="off"
                                value="{{ $loyaltyCard->user ? $loyaltyCard->user->name . ' · ' . $loyaltyCard->user->email : '' }}"
-                               placeholder="Rechercher un employé…"
+                               placeholder="Rechercher un salarié…"
                                class="w-full border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
                         <ul id="employee-dropdown" class="hidden absolute z-20 w-full bg-white border border-stone-200 rounded-lg shadow-lg mt-1 max-h-56 overflow-y-auto"></ul>
                         @error('user_id')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
@@ -289,7 +289,7 @@
         function render(results) {
             dropdown.innerHTML = '';
             if (!results.length) {
-                dropdown.innerHTML = '<li class="px-3 py-2.5 text-sm text-stone-400 italic">Aucun employé trouvé</li>';
+                dropdown.innerHTML = '<li class="px-3 py-2.5 text-sm text-stone-400 italic">Aucun salarié trouvé</li>';
                 dropdown.classList.remove('hidden');
                 return;
             }

@@ -1,8 +1,8 @@
-<x-employee-layout title="Gestion des employés">
+<x-employee-layout title="Gestion des salariés">
     <x-slot name="headerActions">
         <a href="{{ route('employee.users.create') }}" class="bg-amber-700 hover:bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            Nouvel employé
+            Nouvel salarié
         </a>
     </x-slot>
 
@@ -23,7 +23,7 @@
             name="q"
             id="users-search-input"
             value="{{ request('q') }}"
-            placeholder="Rechercher un employé (nom, identifiant, email, rôle)…"
+            placeholder="Rechercher un salarié (nom, identifiant, email, rôle)…"
             oninput="clearTimeout(this._debounce); this._debounce = setTimeout(() => this.form.submit(), 300);"
             class="flex-1 min-w-[220px] border border-stone-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
             autocomplete="off"
@@ -41,7 +41,7 @@
                 <svg class="w-10 h-10 mx-auto mb-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
                 </svg>
-                <p class="text-sm">Aucun employé trouvé.</p>
+                <p class="text-sm">Aucun salarié trouvé.</p>
             </div>
         @else
             {{-- Tableau desktop --}}
@@ -49,7 +49,7 @@
                 <table class="w-full text-sm">
                     <thead class="bg-stone-50 border-b border-stone-100">
                         <tr>
-                            <th class="px-5 py-3 text-left font-medium text-stone-600">Employé</th>
+                            <th class="px-5 py-3 text-left font-medium text-stone-600">Salarié</th>
                             <th class="px-5 py-3 text-left font-medium text-stone-600">Identifiant</th>
                             <th class="px-5 py-3 text-left font-medium text-stone-600">Email</th>
                             <th class="px-5 py-3 text-left font-medium text-stone-600">Rôle</th>
@@ -130,7 +130,7 @@
         <p class="text-xs text-amber-700">
             <strong>Rôles :</strong>
             <strong>Super Admin</strong> — accès complet, peut gérer les autres super admins.
-            <strong>Admin</strong> — accès à l'espace employé complet.
+            <strong>Admin</strong> — accès à l'espace salarié complet.
         </p>
     </div>
 

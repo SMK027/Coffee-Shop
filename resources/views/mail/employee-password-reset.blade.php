@@ -31,14 +31,14 @@
 <div class="wrap">
     <div class="card">
         <div class="header">
-            <h1>☕ Coffee Shop — Espace Employé</h1>
+            <h1>☕ Coffee Shop — Espace Salarié</h1>
             <p>Réinitialisation de mot de passe</p>
         </div>
         <div class="body">
             <p>Bonjour <strong>{{ $employee->name }}</strong>,</p>
             @if($isNewAccount)
             <p>
-                Un compte employé vient d'être créé pour vous sur l'espace <strong>Coffee Shop</strong>.
+                Un compte salarié vient d'être créé pour vous sur l'espace <strong>Coffee Shop</strong>.
                 Cliquez sur le bouton ci-dessous pour définir votre mot de passe et accéder à votre espace.
             </p>
             @else

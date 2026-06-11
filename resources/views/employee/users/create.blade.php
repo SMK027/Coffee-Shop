@@ -1,4 +1,4 @@
-<x-employee-layout title="Nouvel employé">
+<x-employee-layout title="Nouvel salarié">
     <x-slot name="headerActions">
         <a href="{{ route('employee.users.index') }}" class="text-stone-500 hover:text-stone-700 text-sm">← Retour</a>
     </x-slot>

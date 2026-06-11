@@ -9,13 +9,13 @@ use Symfony\Component\HttpFoundation\Response;
 class EnsureIsEmployee
 {
     /**
-     * Vérifie que l'utilisateur connecté possède un rôle d'employé (admin ou superadmin).
+     * Vérifie que l'utilisateur connecté possède un rôle d'salarié (admin ou superadmin).
      * Redirige vers la page d'accueil avec un message d'erreur sinon.
      */
     public function handle(Request $request, Closure $next): Response
     {
         if (!$request->user()?->isAdmin()) {
-            abort(403, 'Accès réservé aux employés.');
+            abort(403, 'Accès réservé aux salariés.');
         }
 
         return $next($request);

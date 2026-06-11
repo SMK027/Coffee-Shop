@@ -30,7 +30,7 @@
                         <span>{{ number_format($order->total_amount + $order->discount_amount, 2, ',', ' ') }} €</span>
                     </div>
                     <div class="flex justify-between text-sm text-green-700">
-                        <span>Réduction employé (-15%)</span>
+                        <span>Réduction salarié (-15%)</span>
                         <span>-{{ number_format($order->discount_amount, 2, ',', ' ') }} €</span>
                     </div>
                     @endif
@@ -60,7 +60,7 @@
                     @if($order->is_employee_order)
                     <div>
                         <dt class="text-stone-500">Type</dt>
-                        <dd class="font-medium text-green-700">Commande employé (-15%)</dd>
+                        <dd class="font-medium text-green-700">Commande salarié (-15%)</dd>
                     </div>
                     @endif
                     @if($order->loyaltyCard)

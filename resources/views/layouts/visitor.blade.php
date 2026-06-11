@@ -30,11 +30,11 @@
                     <a href="{{ route('contact') }}" class="text-amber-100 hover:text-white transition-colors font-medium {{ request()->routeIs('contact') ? 'text-white border-b-2 border-amber-300' : '' }}">Contact</a>
                     @auth
                         <a href="{{ route('employee.dashboard') }}" class="bg-amber-600 hover:bg-amber-500 text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm">
-                            Espace Employé
+                            Espace Salarié
                         </a>
                     @else
                         <a href="{{ route('login') }}" class="bg-amber-700 hover:bg-amber-600 text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm border border-amber-500">
-                            Connexion Employés
+                            Connexion Salariés
                         </a>
                     @endauth
                 </div>
@@ -55,9 +55,9 @@
                     <a href="{{ route('loyalty.create') }}" class="text-amber-100 hover:text-white py-2 font-medium">Fidélité</a>
                     <a href="{{ route('contact') }}" class="text-amber-100 hover:text-white py-2 font-medium">Contact</a>
                     @auth
-                        <a href="{{ route('employee.dashboard') }}" class="text-amber-100 hover:text-white py-2 font-medium">Espace Employé</a>
+                        <a href="{{ route('employee.dashboard') }}" class="text-amber-100 hover:text-white py-2 font-medium">Espace Salarié</a>
                     @else
-                        <a href="{{ route('login') }}" class="text-amber-100 hover:text-white py-2 font-medium">Connexion Employés</a>
+                        <a href="{{ route('login') }}" class="text-amber-100 hover:text-white py-2 font-medium">Connexion Salariés</a>
                     @endauth
                 </div>
             </div>
