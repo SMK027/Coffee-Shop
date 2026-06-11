@@ -9,12 +9,15 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Order extends Model
 {
     protected $fillable = [
-        'customer_name', 'status', 'notes', 'total_amount', 'handled_by', 'completed_at',
+        'customer_name', 'loyalty_card_id', 'status', 'notes', 'total_amount',
+        'handled_by', 'completed_at', 'points_credited', 'points_awarded',
     ];
 
     protected $casts = [
-        'total_amount' => 'decimal:2',
-        'completed_at' => 'datetime',
+        'total_amount'    => 'decimal:2',
+        'completed_at'    => 'datetime',
+        'points_credited' => 'boolean',
+        'points_awarded'  => 'integer',
     ];
 
     const STATUS_PENDING   = 'pending';
@@ -41,6 +44,11 @@ class Order extends Model
         return $this->belongsTo(User::class, 'handled_by');
     }
 
+    public function loyaltyCard(): BelongsTo
+    {
+        return $this->belongsTo(LoyaltyCard::class);
+    }
+
     public function getStatusLabelAttribute(): string
     {
         return self::STATUS_LABELS[$this->status] ?? $this->status;
@@ -49,5 +57,29 @@ class Order extends Model
     public function scopeActive($query)
     {
         return $query->whereNotIn('status', ['completed', 'cancelled']);
+    }
+
+    /**
+     * Crédite les points de fidélité sur la carte raccordée à la commande.
+     *
+     * À appeler une fois la commande marquée comme terminée. Chaque euro
+     * dépensé donne lieu à un crédit (ratio configurable par les super admins).
+     * Sécurisé contre le double-crédit via le champ points_credited.
+     */
+    public function creditLoyaltyPoints(): void
+    {
+        if ($this->points_credited || !$this->loyalty_card_id) {
+            return;
+        }
+
+        $ratio  = \App\Models\Setting::pointsPerEuro();
+        $points = (int) floor((float) $this->total_amount) * $ratio;
+
+        $this->loyaltyCard()->increment('points', $points);
+
+        $this->forceFill([
+            'points_credited' => true,
+            'points_awarded'  => $points,
+        ])->save();
     }
 }

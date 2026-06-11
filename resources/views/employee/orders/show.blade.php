@@ -45,6 +45,18 @@
                         <dt class="text-stone-500">Client</dt>
                         <dd class="font-medium text-stone-800">{{ $order->customer_name }}</dd>
                     </div>
+                    @if($order->loyaltyCard)
+                    <div>
+                        <dt class="text-stone-500">Carte de fidélité</dt>
+                        <dd class="font-medium text-amber-700 font-mono">{{ chunk_split($order->loyaltyCard->card_number, 4, ' ') }}</dd>
+                    </div>
+                    @if($order->points_credited)
+                    <div>
+                        <dt class="text-stone-500">Points crédités</dt>
+                        <dd class="font-medium text-green-700">+{{ $order->points_awarded }} points</dd>
+                    </div>
+                    @endif
+                    @endif
                     <div>
                         <dt class="text-stone-500">Créée le</dt>
                         <dd class="text-stone-800">{{ $order->created_at->format('d/m/Y à H:i') }}</dd>

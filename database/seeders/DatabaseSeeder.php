@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             AdminSeeder::class,
             DrinkSeeder::class,
             TestimonialSeeder::class,
+            SettingSeeder::class,
         ]);
     }
 }

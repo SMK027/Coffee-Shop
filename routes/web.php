@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\LoyaltyController;
 use App\Http\Controllers\Employee\DashboardController;
 use App\Http\Controllers\Employee\OrderController;
 use App\Http\Controllers\Employee\DrinkController;
@@ -8,6 +9,7 @@ use App\Http\Controllers\Employee\TestimonialController;
 use App\Http\Controllers\Employee\ContactController;
 use App\Http\Controllers\Employee\StatsController;
 use App\Http\Controllers\Employee\UserController;
+use App\Http\Controllers\Employee\LoyaltyController as EmployeeLoyaltyController;
 use App\Http\Controllers\Auth\EmployeePasswordResetController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
@@ -22,6 +24,12 @@ Route::get('/menu', [HomeController::class, 'menu'])->name('menu');
 Route::get('/contact', [HomeController::class, 'contact'])->name('contact');
 Route::post('/contact', [HomeController::class, 'submitContact'])->name('contact.submit');
 Route::post('/temoignages', [HomeController::class, 'submitTestimonial'])->name('testimonial.submit');
+
+// Carte de fidélité (publique)
+Route::get('/fidelite', [LoyaltyController::class, 'create'])->name('loyalty.create');
+Route::post('/fidelite', [LoyaltyController::class, 'store'])->name('loyalty.store');
+Route::get('/fidelite/mes-points', [LoyaltyController::class, 'showBalanceForm'])->name('loyalty.balance.form');
+Route::post('/fidelite/mes-points', [LoyaltyController::class, 'balance'])->name('loyalty.balance');
 
 /*
 |--------------------------------------------------------------------------
@@ -62,6 +70,12 @@ Route::prefix('espace-employe')->name('employee.')->middleware(['auth', 'employe
 
     // Statistiques
     Route::get('/statistiques', [StatsController::class, 'index'])->name('stats.index');
+
+    // Fidélité
+    Route::get('/fidelite', [EmployeeLoyaltyController::class, 'index'])->name('loyalty.index');
+    Route::get('/fidelite/reglages', [EmployeeLoyaltyController::class, 'settings'])->name('loyalty.settings');
+    Route::patch('/fidelite/reglages', [EmployeeLoyaltyController::class, 'updateSettings'])->name('loyalty.settings.update');
+    Route::get('/fidelite/{loyaltyCard}', [EmployeeLoyaltyController::class, 'show'])->name('loyalty.show');
 
     // Gestion des employés (admin uniquement)
     Route::get('/employes', [UserController::class, 'index'])->name('users.index');

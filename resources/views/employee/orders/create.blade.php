@@ -10,9 +10,36 @@
             {{-- Informations client --}}
             <div class="bg-white rounded-xl shadow-sm border border-stone-100 p-6 space-y-5">
                 <h2 class="font-semibold text-stone-800">Informations client</h2>
-                <div>
+
+                {{-- Choix : carte de fidélité ou non --}}
+                <label class="flex items-center gap-3 cursor-pointer select-none">
+                    <input type="checkbox" name="use_loyalty" id="use_loyalty" value="1"
+                           {{ old('use_loyalty') ? 'checked' : '' }}
+                           class="h-4 w-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500">
+                    <span class="text-sm font-medium text-stone-700">Le client passe sa carte de fidélité</span>
+                </label>
+
+                {{-- Bloc carte de fidélité --}}
+                <div id="loyalty-block" class="{{ old('use_loyalty') ? '' : 'hidden' }} grid sm:grid-cols-2 gap-5 bg-amber-50 border border-amber-200 rounded-lg p-4">
+                    <div>
+                        <label for="loyalty_card_number" class="block text-sm font-medium text-stone-700 mb-1.5">Numéro de carte</label>
+                        <input type="text" name="loyalty_card_number" id="loyalty_card_number" inputmode="numeric" maxlength="20"
+                               value="{{ old('loyalty_card_number') }}"
+                               class="w-full border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none font-mono tracking-wider">
+                        @error('loyalty_card_number')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                    </div>
+                    <div>
+                        <label for="loyalty_pin" class="block text-sm font-medium text-stone-700 mb-1.5">Code PIN</label>
+                        <input type="password" name="loyalty_pin" id="loyalty_pin" inputmode="numeric" maxlength="6" autocomplete="off"
+                               class="w-full border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none tracking-widest">
+                        @error('loyalty_pin')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                    </div>
+                </div>
+
+                {{-- Nom du client (masqué si carte passée) --}}
+                <div id="customer-name-block" class="{{ old('use_loyalty') ? 'hidden' : '' }}">
                     <label for="customer_name" class="block text-sm font-medium text-stone-700 mb-1.5">Nom du client *</label>
-                    <input type="text" name="customer_name" id="customer_name" required maxlength="100"
+                    <input type="text" name="customer_name" id="customer_name" maxlength="100"
                            value="{{ old('customer_name') }}"
                            class="w-full border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
                     @error('customer_name')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
@@ -105,6 +132,25 @@
     (function () {
         const drinks = @json($drinksData);
         let itemCount = 1;
+
+        /* ── Bascule carte de fidélité / nom du client ─────────── */
+        (function () {
+            const toggle      = document.getElementById('use_loyalty');
+            const loyaltyBlk  = document.getElementById('loyalty-block');
+            const nameBlk     = document.getElementById('customer-name-block');
+            const nameInput   = document.getElementById('customer_name');
+
+            function sync() {
+                const useLoyalty = toggle.checked;
+                loyaltyBlk.classList.toggle('hidden', !useLoyalty);
+                nameBlk.classList.toggle('hidden', useLoyalty);
+                // Le nom n'est requis que si la carte n'est pas utilisée
+                if (nameInput) nameInput.required = !useLoyalty;
+            }
+
+            toggle.addEventListener('change', sync);
+            sync();
+        })();
 
         /* ── Filtrage ─────────────────────────────────────────── */
         function filterDrinks(query) {

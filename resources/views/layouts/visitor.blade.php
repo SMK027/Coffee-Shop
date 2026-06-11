@@ -26,6 +26,7 @@
                 <div class="hidden md:flex items-center gap-8">
                     <a href="{{ route('home') }}" class="text-amber-100 hover:text-white transition-colors font-medium {{ request()->routeIs('home') ? 'text-white border-b-2 border-amber-300' : '' }}">Accueil</a>
                     <a href="{{ route('menu') }}" class="text-amber-100 hover:text-white transition-colors font-medium {{ request()->routeIs('menu') ? 'text-white border-b-2 border-amber-300' : '' }}">Notre Menu</a>
+                    <a href="{{ route('loyalty.create') }}" class="text-amber-100 hover:text-white transition-colors font-medium {{ request()->routeIs('loyalty.*') ? 'text-white border-b-2 border-amber-300' : '' }}">Fidélité</a>
                     <a href="{{ route('contact') }}" class="text-amber-100 hover:text-white transition-colors font-medium {{ request()->routeIs('contact') ? 'text-white border-b-2 border-amber-300' : '' }}">Contact</a>
                     @auth
                         <a href="{{ route('employee.dashboard') }}" class="bg-amber-600 hover:bg-amber-500 text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm">
@@ -51,6 +52,7 @@
                 <div class="flex flex-col gap-2">
                     <a href="{{ route('home') }}" class="text-amber-100 hover:text-white py-2 font-medium">Accueil</a>
                     <a href="{{ route('menu') }}" class="text-amber-100 hover:text-white py-2 font-medium">Notre Menu</a>
+                    <a href="{{ route('loyalty.create') }}" class="text-amber-100 hover:text-white py-2 font-medium">Fidélité</a>
                     <a href="{{ route('contact') }}" class="text-amber-100 hover:text-white py-2 font-medium">Contact</a>
                     @auth
                         <a href="{{ route('employee.dashboard') }}" class="text-amber-100 hover:text-white py-2 font-medium">Espace Employé</a>
