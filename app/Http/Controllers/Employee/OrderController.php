@@ -10,6 +10,7 @@ use App\Models\LoyaltyDiscount;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -46,7 +47,7 @@ class OrderController extends Controller
 
     public function show(Order $order)
     {
-        $order->load('items.drink', 'handler', 'loyaltyDiscount');
+        $order->load('items.drink', 'handler', 'loyaltyCard', 'loyaltyDiscounts');
         $statusLabels = Order::STATUS_LABELS;
 
         return view('employee.orders.show', compact('order', 'statusLabels'));
@@ -90,27 +91,50 @@ class OrderController extends Controller
         ]);
     }
 
+    public function verifyCardPin(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'card_number' => ['required', 'string', 'max:20'],
+            'pin'         => ['required', 'string', 'max:10'],
+        ]);
+
+        $cardNumber = str_replace(' ', '', $validated['card_number']);
+        $card = LoyaltyCard::where('card_number', $cardNumber)->first();
+
+        if (!$card) {
+            return response()->json(['valid' => false, 'message' => 'Carte introuvable.']);
+        }
+
+        if (!Hash::check($validated['pin'], $card->pin)) {
+            return response()->json(['valid' => false, 'message' => 'Code incorrect.']);
+        }
+
+        return response()->json(['valid' => true]);
+    }
+
     public function store(Request $request)
     {
         $useLoyalty      = $request->boolean('use_loyalty');
         $isEmployeeOrder = $request->boolean('is_employee_order');
 
         $validated = $request->validate([
-            'use_loyalty'        => ['nullable', 'boolean'],
-            'is_employee_order'  => ['nullable', 'boolean'],
-            'customer_name'      => [Rule::requiredIf(!$useLoyalty), 'nullable', 'string', 'max:100'],
-            'loyalty_card_number'=> [Rule::requiredIf($useLoyalty), 'nullable', 'string', 'max:20'],
-            'loyalty_discount_id'=> ['nullable', 'integer', 'exists:loyalty_discounts,id'],
-            'notes'              => ['nullable', 'string', 'max:500'],
-            'items'             => ['required', 'array', 'min:1'],
-            'items.*.drink_id'  => ['required', 'integer', 'exists:drinks,id'],
-            'items.*.quantity'  => ['required', 'integer', 'min:1', 'max:20'],
+            'use_loyalty'            => ['nullable', 'boolean'],
+            'is_employee_order'      => ['nullable', 'boolean'],
+            'customer_name'          => [Rule::requiredIf(!$useLoyalty), 'nullable', 'string', 'max:100'],
+            'loyalty_card_number'    => [Rule::requiredIf($useLoyalty), 'nullable', 'string', 'max:20'],
+            'loyalty_discount_ids'   => ['nullable', 'array'],
+            'loyalty_discount_ids.*' => ['integer', 'exists:loyalty_discounts,id'],
+            'card_pin'               => ['nullable', 'string', 'max:10'],
+            'notes'                  => ['nullable', 'string', 'max:500'],
+            'items'                  => ['required', 'array', 'min:1'],
+            'items.*.drink_id'       => ['required', 'integer', 'exists:drinks,id'],
+            'items.*.quantity'       => ['required', 'integer', 'min:1', 'max:20'],
         ], [
             'customer_name.required'       => 'Le nom du client est requis (ou passez une carte de fidélité).',
             'loyalty_card_number.required' => 'Le numéro de carte de fidélité est requis.',
         ]);
 
-        // Rattachement éventuel à une carte de fidélité (identification par numéro de carte uniquement).
+        // Rattachement éventuel à une carte de fidélité
         $loyaltyCard = null;
         if ($useLoyalty) {
             $cardNumber  = str_replace(' ', '', $validated['loyalty_card_number']);
@@ -122,58 +146,67 @@ class OrderController extends Controller
                 ]);
             }
 
-            // La carte d'un salarié déclenche automatiquement la réduction salarié.
             if ($loyaltyCard->hasEmployeeBenefits()) {
                 $isEmployeeOrder = true;
             }
         }
 
-        $loyaltyDiscount = null;
-        if (!empty($validated['loyalty_discount_id'])) {
+        // Sélection de réductions fidélité (plusieurs possibles)
+        $discountIds      = array_values(array_filter((array) ($validated['loyalty_discount_ids'] ?? [])));
+        $loyaltyDiscounts = collect();
+
+        if (!empty($discountIds)) {
             if (!$useLoyalty || !$loyaltyCard) {
                 throw ValidationException::withMessages([
-                    'loyalty_discount_id' => 'Une réduction fidélité requiert une carte valide.',
+                    'loyalty_discount_ids' => 'Les réductions fidélité nécessitent une carte valide.',
                 ]);
             }
 
-            $loyaltyDiscount = LoyaltyDiscount::find($validated['loyalty_discount_id']);
-
-            if (!$loyaltyDiscount || !$loyaltyDiscount->isValidForUse()) {
+            // Vérification du code de la carte
+            $pin = $validated['card_pin'] ?? '';
+            if (!$pin || !Hash::check($pin, $loyaltyCard->pin)) {
                 throw ValidationException::withMessages([
-                    'loyalty_discount_id' => 'Cette réduction n\'est plus valide.',
+                    'card_pin' => 'Code de carte incorrect ou manquant.',
                 ]);
             }
 
-            if ($loyaltyDiscount->employee_only && !$loyaltyCard->hasEmployeeBenefits()) {
-                throw ValidationException::withMessages([
-                    'loyalty_discount_id' => 'Cette réduction est réservée aux salariés.',
-                ]);
+            $loyaltyDiscounts = LoyaltyDiscount::whereIn('id', $discountIds)->get();
+
+            $totalPointsCost = 0;
+            foreach ($loyaltyDiscounts as $discount) {
+                if (!$discount->isValidForUse()) {
+                    throw ValidationException::withMessages([
+                        'loyalty_discount_ids' => "La réduction « {$discount->name} » n'est plus valide.",
+                    ]);
+                }
+                if ($discount->employee_only && !$loyaltyCard->hasEmployeeBenefits()) {
+                    throw ValidationException::withMessages([
+                        'loyalty_discount_ids' => "La réduction « {$discount->name} » est réservée aux salariés.",
+                    ]);
+                }
+                $totalPointsCost += $discount->points_cost;
             }
 
-            if ($loyaltyCard->points < $loyaltyDiscount->points_cost) {
+            if ($loyaltyCard->points < $totalPointsCost) {
                 throw ValidationException::withMessages([
-                    'loyalty_discount_id' => 'Le client n\'a pas assez de points pour cette réduction.',
+                    'loyalty_discount_ids' => 'Points insuffisants pour appliquer toutes les réductions sélectionnées.',
                 ]);
             }
         }
 
-        // Filtre les lignes sans boisson sélectionnée (sécurité côté serveur)
-        $rawItems = collect($validated['items'])->filter(
-            fn($item) => !empty($item['drink_id'])
-        );
+        // Filtre les lignes sans boisson sélectionnée
+        $rawItems = collect($validated['items'])->filter(fn ($item) => !empty($item['drink_id']));
 
         if ($rawItems->isEmpty()) {
-            return back()
-                ->withInput()
-                ->withErrors(['items' => 'Veuillez sélectionner au moins une boisson.']);
+            return back()->withInput()->withErrors(['items' => 'Veuillez sélectionner au moins une boisson.']);
         }
 
-        $total      = 0;
+        $subtotal   = 0;
         $orderItems = [];
 
         foreach ($rawItems as $item) {
-            $drink      = Drink::findOrFail($item['drink_id']);
-            $total      += $drink->price * $item['quantity'];
+            $drink        = Drink::findOrFail($item['drink_id']);
+            $subtotal    += $drink->price * $item['quantity'];
             $orderItems[] = [
                 'drink_id'   => $drink->id,
                 'quantity'   => (int) $item['quantity'],
@@ -181,77 +214,102 @@ class OrderController extends Controller
             ];
         }
 
-        // Réduction immédiate de 15% pour les commandes des salariés.
-        $employeeDiscount = $isEmployeeOrder ? round($total * Order::EMPLOYEE_DISCOUNT_RATE, 2) : 0;
-        $subtotalAfterEmployeeDiscount = round($total - $employeeDiscount, 2);
+        $employeeDiscount      = $isEmployeeOrder ? round($subtotal * Order::EMPLOYEE_DISCOUNT_RATE, 2) : 0;
+        $subtotalAfterEmployee = round($subtotal - $employeeDiscount, 2);
 
-        $loyaltyDiscountAmount = 0;
-        if ($loyaltyDiscount) {
-            if ($loyaltyDiscount->discount_type === LoyaltyDiscount::TYPE_PERCENT) {
-                $loyaltyDiscountAmount = round($subtotalAfterEmployeeDiscount * ((float) $loyaltyDiscount->discount_value / 100), 2);
+        // Calcul des réductions fidélité (application séquentielle sur le solde restant)
+        $discountRows       = [];
+        $totalLoyaltyPoints = 0;
+        $totalLoyaltyAmount = 0;
+        $remaining          = $subtotalAfterEmployee;
+
+        foreach ($loyaltyDiscounts as $discount) {
+            if ($discount->discount_type === LoyaltyDiscount::TYPE_PERCENT) {
+                $amount = round($remaining * ((float) $discount->discount_value / 100), 2);
             } else {
-                $loyaltyDiscountAmount = min($subtotalAfterEmployeeDiscount, (float) $loyaltyDiscount->discount_value);
-                $loyaltyDiscountAmount = round($loyaltyDiscountAmount, 2);
+                $amount = round(min($remaining, (float) $discount->discount_value), 2);
             }
+            $remaining = max(0.0, $remaining - $amount);
+            $discountRows[] = [
+                'loyalty_discount_id' => $discount->id,
+                'points_spent'        => $discount->points_cost,
+                'discount_amount'     => $amount,
+            ];
+            $totalLoyaltyPoints += $discount->points_cost;
+            $totalLoyaltyAmount += $amount;
         }
 
-        $total = round(max(0, $subtotalAfterEmployeeDiscount - $loyaltyDiscountAmount), 2);
+        $totalLoyaltyAmount = round($totalLoyaltyAmount, 2);
+        $total              = round(max(0.0, $subtotalAfterEmployee - $totalLoyaltyAmount), 2);
 
         $order = DB::transaction(function () use (
-            $validated,
-            $loyaltyCard,
-            $isEmployeeOrder,
-            $total,
-            $employeeDiscount,
-            $loyaltyDiscount,
-            $loyaltyDiscountAmount,
-            $orderItems
+            $validated, $loyaltyCard, $isEmployeeOrder, $total,
+            $employeeDiscount, $loyaltyDiscounts, $discountRows,
+            $totalLoyaltyPoints, $totalLoyaltyAmount, $orderItems
         ) {
             $lockedCard = null;
             if ($loyaltyCard) {
                 $lockedCard = LoyaltyCard::whereKey($loyaltyCard->id)->lockForUpdate()->first();
             }
 
-            $lockedDiscount = null;
-            if ($loyaltyDiscount) {
-                $lockedDiscount = LoyaltyDiscount::whereKey($loyaltyDiscount->id)->lockForUpdate()->first();
-                if (!$lockedDiscount || !$lockedDiscount->isValidForUse()) {
+            $pivotRows         = [];
+            $totalPointsNeeded = 0;
+
+            foreach ($loyaltyDiscounts as $discount) {
+                $locked = LoyaltyDiscount::whereKey($discount->id)->lockForUpdate()->first();
+
+                if (!$locked || !$locked->isValidForUse()) {
                     throw ValidationException::withMessages([
-                        'loyalty_discount_id' => 'Cette réduction n\'est plus disponible.',
+                        'loyalty_discount_ids' => "La réduction « {$locked->name ?? '?'} » n'est plus disponible.",
                     ]);
                 }
 
-                if ($lockedDiscount->employee_only && (!$lockedCard || !$lockedCard->hasEmployeeBenefits())) {
+                if ($locked->employee_only && (!$lockedCard || !$lockedCard->hasEmployeeBenefits())) {
                     throw ValidationException::withMessages([
-                        'loyalty_discount_id' => 'Cette réduction est réservée aux salariés.',
+                        'loyalty_discount_ids' => "La réduction « {$locked->name} » est réservée aux salariés.",
                     ]);
                 }
 
-                if (!$lockedCard || $lockedCard->points < $lockedDiscount->points_cost) {
+                $row = collect($discountRows)->firstWhere('loyalty_discount_id', $locked->id);
+                $pivotRows[] = [
+                    'loyalty_discount_id' => $locked->id,
+                    'points_spent'        => $locked->points_cost,
+                    'discount_amount'     => $row['discount_amount'],
+                ];
+                $totalPointsNeeded += $locked->points_cost;
+                $locked->increment('quantity_used');
+            }
+
+            if ($lockedCard && $totalPointsNeeded > 0) {
+                if ($lockedCard->points < $totalPointsNeeded) {
                     throw ValidationException::withMessages([
-                        'loyalty_discount_id' => 'Le client n\'a plus assez de points pour cette réduction.',
+                        'loyalty_discount_ids' => 'Points insuffisants au moment de la validation.',
                     ]);
                 }
-
-                $lockedCard->decrement('points', $lockedDiscount->points_cost);
-                $lockedDiscount->increment('quantity_used');
+                $lockedCard->decrement('points', $totalPointsNeeded);
             }
 
             $order = Order::create([
-                'customer_name'     => $lockedCard ? $lockedCard->full_name : $validated['customer_name'],
-                'loyalty_card_id'   => $lockedCard?->id,
-                'loyalty_discount_id' => $lockedDiscount?->id,
-                'is_employee_order' => $isEmployeeOrder,
-                'notes'             => $validated['notes'] ?? null,
-                'total_amount'      => $total,
-                'discount_amount'   => $employeeDiscount,
-                'loyalty_points_spent' => $lockedDiscount?->points_cost ?? 0,
-                'loyalty_discount_amount' => $loyaltyDiscountAmount,
-                'status'            => Order::STATUS_PENDING,
-                'handled_by'        => auth()->id(),
+                'customer_name'           => $lockedCard ? $lockedCard->full_name : $validated['customer_name'],
+                'loyalty_card_id'         => $lockedCard?->id,
+                'is_employee_order'       => $isEmployeeOrder,
+                'notes'                   => $validated['notes'] ?? null,
+                'total_amount'            => $total,
+                'discount_amount'         => $employeeDiscount,
+                'loyalty_points_spent'    => $totalPointsNeeded,
+                'loyalty_discount_amount' => $totalLoyaltyAmount,
+                'status'                  => Order::STATUS_PENDING,
+                'handled_by'              => auth()->id(),
             ]);
 
             $order->items()->createMany($orderItems);
+
+            foreach ($pivotRows as $row) {
+                $order->loyaltyDiscounts()->attach($row['loyalty_discount_id'], [
+                    'points_spent'    => $row['points_spent'],
+                    'discount_amount' => $row['discount_amount'],
+                ]);
+            }
 
             return $order;
         });

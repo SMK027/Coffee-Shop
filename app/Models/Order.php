@@ -4,12 +4,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Order extends Model
 {
     protected $fillable = [
-        'customer_name', 'loyalty_card_id', 'loyalty_discount_id', 'is_employee_order', 'status', 'notes',
+        'customer_name', 'loyalty_card_id', 'is_employee_order', 'status', 'notes',
         'total_amount', 'discount_amount', 'loyalty_points_spent', 'loyalty_discount_amount', 'handled_by', 'completed_at',
         'points_credited', 'points_awarded',
     ];
@@ -57,9 +58,11 @@ class Order extends Model
         return $this->belongsTo(LoyaltyCard::class);
     }
 
-    public function loyaltyDiscount(): BelongsTo
+    public function loyaltyDiscounts(): BelongsToMany
     {
-        return $this->belongsTo(LoyaltyDiscount::class);
+        return $this->belongsToMany(LoyaltyDiscount::class, 'order_loyalty_discounts')
+            ->withPivot('points_spent', 'discount_amount')
+            ->withTimestamps();
     }
 
     public function getStatusLabelAttribute(): string

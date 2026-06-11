@@ -38,24 +38,56 @@
                     </div>
                     <div id="loyalty-check-status" class="mt-3 hidden rounded-lg border px-3 py-2 text-xs"></div>
 
-                    <div class="mt-4">
-                        <label for="loyalty_discount_id" class="block text-sm font-medium text-stone-700 mb-1.5">Réduction contre points</label>
-                        <select name="loyalty_discount_id" id="loyalty_discount_id"
-                                class="w-full border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
-                            <option value="">Aucune réduction</option>
-                            @foreach($discounts as $discount)
-                                <option value="{{ $discount->id }}"
-                                        data-points-cost="{{ $discount->points_cost }}"
-                                        data-type="{{ $discount->discount_type }}"
-                                        data-value="{{ (float) $discount->discount_value }}"
-                                        data-employee-only="{{ $discount->employee_only ? '1' : '0' }}"
-                                        @selected((string) old('loyalty_discount_id') === (string) $discount->id)>
-                                        {{ $discount->name }} - {{ $discount->points_cost }} pts - {{ $discount->display_value }}{{ $discount->employee_only ? ' (salariés)' : '' }}
-                                </option>
-                            @endforeach
-                        </select>
-                        <p id="loyalty-discount-hint" class="text-xs text-stone-500 mt-1">Sélectionnez une carte de fidélité valide pour utiliser une réduction.</p>
-                        @error('loyalty_discount_id')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                    {{-- Code de carte (requis pour utiliser des réductions) --}}
+                    <div id="pin-block" class="hidden mt-4">
+                        <label for="card_pin" class="block text-sm font-medium text-stone-700 mb-1.5">
+                            Code de la carte
+                            <span class="font-normal text-stone-400">(requis pour utiliser des réductions)</span>
+                        </label>
+                        <div class="flex gap-2">
+                            <input type="password" id="card_pin" name="card_pin" maxlength="10" inputmode="numeric"
+                                   autocomplete="off"
+                                   class="flex-1 border border-stone-300 rounded-lg px-4 py-2.5 text-sm font-mono tracking-widest focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
+                            <button type="button" id="verify-pin-btn"
+                                    class="flex-shrink-0 bg-stone-100 hover:bg-stone-200 text-stone-700 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors">
+                                Valider le code
+                            </button>
+                        </div>
+                        <div id="pin-status" class="hidden mt-1.5 rounded-lg border px-3 py-2 text-xs"></div>
+                        @error('card_pin')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                    </div>
+
+                    {{-- Réductions fidélité (visibles après validation du code) --}}
+                    <div id="discounts-block" class="hidden mt-4">
+                        <p class="text-sm font-medium text-stone-700 mb-2">Réductions disponibles</p>
+                        @if($discounts->isNotEmpty())
+                            <div class="space-y-2" id="discounts-list">
+                                @foreach($discounts as $discount)
+                                <label id="discount-option-{{ $discount->id }}"
+                                       class="flex items-start gap-3 p-2.5 rounded-lg border border-stone-200 cursor-pointer hover:bg-stone-50 transition-colors"
+                                       data-id="{{ $discount->id }}"
+                                       data-points-cost="{{ $discount->points_cost }}"
+                                       data-type="{{ $discount->discount_type }}"
+                                       data-value="{{ (float) $discount->discount_value }}"
+                                       data-employee-only="{{ $discount->employee_only ? '1' : '0' }}">
+                                    <input type="checkbox" name="loyalty_discount_ids[]" value="{{ $discount->id }}"
+                                           class="discount-checkbox mt-0.5 h-4 w-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500"
+                                           @checked(in_array((string)$discount->id, (array)old('loyalty_discount_ids', [])))>
+                                    <span class="text-sm leading-tight">
+                                        <span class="font-medium text-stone-800">{{ $discount->name }}</span>
+                                        <span class="text-stone-500"> — {{ $discount->points_cost }} pts → {{ $discount->display_value }}</span>
+                                        @if($discount->employee_only)
+                                            <span class="inline-flex ml-1 px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs font-medium">Salariés</span>
+                                        @endif
+                                    </span>
+                                </label>
+                                @endforeach
+                            </div>
+                            <p id="points-summary" class="text-xs text-stone-500 mt-2"></p>
+                        @else
+                            <p class="text-xs text-stone-500 italic">Aucune réduction active disponible.</p>
+                        @endif
+                        @error('loyalty_discount_ids')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
                     </div>
                 </div>
 
@@ -159,166 +191,217 @@
             'price'    => (float) $d->price,
             'category' => $d->category->name,
         ]);
-        $discountsData = $discounts->map(fn($discount) => [
-            'id' => $discount->id,
-            'name' => $discount->name,
-            'points_cost' => (int) $discount->points_cost,
-            'discount_type' => $discount->discount_type,
-            'discount_value' => (float) $discount->discount_value,
-            'employee_only' => (bool) $discount->employee_only,
-        ]);
     @endphp
 
     <script>
     (function () {
-        const drinks = @json($drinksData);
-        const discounts = @json($discountsData);
+        const drinks         = @json($drinksData);
         const loyaltyCheckUrl = @json(url('/espace-employe/commandes/verification-carte-fidelite'));
+        const pinVerifyUrl    = @json(url('/espace-employe/commandes/verification-pin-carte'));
         let itemCount = 1;
 
-        /* ── Bascule carte de fidélité / nom du client ─────────── */
+        /* ── Bascule carte de fidélité / nom du client ─────────────── */
         (function () {
-            const toggle      = document.getElementById('use_loyalty');
-            const loyaltyBlk  = document.getElementById('loyalty-block');
-            const nameBlk     = document.getElementById('customer-name-block');
-            const nameInput   = document.getElementById('customer_name');
-            const cardInput   = document.getElementById('loyalty_card_number');
-            const statusBox   = document.getElementById('loyalty-check-status');
-            const employeeTgl = document.getElementById('is_employee_order');
-            const discountSelect = document.getElementById('loyalty_discount_id');
-            const discountHint = document.getElementById('loyalty-discount-hint');
-            let currentCard = null;
+            const toggle       = document.getElementById('use_loyalty');
+            const loyaltyBlk   = document.getElementById('loyalty-block');
+            const nameBlk      = document.getElementById('customer-name-block');
+            const nameInput    = document.getElementById('customer_name');
+            const cardInput    = document.getElementById('loyalty_card_number');
+            const statusBox    = document.getElementById('loyalty-check-status');
+            const employeeTgl  = document.getElementById('is_employee_order');
+            const pinBlock     = document.getElementById('pin-block');
+            const pinInput     = document.getElementById('card_pin');
+            const pinStatusBox = document.getElementById('pin-status');
+            const verifyBtn    = document.getElementById('verify-pin-btn');
+            const discountsBlk = document.getElementById('discounts-block');
+            const pointsSummary = document.getElementById('points-summary');
+            let currentCard   = null;
+            let pinVerified   = false;
             let debounceTimer = null;
             let requestSeq    = 0;
 
+            /* ── Boîte statut carte ── */
             function setStatus(type, message) {
                 if (!statusBox) return;
                 statusBox.classList.remove(
                     'hidden',
                     'bg-amber-100', 'border-amber-200', 'text-amber-800',
                     'bg-green-100', 'border-green-200', 'text-green-800',
-                    'bg-red-100', 'border-red-200', 'text-red-700'
+                    'bg-red-100',   'border-red-200',   'text-red-700'
                 );
-
-                if (type === 'loading') {
-                    statusBox.classList.add('bg-amber-100', 'border-amber-200', 'text-amber-800');
-                } else if (type === 'success') {
-                    statusBox.classList.add('bg-green-100', 'border-green-200', 'text-green-800');
-                } else if (type === 'error') {
-                    statusBox.classList.add('bg-red-100', 'border-red-200', 'text-red-700');
-                }
-
+                if (type === 'loading') statusBox.classList.add('bg-amber-100', 'border-amber-200', 'text-amber-800');
+                else if (type === 'success') statusBox.classList.add('bg-green-100', 'border-green-200', 'text-green-800');
+                else if (type === 'error') statusBox.classList.add('bg-red-100', 'border-red-200', 'text-red-700');
                 statusBox.textContent = message;
             }
-
             function clearStatus() {
                 if (!statusBox) return;
                 statusBox.classList.add('hidden');
                 statusBox.textContent = '';
             }
 
-            function selectedDiscount() {
-                if (!discountSelect || !discountSelect.value) return null;
-                return discounts.find(d => String(d.id) === String(discountSelect.value)) || null;
+            /* ── Boîte statut PIN ── */
+            function setPinStatus(type, message) {
+                if (!pinStatusBox) return;
+                pinStatusBox.classList.remove(
+                    'hidden',
+                    'bg-amber-100', 'border-amber-200', 'text-amber-800',
+                    'bg-green-100', 'border-green-200', 'text-green-800',
+                    'bg-red-100',   'border-red-200',   'text-red-700'
+                );
+                if (type === 'loading') pinStatusBox.classList.add('bg-amber-100', 'border-amber-200', 'text-amber-800');
+                else if (type === 'success') pinStatusBox.classList.add('bg-green-100', 'border-green-200', 'text-green-800');
+                else if (type === 'error') pinStatusBox.classList.add('bg-red-100', 'border-red-200', 'text-red-700');
+                pinStatusBox.textContent = message;
+                pinStatusBox.classList.remove('hidden');
+            }
+            function clearPinStatus() {
+                if (!pinStatusBox) return;
+                pinStatusBox.classList.add('hidden');
+                pinStatusBox.textContent = '';
+            }
+
+            /* ── Gestion de l'état PIN/réductions ── */
+            function setPinVerified(verified) {
+                pinVerified = verified;
+                if (discountsBlk) discountsBlk.classList.toggle('hidden', !verified);
+                if (!verified) {
+                    document.querySelectorAll('.discount-checkbox').forEach(cb => { cb.checked = false; cb.disabled = false; });
+                    document.querySelectorAll('[data-id]').forEach(label => {
+                        label.classList.remove('opacity-40', 'cursor-not-allowed');
+                        label.classList.add('cursor-pointer');
+                    });
+                    if (pointsSummary) pointsSummary.textContent = '';
+                    updateTotal();
+                } else {
+                    refreshDiscountEligibility();
+                }
+            }
+
+            function updatePointsSummary() {
+                if (!pointsSummary || !currentCard) return;
+                let used = 0;
+                document.querySelectorAll('.discount-checkbox:checked').forEach(cb => {
+                    const lbl = cb.closest('[data-points-cost]');
+                    if (lbl) used += parseInt(lbl.dataset.pointsCost || 0, 10);
+                });
+                const remaining = currentCard.points - used;
+                pointsSummary.textContent = used > 0
+                    ? `${used} pts utilisés — ${remaining} pts restants sur ${currentCard.points} disponibles.`
+                    : `${currentCard.points} pts disponibles.`;
             }
 
             function refreshDiscountEligibility() {
-                if (!discountSelect) return;
-
-                const discount = selectedDiscount();
-
-                if (!toggle.checked || !currentCard) {
-                    discountSelect.disabled = true;
-                    discountHint.textContent = 'Sélectionnez une carte de fidélité valide pour utiliser une réduction.';
-                    if (discountSelect.value) discountSelect.value = '';
-                    updateTotal();
-                    return;
-                }
-
-                discountSelect.disabled = false;
-
-                if (!discount) {
-                    discountHint.textContent = 'Sélectionnez une réduction si le client souhaite échanger ses points.';
-                    updateTotal();
-                    return;
-                }
-
-                if (discount.employee_only && !currentCard.has_employee_benefits) {
-                    discountHint.textContent = 'Cette réduction est réservée aux salariés.';
-                    discountSelect.value = '';
-                    updateTotal();
-                    return;
-                }
-
-                if (currentCard.points < discount.points_cost) {
-                    discountHint.textContent = `Points insuffisants — ${currentCard.points} pts disponibles, ${discount.points_cost} pts requis.`;
-                    discountSelect.value = '';
-                    updateTotal();
-                    return;
-                }
-
-                discountHint.textContent = `Réduction disponible — ${discount.points_cost} pts.`;
+                if (!pinVerified || !currentCard) return;
+                let usedPoints = 0;
+                document.querySelectorAll('.discount-checkbox:checked').forEach(cb => {
+                    const lbl = cb.closest('[data-points-cost]');
+                    if (lbl) usedPoints += parseInt(lbl.dataset.pointsCost || 0, 10);
+                });
+                document.querySelectorAll('[data-id]').forEach(label => {
+                    const cb        = label.querySelector('.discount-checkbox');
+                    if (!cb) return;
+                    const cost      = parseInt(label.dataset.pointsCost || 0, 10);
+                    const empOnly   = label.dataset.employeeOnly === '1';
+                    const available = cb.checked ? currentCard.points : currentCard.points - usedPoints;
+                    if (empOnly && !currentCard.has_employee_benefits) {
+                        cb.disabled = true; cb.checked = false;
+                        label.classList.add('opacity-40', 'cursor-not-allowed');
+                        label.classList.remove('hover:bg-stone-50', 'cursor-pointer');
+                    } else if (!cb.checked && available < cost) {
+                        cb.disabled = true;
+                        label.classList.add('opacity-40', 'cursor-not-allowed');
+                        label.classList.remove('hover:bg-stone-50', 'cursor-pointer');
+                    } else {
+                        cb.disabled = false;
+                        label.classList.remove('opacity-40', 'cursor-not-allowed');
+                        label.classList.add('hover:bg-stone-50', 'cursor-pointer');
+                    }
+                });
+                updatePointsSummary();
                 updateTotal();
             }
 
-            async function checkCard() {
-                const raw = (cardInput?.value || '').trim();
-                const normalized = raw.replace(/\s+/g, '');
-
-                if (!toggle.checked || normalized.length < 8) {
-                    currentCard = null;
-                    clearStatus();
-                    refreshDiscountEligibility();
-                    return;
-                }
-
-                setStatus('loading', 'Vérification de la carte en cours…');
-                const seq = ++requestSeq;
-
+            /* ── Vérification PIN via AJAX ── */
+            async function verifyPin() {
+                if (!currentCard || !pinInput) return;
+                const pin = pinInput.value;
+                if (!pin) { setPinStatus('error', 'Saisissez le code de la carte.'); return; }
+                setPinStatus('loading', 'Vérification du code…');
                 try {
-                    const res = await fetch(`${loyaltyCheckUrl}?card_number=${encodeURIComponent(raw)}`, {
+                    const csrf = document.querySelector('input[name="_token"]')?.value || '';
+                    const res  = await fetch(pinVerifyUrl, {
+                        method: 'POST',
                         headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': csrf,
                             'X-Requested-With': 'XMLHttpRequest',
                             'Accept': 'application/json',
                         },
+                        body: JSON.stringify({
+                            card_number: (cardInput?.value || '').trim(),
+                            pin: pin,
+                        }),
                     });
-
-                    if (seq !== requestSeq) return;
-
-                    if (!res.ok) {
-                        setStatus('error', 'Vérification impossible pour le moment.');
-                        return;
+                    const data = await res.json();
+                    if (data.valid) {
+                        setPinStatus('success', 'Code validé — sélectionnez les réductions souhaitées.');
+                        setPinVerified(true);
+                    } else {
+                        setPinStatus('error', data.message || 'Code incorrect.');
+                        setPinVerified(false);
                     }
+                } catch (_) {
+                    setPinStatus('error', 'Vérification impossible pour le moment.');
+                    setPinVerified(false);
+                }
+            }
 
+            /* ── Vérification carte via AJAX ── */
+            async function checkCard() {
+                const raw        = (cardInput?.value || '').trim();
+                const normalized = raw.replace(/\s+/g, '');
+                if (!toggle.checked || normalized.length < 8) {
+                    currentCard = null; clearStatus();
+                    if (pinBlock) pinBlock.classList.add('hidden');
+                    if (pinInput) pinInput.value = '';
+                    clearPinStatus(); setPinVerified(false);
+                    return;
+                }
+                setStatus('loading', 'Vérification de la carte en cours…');
+                const seq = ++requestSeq;
+                try {
+                    const res = await fetch(`${loyaltyCheckUrl}?card_number=${encodeURIComponent(raw)}`, {
+                        headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                    });
+                    if (seq !== requestSeq) return;
+                    if (!res.ok) {
+                        currentCard = null; setStatus('error', 'Vérification impossible pour le moment.');
+                        if (pinBlock) pinBlock.classList.add('hidden');
+                        setPinVerified(false); return;
+                    }
                     const data = await res.json();
                     if (!data.found) {
-                        currentCard = null;
-                        setStatus('error', data.message || 'Carte introuvable.');
-                        refreshDiscountEligibility();
-                        return;
+                        currentCard = null; setStatus('error', data.message || 'Carte introuvable.');
+                        if (pinBlock) pinBlock.classList.add('hidden');
+                        if (pinInput) pinInput.value = '';
+                        clearPinStatus(); setPinVerified(false); return;
                     }
-
-                    const card = data.card || {};
-                    currentCard = card;
-                    if (card.has_employee_benefits && employeeTgl) {
-                        employeeTgl.checked = true;
-                        updateTotal();
+                    currentCard = data.card || {};
+                    if (currentCard.has_employee_benefits && employeeTgl) {
+                        employeeTgl.checked = true; updateTotal();
                     }
-
-                    const benefitsMsg = card.has_employee_benefits
-                        ? ' Avantage salarié détecté.'
-                        : '';
-
-                    setStatus(
-                        'success',
-                        `Carte valide: ${card.full_name} - ${card.points} pts.${benefitsMsg}`
-                    );
-                    refreshDiscountEligibility();
+                    const benefitsMsg = currentCard.has_employee_benefits ? ' Avantage salarié détecté.' : '';
+                    setStatus('success', `Carte valide : ${currentCard.full_name} — ${currentCard.points} pts.${benefitsMsg}`);
+                    /* Afficher le champ PIN, réinitialiser la validation précédente */
+                    if (pinBlock) pinBlock.classList.remove('hidden');
+                    if (pinInput) pinInput.value = '';
+                    clearPinStatus(); setPinVerified(false);
                 } catch (_) {
                     if (seq !== requestSeq) return;
-                    currentCard = null;
-                    setStatus('error', 'Vérification impossible pour le moment.');
-                    refreshDiscountEligibility();
+                    currentCard = null; setStatus('error', 'Vérification impossible pour le moment.');
+                    if (pinBlock) pinBlock.classList.add('hidden');
+                    setPinVerified(false);
                 }
             }
 
@@ -331,23 +414,32 @@
                 const useLoyalty = toggle.checked;
                 loyaltyBlk.classList.toggle('hidden', !useLoyalty);
                 nameBlk.classList.toggle('hidden', useLoyalty);
-                // Le nom n'est requis que si la carte n'est pas utilisée
                 if (nameInput) nameInput.required = !useLoyalty;
                 if (!useLoyalty) {
-                    currentCard = null;
-                    clearStatus();
-                    refreshDiscountEligibility();
+                    currentCard = null; clearStatus();
+                    if (pinBlock) pinBlock.classList.add('hidden');
+                    if (pinInput) pinInput.value = '';
+                    clearPinStatus(); setPinVerified(false);
                 } else {
                     queueCheck();
                 }
             }
 
             toggle.addEventListener('change', sync);
-            discountSelect?.addEventListener('change', refreshDiscountEligibility);
+            if (verifyBtn) verifyBtn.addEventListener('click', verifyPin);
+            if (pinInput) {
+                pinInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); verifyPin(); } });
+                pinInput.addEventListener('input', () => {
+                    if (pinVerified) { clearPinStatus(); setPinVerified(false); }
+                });
+            }
             if (cardInput) {
                 cardInput.addEventListener('input', queueCheck);
                 cardInput.addEventListener('blur', checkCard);
             }
+            document.querySelectorAll('.discount-checkbox').forEach(cb => {
+                cb.addEventListener('change', refreshDiscountEligibility);
+            });
             sync();
         })();
 
@@ -549,23 +641,30 @@
 
             const empToggle  = document.getElementById('is_employee_order');
             const isEmployee = empToggle && empToggle.checked;
-            const employeeDiscount = isEmployee ? subtotal * EMPLOYEE_DISCOUNT_RATE : 0;
-            const subtotalAfterEmployeeDiscount = subtotal - employeeDiscount;
+            const employeeDiscount      = isEmployee ? subtotal * EMPLOYEE_DISCOUNT_RATE : 0;
+            const subtotalAfterEmployee = subtotal - employeeDiscount;
 
-            const discountSelect = document.getElementById('loyalty_discount_id');
-            const selected = discountSelect && discountSelect.value
-                ? discounts.find(d => String(d.id) === String(discountSelect.value))
-                : null;
-            let loyaltyDiscount = 0;
-            if (selected) {
-                if (selected.discount_type === 'percent') {
-                    loyaltyDiscount = subtotalAfterEmployeeDiscount * (selected.discount_value / 100);
+            /* Réductions fidélité : application séquentielle sur le solde restant */
+            let remaining            = subtotalAfterEmployee;
+            let totalLoyaltyDiscount = 0;
+            let checkedCount         = 0;
+            document.querySelectorAll('.discount-checkbox:checked').forEach(cb => {
+                const label = cb.closest('[data-type]');
+                if (!label) return;
+                const type  = label.dataset.type;
+                const value = parseFloat(label.dataset.value) || 0;
+                let amount;
+                if (type === 'percent') {
+                    amount = Math.round(remaining * (value / 100) * 100) / 100;
                 } else {
-                    loyaltyDiscount = Math.min(subtotalAfterEmployeeDiscount, selected.discount_value);
+                    amount = Math.round(Math.min(remaining, value) * 100) / 100;
                 }
-            }
-
-            const total = Math.max(0, subtotalAfterEmployeeDiscount - loyaltyDiscount);
+                remaining = Math.max(0, remaining - amount);
+                totalLoyaltyDiscount += amount;
+                checkedCount++;
+            });
+            totalLoyaltyDiscount = Math.round(totalLoyaltyDiscount * 100) / 100;
+            const total = Math.max(0, subtotalAfterEmployee - totalLoyaltyDiscount);
 
             const discountLine = document.getElementById('discount-line');
             if (discountLine) {
@@ -577,17 +676,13 @@
 
             const loyaltyLine = document.getElementById('loyalty-discount-line');
             if (loyaltyLine) {
-                const active = loyaltyDiscount > 0.001;
+                const active = totalLoyaltyDiscount > 0.001;
                 loyaltyLine.classList.toggle('hidden', !active);
                 loyaltyLine.classList.toggle('flex', active);
-                if (active) {
-                    const label = selected && selected.discount_type === 'percent'
-                        ? `Réduction fidélité (-${selected.discount_value}%)`
-                        : 'Réduction fidélité';
-                    document.getElementById('loyalty-discount-label').textContent = label;
-                }
+                document.getElementById('loyalty-discount-label').textContent =
+                    checkedCount > 1 ? `Réductions fidélité (×${checkedCount})` : 'Réduction fidélité';
                 document.getElementById('loyalty-discount-display').textContent =
-                    '-' + loyaltyDiscount.toFixed(2).replace('.', ',') + ' €';
+                    '-' + totalLoyaltyDiscount.toFixed(2).replace('.', ',') + ' €';
             }
 
             document.getElementById('total-display').textContent =
@@ -614,12 +709,9 @@
         document.getElementById('order-form').addEventListener('submit', e => {
             let invalid = false;
             const useLoyalty = document.getElementById('use_loyalty');
-            const discountSelect = document.getElementById('loyalty_discount_id');
-            if (discountSelect && discountSelect.value && !(useLoyalty && useLoyalty.checked)) {
-                e.preventDefault();
-                useLoyalty.checked = true;
-                useLoyalty.dispatchEvent(new Event('change'));
-                return;
+            /* Si des réductions sont cochées sans carte active, les décocher */
+            if (!(useLoyalty && useLoyalty.checked)) {
+                document.querySelectorAll('.discount-checkbox').forEach(cb => { cb.checked = false; });
             }
 
             document.querySelectorAll('.item-row').forEach(row => {

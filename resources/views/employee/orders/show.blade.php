@@ -37,7 +37,7 @@
                     @endif
                     @if($order->loyalty_discount_amount > 0)
                     <div class="flex justify-between text-sm text-blue-700">
-                        <span>Réduction fidélité</span>
+                        <span>Réduction{{ $order->loyaltyDiscounts->count() > 1 ? 's' : '' }} fidélité</span>
                         <span>-{{ number_format($order->loyalty_discount_amount, 2, ',', ' ') }} €</span>
                     </div>
                     @endif
@@ -76,10 +76,17 @@
                         <dt class="text-stone-500">Carte de fidélité</dt>
                         <dd class="font-medium text-amber-700 font-mono">{{ chunk_split($order->loyaltyCard->card_number, 4, ' ') }}</dd>
                     </div>
-                    @if($order->loyaltyDiscount)
+                    @if($order->loyaltyDiscounts->isNotEmpty())
                     <div>
-                        <dt class="text-stone-500">Réduction fidélité</dt>
-                        <dd class="font-medium text-blue-700">{{ $order->loyaltyDiscount->name }} ({{ $order->loyalty_points_spent }} points)</dd>
+                        <dt class="text-stone-500">Réduction{{ $order->loyaltyDiscounts->count() > 1 ? 's' : '' }} fidélité</dt>
+                        <dd class="space-y-0.5 mt-0.5">
+                            @foreach($order->loyaltyDiscounts as $discount)
+                            <p class="font-medium text-blue-700 text-sm">
+                                {{ $discount->name }}
+                                <span class="font-normal text-blue-600">(-{{ number_format($discount->pivot->discount_amount, 2, ',', ' ') }} € / {{ $discount->pivot->points_spent }} pts)</span>
+                            </p>
+                            @endforeach
+                        </dd>
                     </div>
                     @endif
                     @if($order->points_credited)
