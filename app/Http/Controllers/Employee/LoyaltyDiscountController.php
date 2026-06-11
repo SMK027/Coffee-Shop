@@ -28,7 +28,7 @@ class LoyaltyDiscountController extends Controller
         LoyaltyDiscount::create($data);
 
         return redirect()->route('employee.loyalty-discounts.index')
-            ->with('success', 'Reduction creee avec succes.');
+            ->with('success', 'Réduction créée avec succès.');
     }
 
     public function edit(LoyaltyDiscount $loyaltyDiscount)
@@ -42,7 +42,7 @@ class LoyaltyDiscountController extends Controller
         $loyaltyDiscount->update($data);
 
         return redirect()->route('employee.loyalty-discounts.index')
-            ->with('success', 'Reduction mise a jour.');
+            ->with('success', 'Réduction mise à jour.');
     }
 
     private function validatePayload(Request $request): array
@@ -69,7 +69,7 @@ class LoyaltyDiscountController extends Controller
 
         if ($validated['discount_type'] === LoyaltyDiscount::TYPE_PERCENT && (float) $validated['discount_value'] > 100) {
             throw ValidationException::withMessages([
-                'discount_value' => 'Une reduction en pourcentage ne peut pas depasser 100%.',
+                'discount_value' => 'Une réduction en pourcentage ne peut pas dépasser 100 %.',
             ]);
         }
 

@@ -1,4 +1,4 @@
-<x-employee-layout title="Nouvelle reduction fidelite">
+<x-employee-layout title="Nouvelle réduction fidélité">
     <x-slot name="headerActions">
         <a href="{{ route('employee.loyalty-discounts.index') }}" class="text-stone-500 hover:text-stone-700 text-sm">← Retour</a>
     </x-slot>

@@ -50,7 +50,7 @@
             <input type="number" name="quantity_limit" id="quantity_limit" min="1"
                    value="{{ old('quantity_limit', $discount->quantity_limit ?? '') }}"
                    class="w-full border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
-            <p class="text-xs text-stone-500 mt-1">Laisser vide pour un stock illimite.</p>
+            <p class="text-xs text-stone-500 mt-1">Laisser vide pour un stock illimité.</p>
             @error('quantity_limit')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
         </div>
 
@@ -82,17 +82,17 @@
             <label class="flex items-center gap-2 text-sm text-stone-700">
                 <input type="checkbox" name="is_active" value="1" class="rounded border-stone-300 text-amber-600 focus:ring-amber-500"
                        @checked(old('is_active', $discount->is_active ?? true))>
-                Reduction active
+                Réduction active
             </label>
             <label class="flex items-center gap-2 text-sm text-stone-700">
                 <input type="checkbox" name="is_sold_out" value="1" class="rounded border-stone-300 text-amber-600 focus:ring-amber-500"
                        @checked(old('is_sold_out', $discount->is_sold_out ?? false))>
-                Marquer comme soldee
+                Marquer comme soldée
             </label>
             <label class="flex items-center gap-2 text-sm text-stone-700">
                 <input type="checkbox" name="employee_only" value="1" class="rounded border-stone-300 text-amber-600 focus:ring-amber-500"
                        @checked(old('employee_only', $discount->employee_only ?? false))>
-                Reservee salaries uniquement
+                Réservée salariés uniquement
             </label>
         </div>
     </div>

@@ -39,10 +39,10 @@
                     <div id="loyalty-check-status" class="mt-3 hidden rounded-lg border px-3 py-2 text-xs"></div>
 
                     <div class="mt-4">
-                        <label for="loyalty_discount_id" class="block text-sm font-medium text-stone-700 mb-1.5">Reduction contre points</label>
+                        <label for="loyalty_discount_id" class="block text-sm font-medium text-stone-700 mb-1.5">Réduction contre points</label>
                         <select name="loyalty_discount_id" id="loyalty_discount_id"
                                 class="w-full border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
-                            <option value="">Aucune reduction</option>
+                            <option value="">Aucune réduction</option>
                             @foreach($discounts as $discount)
                                 <option value="{{ $discount->id }}"
                                         data-points-cost="{{ $discount->points_cost }}"
@@ -50,11 +50,11 @@
                                         data-value="{{ (float) $discount->discount_value }}"
                                         data-employee-only="{{ $discount->employee_only ? '1' : '0' }}"
                                         @selected((string) old('loyalty_discount_id') === (string) $discount->id)>
-                                    {{ $discount->name }} - {{ $discount->points_cost }} pts - {{ $discount->display_value }}{{ $discount->employee_only ? ' (salaries)' : '' }}
+                                        {{ $discount->name }} - {{ $discount->points_cost }} pts - {{ $discount->display_value }}{{ $discount->employee_only ? ' (salariés)' : '' }}
                                 </option>
                             @endforeach
                         </select>
-                        <p id="loyalty-discount-hint" class="text-xs text-stone-500 mt-1">Selectionnez une carte fidelite valide pour utiliser une reduction.</p>
+                        <p id="loyalty-discount-hint" class="text-xs text-stone-500 mt-1">Sélectionnez une carte de fidélité valide pour utiliser une réduction.</p>
                         @error('loyalty_discount_id')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
                     </div>
                 </div>
@@ -131,7 +131,7 @@
                         <span id="discount-display">0,00 €</span>
                     </div>
                     <div id="loyalty-discount-line" class="hidden justify-between text-blue-700">
-                        <span id="loyalty-discount-label">Reduction fidelite</span>
+                        <span id="loyalty-discount-label">Réduction fidélité</span>
                         <span id="loyalty-discount-display">0,00 €</span>
                     </div>
                     <div class="flex justify-between font-semibold">
@@ -229,7 +229,7 @@
 
                 if (!toggle.checked || !currentCard) {
                     discountSelect.disabled = true;
-                    discountHint.textContent = 'Selectionnez une carte fidelite valide pour utiliser une reduction.';
+                    discountHint.textContent = 'Sélectionnez une carte de fidélité valide pour utiliser une réduction.';
                     if (discountSelect.value) discountSelect.value = '';
                     updateTotal();
                     return;
@@ -238,22 +238,22 @@
                 discountSelect.disabled = false;
 
                 if (!discount) {
-                    discountHint.textContent = 'Selectionnez une reduction si le client souhaite echanger ses points.';
+                    discountHint.textContent = 'Sélectionnez une réduction si le client souhaite échanger ses points.';
                     updateTotal();
                     return;
                 }
 
                 if (discount.employee_only && !currentCard.has_employee_benefits) {
-                    discountHint.textContent = 'Cette reduction est reservee aux salaries.';
+                    discountHint.textContent = 'Cette réduction est réservée aux salariés.';
                     discountSelect.value = '';
                     updateTotal();
                     return;
                 }
 
                 if (currentCard.points < discount.points_cost) {
-                    discountHint.textContent = `Points insuffisants (${discount.points_cost} pts requis).`;
+                    discountHint.textContent = `Points insuffisants (${discount.points_cost} pts nécessaires).`;
                 } else {
-                    discountHint.textContent = `Reduction disponible: ${discount.points_cost} pts.`;
+                    discountHint.textContent = `Réduction disponible — ${discount.points_cost} pts.`;
                 }
 
                 updateTotal();
@@ -270,7 +270,7 @@
                     return;
                 }
 
-                setStatus('loading', 'Verification de la carte en cours...');
+                setStatus('loading', 'Vérification de la carte en cours…');
                 const seq = ++requestSeq;
 
                 try {
@@ -284,7 +284,7 @@
                     if (seq !== requestSeq) return;
 
                     if (!res.ok) {
-                        setStatus('error', 'Verification impossible pour le moment.');
+                        setStatus('error', 'Vérification impossible pour le moment.');
                         return;
                     }
 
@@ -304,7 +304,7 @@
                     }
 
                     const benefitsMsg = card.has_employee_benefits
-                        ? ' Avantage employe detecte.'
+                        ? ' Avantage salarié détecté.'
                         : '';
 
                     setStatus(
@@ -315,7 +315,7 @@
                 } catch (_) {
                     if (seq !== requestSeq) return;
                     currentCard = null;
-                    setStatus('error', 'Verification impossible pour le moment.');
+                    setStatus('error', 'Vérification impossible pour le moment.');
                     refreshDiscountEligibility();
                 }
             }
@@ -580,8 +580,8 @@
                 loyaltyLine.classList.toggle('flex', active);
                 if (active) {
                     const label = selected && selected.discount_type === 'percent'
-                        ? `Reduction fidelite (-${selected.discount_value}%)`
-                        : 'Reduction fidelite';
+                        ? `Réduction fidélité (-${selected.discount_value}%)`
+                        : 'Réduction fidélité';
                     document.getElementById('loyalty-discount-label').textContent = label;
                 }
                 document.getElementById('loyalty-discount-display').textContent =

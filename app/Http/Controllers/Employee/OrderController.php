@@ -132,7 +132,7 @@ class OrderController extends Controller
         if (!empty($validated['loyalty_discount_id'])) {
             if (!$useLoyalty || !$loyaltyCard) {
                 throw ValidationException::withMessages([
-                    'loyalty_discount_id' => 'Une reduction fidelite requiert une carte valide.',
+                    'loyalty_discount_id' => 'Une réduction fidélité requiert une carte valide.',
                 ]);
             }
 
@@ -140,19 +140,19 @@ class OrderController extends Controller
 
             if (!$loyaltyDiscount || !$loyaltyDiscount->isValidForUse()) {
                 throw ValidationException::withMessages([
-                    'loyalty_discount_id' => 'Cette reduction n\'est plus valide.',
+                    'loyalty_discount_id' => 'Cette réduction n\'est plus valide.',
                 ]);
             }
 
             if ($loyaltyDiscount->employee_only && !$loyaltyCard->hasEmployeeBenefits()) {
                 throw ValidationException::withMessages([
-                    'loyalty_discount_id' => 'Cette reduction est reservee aux salaries.',
+                    'loyalty_discount_id' => 'Cette réduction est réservée aux salariés.',
                 ]);
             }
 
             if ($loyaltyCard->points < $loyaltyDiscount->points_cost) {
                 throw ValidationException::withMessages([
-                    'loyalty_discount_id' => 'Le client n\'a pas assez de points pour cette reduction.',
+                    'loyalty_discount_id' => 'Le client n\'a pas assez de points pour cette réduction.',
                 ]);
             }
         }
@@ -217,19 +217,19 @@ class OrderController extends Controller
                 $lockedDiscount = LoyaltyDiscount::whereKey($loyaltyDiscount->id)->lockForUpdate()->first();
                 if (!$lockedDiscount || !$lockedDiscount->isValidForUse()) {
                     throw ValidationException::withMessages([
-                        'loyalty_discount_id' => 'Cette reduction n\'est plus disponible.',
+                        'loyalty_discount_id' => 'Cette réduction n\'est plus disponible.',
                     ]);
                 }
 
                 if ($lockedDiscount->employee_only && (!$lockedCard || !$lockedCard->hasEmployeeBenefits())) {
                     throw ValidationException::withMessages([
-                        'loyalty_discount_id' => 'Cette reduction est reservee aux salaries.',
+                        'loyalty_discount_id' => 'Cette réduction est réservée aux salariés.',
                     ]);
                 }
 
                 if (!$lockedCard || $lockedCard->points < $lockedDiscount->points_cost) {
                     throw ValidationException::withMessages([
-                        'loyalty_discount_id' => 'Le client n\'a plus assez de points pour cette reduction.',
+                        'loyalty_discount_id' => 'Le client n\'a plus assez de points pour cette réduction.',
                     ]);
                 }
 

@@ -37,7 +37,7 @@
                     @endif
                     @if($order->loyalty_discount_amount > 0)
                     <div class="flex justify-between text-sm text-blue-700">
-                        <span>Reduction fidelite</span>
+                        <span>Réduction fidélité</span>
                         <span>-{{ number_format($order->loyalty_discount_amount, 2, ',', ' ') }} €</span>
                     </div>
                     @endif
@@ -78,7 +78,7 @@
                     </div>
                     @if($order->loyaltyDiscount)
                     <div>
-                        <dt class="text-stone-500">Reduction fidelite</dt>
+                        <dt class="text-stone-500">Réduction fidélité</dt>
                         <dd class="font-medium text-blue-700">{{ $order->loyaltyDiscount->name }} ({{ $order->loyalty_points_spent }} points)</dd>
                     </div>
                     @endif
