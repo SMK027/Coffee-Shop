@@ -251,11 +251,13 @@
                 }
 
                 if (currentCard.points < discount.points_cost) {
-                    discountHint.textContent = `Points insuffisants (${discount.points_cost} pts nécessaires).`;
-                } else {
-                    discountHint.textContent = `Réduction disponible — ${discount.points_cost} pts.`;
+                    discountHint.textContent = `Points insuffisants — ${currentCard.points} pts disponibles, ${discount.points_cost} pts requis.`;
+                    discountSelect.value = '';
+                    updateTotal();
+                    return;
                 }
 
+                discountHint.textContent = `Réduction disponible — ${discount.points_cost} pts.`;
                 updateTotal();
             }
 

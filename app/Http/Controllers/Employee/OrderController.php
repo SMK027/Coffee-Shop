@@ -76,7 +76,7 @@ class OrderController extends Controller
         if (!$card) {
             return response()->json([
                 'found' => false,
-                'message' => 'Aucune carte ne correspond a ce numero.',
+                'message' => 'Aucune carte ne correspond à ce numéro.',
             ]);
         }
 
