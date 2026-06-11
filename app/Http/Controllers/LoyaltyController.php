@@ -81,6 +81,8 @@ class LoyaltyController extends Controller
                 ->withErrors(['card_number' => 'Numéro de carte ou code PIN incorrect.']);
         }
 
+        $card->load(['orders' => fn ($q) => $q->latest()]);
+
         return view('visitor.loyalty.balance', compact('card'));
     }
 

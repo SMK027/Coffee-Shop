@@ -13,6 +13,34 @@
                     <p class="text-amber-200 text-sm">{{ $card->full_name }}</p>
                     <p class="text-amber-300 text-xs font-mono mt-1">{{ chunk_split($card->card_number, 4, ' ') }}</p>
                 </div>
+
+                {{-- Historique des commandes --}}
+                <div class="bg-white rounded-2xl shadow-sm border border-stone-100 overflow-hidden mb-6">
+                    <h2 class="font-semibold text-stone-800 px-5 py-4 border-b border-stone-100">Historique de mes commandes</h2>
+                    @if($card->orders->isEmpty())
+                        <div class="px-5 py-10 text-center text-stone-500 text-sm">
+                            <p>Aucune commande pour le moment.</p>
+                        </div>
+                    @else
+                        <ul class="divide-y divide-stone-50">
+                            @foreach($card->orders as $order)
+                            <li class="flex items-center justify-between px-5 py-3">
+                                <div>
+                                    <p class="font-medium text-stone-800 text-sm">Commande #{{ str_pad($order->id, 4, '0', STR_PAD_LEFT) }}</p>
+                                    <p class="text-xs text-stone-400">{{ $order->created_at->format('d/m/Y à H:i') }} · {{ $order->status_label }}</p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-sm font-medium text-stone-800">{{ number_format($order->total_amount, 2, ',', ' ') }} €</p>
+                                    @if($order->points_credited)
+                                        <p class="text-xs text-green-600">+{{ $order->points_awarded }} pts</p>
+                                    @endif
+                                </div>
+                            </li>
+                            @endforeach
+                        </ul>
+                    @endif
+                </div>
+
                 <div class="text-center">
                     <a href="{{ route('loyalty.balance.form') }}" class="text-amber-700 hover:text-amber-600 text-sm font-medium underline">
                         Consulter une autre carte
