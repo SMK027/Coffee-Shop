@@ -23,9 +23,21 @@
                     </div>
                     @endforeach
                 </div>
-                <div class="mt-4 pt-4 border-t border-stone-100 flex justify-between">
-                    <span class="font-semibold text-stone-800">Total</span>
-                    <span class="font-bold text-stone-800 text-lg">{{ number_format($order->total_amount, 2, ',', ' ') }} €</span>
+                <div class="mt-4 pt-4 border-t border-stone-100 space-y-1.5">
+                    @if($order->discount_amount > 0)
+                    <div class="flex justify-between text-sm text-stone-500">
+                        <span>Sous-total</span>
+                        <span>{{ number_format($order->total_amount + $order->discount_amount, 2, ',', ' ') }} €</span>
+                    </div>
+                    <div class="flex justify-between text-sm text-green-700">
+                        <span>Réduction employé (-15%)</span>
+                        <span>-{{ number_format($order->discount_amount, 2, ',', ' ') }} €</span>
+                    </div>
+                    @endif
+                    <div class="flex justify-between">
+                        <span class="font-semibold text-stone-800">Total</span>
+                        <span class="font-bold text-stone-800 text-lg">{{ number_format($order->total_amount, 2, ',', ' ') }} €</span>
+                    </div>
                 </div>
                 @if($order->notes)
                     <div class="mt-4 p-3 bg-amber-50 rounded-lg">
@@ -45,6 +57,12 @@
                         <dt class="text-stone-500">Client</dt>
                         <dd class="font-medium text-stone-800">{{ $order->customer_name }}</dd>
                     </div>
+                    @if($order->is_employee_order)
+                    <div>
+                        <dt class="text-stone-500">Type</dt>
+                        <dd class="font-medium text-green-700">Commande employé (-15%)</dd>
+                    </div>
+                    @endif
                     @if($order->loyaltyCard)
                     <div>
                         <dt class="text-stone-500">Carte de fidélité</dt>

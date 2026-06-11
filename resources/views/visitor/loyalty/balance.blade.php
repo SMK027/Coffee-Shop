@@ -30,9 +30,10 @@
                         @csrf
                         <div>
                             <label for="card_number" class="block text-sm font-medium text-stone-700 mb-1.5">Numéro de carte *</label>
-                            <input type="text" name="card_number" id="card_number" required inputmode="numeric" maxlength="20"
-                                   value="{{ old('card_number') }}"
+                            <input type="text" name="card_number" id="card_number" required maxlength="20"
+                                   value="{{ old('card_number') }}" placeholder="Ex. 3433 7056 2183"
                                    class="w-full border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none font-mono tracking-wider">
+                            <p class="text-xs text-stone-400 mt-1">Vous pouvez saisir des espaces entre les chiffres.</p>
                         </div>
                         <div>
                             <label for="pin" class="block text-sm font-medium text-stone-700 mb-1.5">Code PIN *</label>

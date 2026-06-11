@@ -7,7 +7,6 @@ use App\Models\Order;
 use App\Models\Drink;
 use App\Models\LoyaltyCard;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -44,13 +43,14 @@ class OrderController extends Controller
 
     public function store(Request $request)
     {
-        $useLoyalty = $request->boolean('use_loyalty');
+        $useLoyalty      = $request->boolean('use_loyalty');
+        $isEmployeeOrder = $request->boolean('is_employee_order');
 
         $validated = $request->validate([
             'use_loyalty'        => ['nullable', 'boolean'],
+            'is_employee_order'  => ['nullable', 'boolean'],
             'customer_name'      => [Rule::requiredIf(!$useLoyalty), 'nullable', 'string', 'max:100'],
             'loyalty_card_number'=> [Rule::requiredIf($useLoyalty), 'nullable', 'string', 'max:20'],
-            'loyalty_pin'        => [Rule::requiredIf($useLoyalty), 'nullable', 'string', 'max:6'],
             'notes'              => ['nullable', 'string', 'max:500'],
             'items'             => ['required', 'array', 'min:1'],
             'items.*.drink_id'  => ['required', 'integer', 'exists:drinks,id'],
@@ -58,17 +58,17 @@ class OrderController extends Controller
         ], [
             'customer_name.required'       => 'Le nom du client est requis (ou passez une carte de fidélité).',
             'loyalty_card_number.required' => 'Le numéro de carte de fidélité est requis.',
-            'loyalty_pin.required'         => 'Le code PIN de la carte est requis.',
         ]);
 
-        // Rattachement éventuel à une carte de fidélité
+        // Rattachement éventuel à une carte de fidélité (identification par numéro de carte uniquement).
         $loyaltyCard = null;
         if ($useLoyalty) {
-            $loyaltyCard = LoyaltyCard::where('card_number', $validated['loyalty_card_number'])->first();
+            $cardNumber  = str_replace(' ', '', $validated['loyalty_card_number']);
+            $loyaltyCard = LoyaltyCard::where('card_number', $cardNumber)->first();
 
-            if (!$loyaltyCard || !Hash::check($validated['loyalty_pin'], $loyaltyCard->pin)) {
+            if (!$loyaltyCard) {
                 throw ValidationException::withMessages([
-                    'loyalty_card_number' => 'Numéro de carte ou code PIN incorrect.',
+                    'loyalty_card_number' => 'Aucune carte de fidélité ne correspond à ce numéro.',
                 ]);
             }
         }
@@ -97,13 +97,19 @@ class OrderController extends Controller
             ];
         }
 
+        // Réduction immédiate de 15% pour les commandes des employés.
+        $discount = $isEmployeeOrder ? round($total * Order::EMPLOYEE_DISCOUNT_RATE, 2) : 0;
+        $total    = round($total - $discount, 2);
+
         $order = Order::create([
-            'customer_name'   => $loyaltyCard ? $loyaltyCard->full_name : $validated['customer_name'],
-            'loyalty_card_id' => $loyaltyCard?->id,
-            'notes'           => $validated['notes'] ?? null,
-            'total_amount'    => $total,
-            'status'          => Order::STATUS_PENDING,
-            'handled_by'      => auth()->id(),
+            'customer_name'     => $loyaltyCard ? $loyaltyCard->full_name : $validated['customer_name'],
+            'loyalty_card_id'   => $loyaltyCard?->id,
+            'is_employee_order' => $isEmployeeOrder,
+            'notes'             => $validated['notes'] ?? null,
+            'total_amount'      => $total,
+            'discount_amount'   => $discount,
+            'status'            => Order::STATUS_PENDING,
+            'handled_by'        => auth()->id(),
         ]);
 
         $order->items()->createMany($orderItems);

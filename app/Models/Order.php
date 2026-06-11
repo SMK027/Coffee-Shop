@@ -9,15 +9,18 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Order extends Model
 {
     protected $fillable = [
-        'customer_name', 'loyalty_card_id', 'status', 'notes', 'total_amount',
-        'handled_by', 'completed_at', 'points_credited', 'points_awarded',
+        'customer_name', 'loyalty_card_id', 'is_employee_order', 'status', 'notes',
+        'total_amount', 'discount_amount', 'handled_by', 'completed_at',
+        'points_credited', 'points_awarded',
     ];
 
     protected $casts = [
-        'total_amount'    => 'decimal:2',
-        'completed_at'    => 'datetime',
-        'points_credited' => 'boolean',
-        'points_awarded'  => 'integer',
+        'total_amount'      => 'decimal:2',
+        'discount_amount'   => 'decimal:2',
+        'is_employee_order' => 'boolean',
+        'completed_at'      => 'datetime',
+        'points_credited'   => 'boolean',
+        'points_awarded'    => 'integer',
     ];
 
     const STATUS_PENDING   = 'pending';
@@ -33,6 +36,9 @@ class Order extends Model
         'completed' => 'Terminée',
         'cancelled' => 'Annulée',
     ];
+
+    /** Taux de réduction immédiate accordé sur les commandes des employés. */
+    const EMPLOYEE_DISCOUNT_RATE = 0.15;
 
     public function items(): HasMany
     {

@@ -19,20 +19,22 @@
                     <span class="text-sm font-medium text-stone-700">Le client passe sa carte de fidélité</span>
                 </label>
 
+                {{-- Commande employé : réduction immédiate de 15% --}}
+                <label class="flex items-center gap-3 cursor-pointer select-none">
+                    <input type="checkbox" name="is_employee_order" id="is_employee_order" value="1"
+                           {{ old('is_employee_order') ? 'checked' : '' }}
+                           class="h-4 w-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500">
+                    <span class="text-sm font-medium text-stone-700">Commande employé (réduction immédiate de 15%)</span>
+                </label>
+
                 {{-- Bloc carte de fidélité --}}
-                <div id="loyalty-block" class="{{ old('use_loyalty') ? '' : 'hidden' }} grid sm:grid-cols-2 gap-5 bg-amber-50 border border-amber-200 rounded-lg p-4">
+                <div id="loyalty-block" class="{{ old('use_loyalty') ? '' : 'hidden' }} bg-amber-50 border border-amber-200 rounded-lg p-4">
                     <div>
                         <label for="loyalty_card_number" class="block text-sm font-medium text-stone-700 mb-1.5">Numéro de carte</label>
                         <input type="text" name="loyalty_card_number" id="loyalty_card_number" inputmode="numeric" maxlength="20"
                                value="{{ old('loyalty_card_number') }}"
                                class="w-full border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none font-mono tracking-wider">
                         @error('loyalty_card_number')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
-                    </div>
-                    <div>
-                        <label for="loyalty_pin" class="block text-sm font-medium text-stone-700 mb-1.5">Code PIN</label>
-                        <input type="password" name="loyalty_pin" id="loyalty_pin" inputmode="numeric" maxlength="6" autocomplete="off"
-                               class="w-full border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none tracking-widest">
-                        @error('loyalty_pin')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
                     </div>
                 </div>
 
@@ -102,9 +104,15 @@
                     Ajouter une boisson
                 </button>
 
-                <div class="mt-5 pt-4 border-t border-stone-100 flex justify-between text-sm font-semibold">
-                    <span>Total estimé</span>
-                    <span id="total-display">0,00 €</span>
+                <div class="mt-5 pt-4 border-t border-stone-100 space-y-1.5 text-sm">
+                    <div id="discount-line" class="hidden justify-between text-green-700">
+                        <span>Réduction employé (-15%)</span>
+                        <span id="discount-display">0,00 €</span>
+                    </div>
+                    <div class="flex justify-between font-semibold">
+                        <span>Total estimé</span>
+                        <span id="total-display">0,00 €</span>
+                    </div>
                 </div>
             </div>
 
@@ -335,19 +343,42 @@
         });
 
         /* ── Calcul du total ───────────────────────────────────── */
+        const EMPLOYEE_DISCOUNT_RATE = 0.15;
+
         function updateTotal() {
-            let total = 0;
+            let subtotal = 0;
             document.querySelectorAll('.item-row').forEach(row => {
                 const hidden = row.querySelector('.drink-id-input');
                 const qty    = row.querySelector('.qty-input');
                 if (hidden && hidden.value && qty) {
                     const drink = drinks.find(d => d.id == hidden.value);
-                    if (drink) total += drink.price * parseInt(qty.value || 1, 10);
+                    if (drink) subtotal += drink.price * parseInt(qty.value || 1, 10);
                 }
             });
+
+            const empToggle  = document.getElementById('is_employee_order');
+            const isEmployee = empToggle && empToggle.checked;
+            const discount   = isEmployee ? subtotal * EMPLOYEE_DISCOUNT_RATE : 0;
+            const total      = subtotal - discount;
+
+            const discountLine = document.getElementById('discount-line');
+            if (discountLine) {
+                discountLine.classList.toggle('hidden', !isEmployee);
+                discountLine.classList.toggle('flex', isEmployee);
+                document.getElementById('discount-display').textContent =
+                    '-' + discount.toFixed(2).replace('.', ',') + ' €';
+            }
+
             document.getElementById('total-display').textContent =
                 total.toFixed(2).replace('.', ',') + ' €';
         }
+
+        /* ── Recalcul lors du basculement « commande employé » ── */
+        (function () {
+            const empToggle = document.getElementById('is_employee_order');
+            if (empToggle) empToggle.addEventListener('change', updateTotal);
+        })();
+
 
         /* ── Boutons supprimer (masqué si seule ligne) ─────────── */
         function updateRemoveButtons() {

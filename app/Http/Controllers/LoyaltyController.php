@@ -70,7 +70,10 @@ class LoyaltyController extends Controller
             'pin'         => ['required', 'string', 'max:6'],
         ]);
 
-        $card = LoyaltyCard::where('card_number', $validated['card_number'])->first();
+        // Tolère les espaces saisis entre les groupes de chiffres de la carte.
+        $cardNumber = str_replace(' ', '', $validated['card_number']);
+
+        $card = LoyaltyCard::where('card_number', $cardNumber)->first();
 
         if (!$card || !\Illuminate\Support\Facades\Hash::check($validated['pin'], $card->pin)) {
             return back()
