@@ -47,13 +47,13 @@
                     <button type="submit" class="bg-amber-700 hover:bg-amber-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium transition-colors">
                         Enregistrer la réponse
                     </button>
-                    <form action="{{ route('employee.contacts.archive', $contact) }}" method="POST" class="inline">
-                        @csrf @method('PATCH')
-                        <button type="submit" class="bg-stone-100 hover:bg-stone-200 text-stone-600 px-5 py-2.5 rounded-lg text-sm font-medium transition-colors">
-                            Archiver
-                        </button>
-                    </form>
+                    <button type="submit" form="archive-contact-form" class="bg-stone-100 hover:bg-stone-200 text-stone-600 px-5 py-2.5 rounded-lg text-sm font-medium transition-colors">
+                        Archiver
+                    </button>
                 </div>
+            </form>
+            <form id="archive-contact-form" action="{{ route('employee.contacts.archive', $contact) }}" method="POST">
+                @csrf @method('PATCH')
             </form>
         </div>
         @endif
