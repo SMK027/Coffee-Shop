@@ -64,10 +64,10 @@
 
                 {{-- Historique des commandes --}}
                 <div class="bg-white rounded-2xl shadow-sm border border-stone-100 overflow-hidden mb-6">
-                    <h2 class="font-semibold text-stone-800 px-5 py-4 border-b border-stone-100">Historique de mes commandes</h2>
+                    <h2 class="font-semibold text-stone-800 px-5 py-4 border-b border-stone-100">Mes 5 dernières commandes</h2>
                     @if($card->orders->isEmpty())
                         <div class="px-5 py-10 text-center text-stone-500 text-sm">
-                            <p>Aucune commande pour le moment.</p>
+                            <p>Aucune commande validée pour le moment.</p>
                         </div>
                     @else
                         <ul class="divide-y divide-stone-50">

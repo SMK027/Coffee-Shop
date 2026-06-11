@@ -90,7 +90,10 @@ class LoyaltyController extends Controller
                 ->withErrors(['card_number' => 'Numéro de carte ou code PIN incorrect.']);
         }
 
-        $card->load(['orders' => fn ($q) => $q->latest(), 'pointAdjustments' => fn ($q) => $q->latest()]);
+        $card->load([
+            'orders' => fn ($q) => $q->where('status', 'completed')->latest()->limit(5),
+            'pointAdjustments' => fn ($q) => $q->latest(),
+        ]);
 
         // Ouvre une session de consultation pour accéder au détail des commandes
         // de cette carte uniquement.
