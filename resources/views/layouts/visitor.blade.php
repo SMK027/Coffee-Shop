@@ -70,6 +70,11 @@
             <p>{{ session('success') }}</p>
         </div>
     @endif
+    @if(session('error'))
+        <div class="bg-red-50 border-l-4 border-red-500 text-red-800 px-4 py-3 mx-auto max-w-6xl mt-4 rounded-r-lg" role="alert">
+            <p>{{ session('error') }}</p>
+        </div>
+    @endif
 
     {{-- Contenu principal --}}
     <main>

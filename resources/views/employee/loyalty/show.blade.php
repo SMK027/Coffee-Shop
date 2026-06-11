@@ -21,6 +21,24 @@
                     <div><dt class="text-stone-500">Carte créée le</dt><dd class="text-stone-800">{{ $loyaltyCard->created_at->format('d/m/Y') }}</dd></div>
                 </dl>
             </div>
+
+            @if(auth()->user()->isSuperAdmin())
+            <div class="bg-white rounded-xl shadow-sm border border-stone-100 p-4 sm:p-6">
+                <h2 class="font-semibold text-stone-800 mb-2">Code PIN</h2>
+                <p class="text-sm text-stone-500 mb-4">
+                    Envoyez au titulaire un lien par email pour qu'il définisse un nouveau code PIN.
+                    Le lien expire dans 30 minutes.
+                </p>
+                <form action="{{ route('employee.loyalty.pin.send', $loyaltyCard) }}" method="POST"
+                      onsubmit="return confirm('Envoyer un lien de réinitialisation du code PIN à {{ $loyaltyCard->email }} ?');">
+                    @csrf
+                    <button type="submit" class="w-full bg-amber-700 hover:bg-amber-600 text-white px-4 py-2.5 rounded-lg font-medium text-sm transition-colors flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                        Réinitialiser le code PIN par email
+                    </button>
+                </form>
+            </div>
+            @endif
         </div>
 
         {{-- Commandes raccordées --}}

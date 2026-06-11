@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\LoyaltyCard;
+use App\Models\LoyaltyPinReset;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -78,5 +79,56 @@ class LoyaltyController extends Controller
         }
 
         return view('visitor.loyalty.balance', compact('card'));
+    }
+
+    /**
+     * Affiche le formulaire de définition d'un nouveau code PIN (lien email).
+     */
+    public function showPinResetForm(string $token)
+    {
+        $record = LoyaltyPinReset::where('token', hash('sha256', $token))
+            ->with('loyaltyCard')
+            ->first();
+
+        if (!$record || !$record->isValid()) {
+            return redirect()->route('loyalty.balance.form')
+                ->with('error', 'Ce lien de réinitialisation est invalide ou a expiré. Demandez-en un nouveau auprès de l\'équipe.');
+        }
+
+        return view('visitor.loyalty.reset-pin', [
+            'token' => $token,
+            'card'  => $record->loyaltyCard,
+        ]);
+    }
+
+    /**
+     * Enregistre le nouveau code PIN après vérification du token.
+     */
+    public function resetPin(Request $request, string $token)
+    {
+        $record = LoyaltyPinReset::where('token', hash('sha256', $token))
+            ->with('loyaltyCard')
+            ->first();
+
+        if (!$record || !$record->isValid()) {
+            return redirect()->route('loyalty.balance.form')
+                ->with('error', 'Ce lien de réinitialisation est invalide ou a expiré. Demandez-en un nouveau auprès de l\'équipe.');
+        }
+
+        $request->validate([
+            'pin' => ['required', 'confirmed', 'digits_between:4,6'],
+        ], [
+            'pin.digits_between' => 'Le code PIN doit contenir entre 4 et 6 chiffres.',
+            'pin.confirmed'      => 'La confirmation du code PIN ne correspond pas.',
+        ]);
+
+        // Mise à jour du PIN (chiffré via le cast 'hashed' du modèle)
+        $record->loyaltyCard->update(['pin' => $request->pin]);
+
+        // Invalide le token (usage unique)
+        $record->markAsUsed();
+
+        return redirect()->route('loyalty.balance.form')
+            ->with('success', 'Votre code PIN a été mis à jour. Vous pouvez désormais consulter vos points.');
     }
 }

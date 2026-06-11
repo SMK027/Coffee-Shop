@@ -29,6 +29,11 @@ class LoyaltyCard extends Model
         return $this->hasMany(Order::class);
     }
 
+    public function pinResets(): HasMany
+    {
+        return $this->hasMany(LoyaltyPinReset::class);
+    }
+
     public function getFullNameAttribute(): string
     {
         return trim("{$this->first_name} {$this->last_name}");

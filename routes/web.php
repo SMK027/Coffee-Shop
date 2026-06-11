@@ -30,6 +30,8 @@ Route::get('/fidelite', [LoyaltyController::class, 'create'])->name('loyalty.cre
 Route::post('/fidelite', [LoyaltyController::class, 'store'])->name('loyalty.store');
 Route::get('/fidelite/mes-points', [LoyaltyController::class, 'showBalanceForm'])->name('loyalty.balance.form');
 Route::post('/fidelite/mes-points', [LoyaltyController::class, 'balance'])->name('loyalty.balance');
+Route::get('/fidelite/reinitialiser-pin/{token}', [LoyaltyController::class, 'showPinResetForm'])->name('loyalty.pin.form');
+Route::post('/fidelite/reinitialiser-pin/{token}', [LoyaltyController::class, 'resetPin'])->name('loyalty.pin.reset');
 
 /*
 |--------------------------------------------------------------------------
@@ -75,6 +77,7 @@ Route::prefix('espace-employe')->name('employee.')->middleware(['auth', 'employe
     Route::get('/fidelite', [EmployeeLoyaltyController::class, 'index'])->name('loyalty.index');
     Route::get('/fidelite/reglages', [EmployeeLoyaltyController::class, 'settings'])->name('loyalty.settings');
     Route::patch('/fidelite/reglages', [EmployeeLoyaltyController::class, 'updateSettings'])->name('loyalty.settings.update');
+    Route::post('/fidelite/{loyaltyCard}/reset-pin', [EmployeeLoyaltyController::class, 'sendPinReset'])->name('loyalty.pin.send');
     Route::get('/fidelite/{loyaltyCard}', [EmployeeLoyaltyController::class, 'show'])->name('loyalty.show');
 
     // Gestion des employés (admin uniquement)
