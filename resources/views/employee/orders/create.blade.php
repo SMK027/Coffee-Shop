@@ -69,6 +69,7 @@
                                        data-points-cost="{{ $discount->points_cost }}"
                                        data-type="{{ $discount->discount_type }}"
                                        data-value="{{ (float) $discount->discount_value }}"
+                                       data-max-amount="{{ $discount->max_discount_amount !== null ? (float) $discount->max_discount_amount : '' }}"
                                        data-employee-only="{{ $discount->employee_only ? '1' : '0' }}">
                                     <input type="checkbox" name="loyalty_discount_ids[]" value="{{ $discount->id }}"
                                            class="discount-checkbox mt-0.5 h-4 w-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500"
@@ -651,11 +652,13 @@
             document.querySelectorAll('.discount-checkbox:checked').forEach(cb => {
                 const label = cb.closest('[data-type]');
                 if (!label) return;
-                const type  = label.dataset.type;
-                const value = parseFloat(label.dataset.value) || 0;
+                const type      = label.dataset.type;
+                const value     = parseFloat(label.dataset.value) || 0;
+                const maxAmount = label.dataset.maxAmount !== '' ? parseFloat(label.dataset.maxAmount) : null;
                 let amount;
                 if (type === 'percent') {
                     amount = Math.round(remaining * (value / 100) * 100) / 100;
+                    if (maxAmount !== null) amount = Math.min(amount, Math.round(maxAmount * 100) / 100);
                 } else {
                     amount = Math.round(Math.min(remaining, value) * 100) / 100;
                 }

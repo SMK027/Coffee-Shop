@@ -45,6 +45,18 @@
             @error('discount_value')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
         </div>
 
+        <div id="max-amount-block">
+            <label for="max_discount_amount" class="block text-sm font-medium text-stone-700 mb-1.5">
+                Plafond par commande
+                <span class="font-normal text-stone-400">(en €, optionnel)</span>
+            </label>
+            <input type="number" step="0.01" name="max_discount_amount" id="max_discount_amount" min="0.01"
+                   value="{{ old('max_discount_amount', $discount->max_discount_amount ?? '') }}"
+                   class="w-full border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
+            <p class="text-xs text-stone-500 mt-1">Ex. : 20 % dans la limite de 20 €. Laisser vide sans plafond.</p>
+            @error('max_discount_amount')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+        </div>
+
         <div>
             <label for="quantity_limit" class="block text-sm font-medium text-stone-700 mb-1.5">Quantité max</label>
             <input type="number" name="quantity_limit" id="quantity_limit" min="1"
@@ -121,5 +133,20 @@
 
     permanent?.addEventListener('change', syncScheduleInputs);
     syncScheduleInputs();
+})();
+
+(function () {
+    const typeSelect     = document.getElementById('discount_type');
+    const maxAmountBlock = document.getElementById('max-amount-block');
+    const maxAmountInput = document.getElementById('max_discount_amount');
+
+    function syncMaxAmount() {
+        const isPercent = typeSelect && typeSelect.value === 'percent';
+        if (maxAmountBlock) maxAmountBlock.classList.toggle('hidden', !isPercent);
+        if (!isPercent && maxAmountInput) maxAmountInput.value = '';
+    }
+
+    typeSelect?.addEventListener('change', syncMaxAmount);
+    syncMaxAmount();
 })();
 </script>

@@ -226,6 +226,9 @@ class OrderController extends Controller
         foreach ($loyaltyDiscounts as $discount) {
             if ($discount->discount_type === LoyaltyDiscount::TYPE_PERCENT) {
                 $amount = round($remaining * ((float) $discount->discount_value / 100), 2);
+                if ($discount->max_discount_amount !== null) {
+                    $amount = min($amount, round((float) $discount->max_discount_amount, 2));
+                }
             } else {
                 $amount = round(min($remaining, (float) $discount->discount_value), 2);
             }
@@ -271,11 +274,16 @@ class OrderController extends Controller
                     ]);
                 }
 
-                $row = collect($discountRows)->firstWhere('loyalty_discount_id', $locked->id);
+                /* Recalcule le montant à partir du locked pour cohérence (le solde peut avoir bougé) */
+                $computedAmount = $row['discount_amount'];
+                // Recalcul du plafond éventuel dans la transaction
+                if ($locked->discount_type === LoyaltyDiscount::TYPE_PERCENT && $locked->max_discount_amount !== null) {
+                    $computedAmount = min($computedAmount, round((float) $locked->max_discount_amount, 2));
+                }
                 $pivotRows[] = [
                     'loyalty_discount_id' => $locked->id,
                     'points_spent'        => $locked->points_cost,
-                    'discount_amount'     => $row['discount_amount'],
+                    'discount_amount'     => $computedAmount,
                 ];
                 $totalPointsNeeded += $locked->points_cost;
                 $locked->increment('quantity_used');

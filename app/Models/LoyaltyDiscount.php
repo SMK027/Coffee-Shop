@@ -13,6 +13,7 @@ class LoyaltyDiscount extends Model
         'points_cost',
         'discount_type',
         'discount_value',
+        'max_discount_amount',
         'is_active',
         'is_sold_out',
         'employee_only',
@@ -26,6 +27,7 @@ class LoyaltyDiscount extends Model
     protected $casts = [
         'points_cost' => 'integer',
         'discount_value' => 'decimal:2',
+        'max_discount_amount' => 'decimal:2',
         'is_active' => 'boolean',
         'is_sold_out' => 'boolean',
         'employee_only' => 'boolean',
@@ -80,7 +82,12 @@ class LoyaltyDiscount extends Model
     public function getDisplayValueAttribute(): string
     {
         if ($this->discount_type === self::TYPE_PERCENT) {
-            return rtrim(rtrim((string) $this->discount_value, '0'), '.') . ' %';
+            $base = rtrim(rtrim((string) $this->discount_value, '0'), '.') . ' %';
+            if ($this->max_discount_amount !== null) {
+                $cap = number_format((float) $this->max_discount_amount, 2, ',', ' ') . ' EUR';
+                return "{$base} (max {$cap})";
+            }
+            return $base;
         }
 
         return number_format((float) $this->discount_value, 2, ',', ' ') . ' EUR';

@@ -53,6 +53,7 @@ class LoyaltyDiscountController extends Controller
             'points_cost' => ['required', 'integer', 'min:1'],
             'discount_type' => ['required', Rule::in([LoyaltyDiscount::TYPE_FIXED, LoyaltyDiscount::TYPE_PERCENT])],
             'discount_value' => ['required', 'numeric', 'gt:0'],
+            'max_discount_amount' => ['nullable', 'numeric', 'gt:0'],
             'is_active' => ['nullable', 'boolean'],
             'is_sold_out' => ['nullable', 'boolean'],
             'employee_only' => ['nullable', 'boolean'],
@@ -71,6 +72,11 @@ class LoyaltyDiscountController extends Controller
             throw ValidationException::withMessages([
                 'discount_value' => 'Une réduction en pourcentage ne peut pas dépasser 100 %.',
             ]);
+        }
+
+        // Le plafond n'est applicable qu'aux réductions en pourcentage.
+        if ($validated['discount_type'] === LoyaltyDiscount::TYPE_FIXED) {
+            $validated['max_discount_amount'] = null;
         }
 
         if ($validated['is_permanent']) {
