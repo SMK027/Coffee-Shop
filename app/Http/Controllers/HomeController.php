@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\DrinkCategory;
 use App\Models\Testimonial;
+use App\Services\CaptchaService;
 use Illuminate\Http\Request;
 
 class HomeController extends Controller
@@ -28,19 +29,24 @@ class HomeController extends Controller
         return view('visitor.menu', compact('categories'));
     }
 
-    public function contact()
+    public function contact(Request $request, CaptchaService $captcha)
     {
-        return view('visitor.contact');
+        return view('visitor.contact', [
+            'captchaQuestion' => $captcha->refreshChallenge($request, 'contact_form'),
+        ]);
     }
 
-    public function submitContact(Request $request)
+    public function submitContact(Request $request, CaptchaService $captcha)
     {
         $validated = $request->validate([
             'name'    => ['required', 'string', 'max:100'],
             'email'   => ['required', 'email', 'max:150'],
             'subject' => ['required', 'string', 'max:200'],
             'message' => ['required', 'string', 'min:20', 'max:2000'],
+            'captcha' => $captcha->validationRules($request, 'contact_form'),
         ]);
+
+        unset($validated['captcha']);
 
         \App\Models\Contact::create($validated);
 

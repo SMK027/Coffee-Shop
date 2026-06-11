@@ -21,9 +21,15 @@ class AuthenticationTest extends TestCase
     {
         $user = User::factory()->create();
 
-        $response = $this->post('/login', [
+        $response = $this->withSession([
+            'captcha.employee_login_form' => [
+                'question' => 'Combien font 2 + 2 ?',
+                'answer' => '4',
+            ],
+        ])->post('/login', [
             'email' => $user->email,
             'password' => 'password',
+            'captcha' => '4',
         ]);
 
         $this->assertAuthenticated();
@@ -34,9 +40,15 @@ class AuthenticationTest extends TestCase
     {
         $user = User::factory()->create();
 
-        $this->post('/login', [
+        $this->withSession([
+            'captcha.employee_login_form' => [
+                'question' => 'Combien font 2 + 2 ?',
+                'answer' => '4',
+            ],
+        ])->post('/login', [
             'email' => $user->email,
             'password' => 'wrong-password',
+            'captcha' => '4',
         ]);
 
         $this->assertGuest();

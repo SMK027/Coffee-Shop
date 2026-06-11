@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Services\CaptchaService;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -27,9 +28,12 @@ class LoginRequest extends FormRequest
      */
     public function rules(): array
     {
+        $captcha = app(CaptchaService::class);
+
         return [
             'email' => ['required', 'string', 'email'],
             'password' => ['required', 'string'],
+            'captcha' => $captcha->validationRules($this, 'employee_login_form'),
         ];
     }
 

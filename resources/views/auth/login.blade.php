@@ -34,6 +34,13 @@
                            class="w-full border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-colors">
                     @error('password')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
                 </div>
+                <div>
+                    <label for="captcha" class="block text-sm font-medium text-stone-700 mb-1.5">Captcha</label>
+                    <p class="text-xs text-stone-500 mb-2">{{ $captchaQuestion }}</p>
+                    <input id="captcha" type="text" name="captcha" required value="{{ old('captcha') }}"
+                           class="w-full border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-colors">
+                    @error('captcha')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                </div>
                 <div class="flex items-center justify-between">
                     <label class="flex items-center gap-2 text-sm text-stone-600">
                         <input type="checkbox" name="remember" class="rounded border-stone-300 text-amber-600 focus:ring-amber-500">

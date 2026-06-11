@@ -104,6 +104,14 @@
                         @error('message')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
                     </div>
                     <div>
+                        <label for="captcha" class="block text-sm font-medium text-stone-700 mb-1.5">Captcha *</label>
+                        <p class="text-xs text-stone-500 mb-2">{{ $captchaQuestion }}</p>
+                        <input type="text" name="captcha" id="captcha" required
+                               value="{{ old('captcha') }}" placeholder="Votre reponse"
+                               class="w-full sm:w-64 border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-colors">
+                        @error('captcha')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                    </div>
+                    <div>
                         <button type="submit"
                                 class="w-full sm:w-auto bg-amber-700 hover:bg-amber-600 text-white px-8 py-3 rounded-lg font-semibold transition-colors text-sm shadow-sm">
                             Envoyer le message
