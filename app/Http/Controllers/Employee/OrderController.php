@@ -322,6 +322,25 @@ class OrderController extends Controller
                 ]);
             }
 
+            // Traçabilité : enregistre le débit de points dans l'historique de la carte.
+            if ($lockedCard && $totalPointsNeeded > 0) {
+                $balanceAfter = $lockedCard->fresh()->points;
+                $discountNames = collect($pivotRows)->map(function ($row) {
+                    $d = LoyaltyDiscount::find($row['loyalty_discount_id']);
+                    return $d ? $d->name . ' (' . $row['points_spent'] . ' pts)' : '?';
+                })->implode(', ');
+                \App\Models\LoyaltyPointAdjustment::create([
+                    'loyalty_card_id' => $lockedCard->id,
+                    'order_id'        => $order->id,
+                    'user_id'         => auth()->id(),
+                    'type'            => \App\Models\LoyaltyPointAdjustment::TYPE_DEBIT,
+                    'source'          => \App\Models\LoyaltyPointAdjustment::SOURCE_ORDER_DEBIT,
+                    'points'          => $totalPointsNeeded,
+                    'balance_after'   => $balanceAfter,
+                    'reason'          => "Réduction(s) appliquée(s) — commande #{$order->id} : {$discountNames}",
+                ]);
+            }
+
             return $order;
         });
 

@@ -227,28 +227,56 @@
                 @endif
             </div>
 
-            @if(auth()->user()->isSuperAdmin())
+            {{-- Historique des mouvements de points (visible par tous les salariés) --}}
             <div class="bg-white rounded-xl shadow-sm border border-stone-100 overflow-hidden mt-4 sm:mt-6">
-                <h2 class="font-semibold text-stone-800 px-4 sm:px-6 py-4 border-b border-stone-100">Historique des ajustements de points</h2>
+                <h2 class="font-semibold text-stone-800 px-4 sm:px-6 py-4 border-b border-stone-100">Historique des points</h2>
                 @if($loyaltyCard->pointAdjustments->isEmpty())
-                    <div class="px-6 py-12 text-center text-stone-500"><p>Aucun ajustement manuel pour cette carte.</p></div>
+                    <div class="px-6 py-12 text-center text-stone-500"><p>Aucun mouvement de points pour cette carte.</p></div>
                 @else
                     <div class="divide-y divide-stone-50">
                         @foreach($loyaltyCard->pointAdjustments as $adjustment)
-                        <div class="flex items-center justify-between px-4 sm:px-6 py-3">
-                            <div>
-                                <p class="font-medium text-sm {{ $adjustment->isCredit() ? 'text-green-700' : 'text-red-700' }}">
-                                    {{ $adjustment->isCredit() ? 'Crédit' : 'Débit' }} de {{ $adjustment->points }} pts
-                                </p>
-                                <p class="text-xs text-stone-400">
-                                    {{ $adjustment->created_at->format('d/m/Y à H:i') }}
-                                    @if($adjustment->user) · par {{ $adjustment->user->name }} @endif
-                                    @if($adjustment->reason) · {{ $adjustment->reason }} @endif
-                                </p>
+                        @php
+                            $isCredit = $adjustment->isCredit();
+                            $isManual = $adjustment->isManual();
+                            $source   = $adjustment->source;
+                        @endphp
+                        <div class="flex items-start justify-between gap-3 px-4 sm:px-6 py-3 hover:bg-stone-50 transition-colors">
+                            <div class="flex items-start gap-3 min-w-0">
+                                {{-- Icône --}}
+                                <div class="flex-shrink-0 mt-0.5 w-7 h-7 rounded-full flex items-center justify-center
+                                    {{ $isCredit ? 'bg-green-100' : 'bg-red-100' }}">
+                                    @if($isCredit)
+                                        <svg class="w-3.5 h-3.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
+                                    @else
+                                        <svg class="w-3.5 h-3.5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M20 12H4"/></svg>
+                                    @endif
+                                </div>
+                                <div class="min-w-0">
+                                    <div class="flex flex-wrap items-center gap-1.5 mb-0.5">
+                                        <span class="text-sm font-medium {{ $isCredit ? 'text-green-700' : 'text-red-700' }}">
+                                            {{ $isCredit ? 'Crédit' : 'Débit' }} de {{ $adjustment->points }} pts
+                                        </span>
+                                        @if($source === 'order_debit')
+                                            <span class="px-1.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">Réduction</span>
+                                        @elseif($source === 'order_credit')
+                                            <span class="px-1.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">Points gagnés</span>
+                                        @else
+                                            <span class="px-1.5 py-0.5 rounded-full text-xs font-medium bg-stone-100 text-stone-600">Ajustement manuel</span>
+                                        @endif
+                                    </div>
+                                    <p class="text-xs text-stone-400 truncate">
+                                        {{ $adjustment->created_at->format('d/m/Y à H:i') }}
+                                        @if($adjustment->order_id)
+                                            · <a href="{{ route('employee.orders.show', $adjustment->order_id) }}" class="underline hover:text-stone-600">Commande #{{ str_pad($adjustment->order_id, 4, '0', STR_PAD_LEFT) }}</a>
+                                        @endif
+                                        @if($adjustment->user) · {{ $adjustment->user->name }} @endif
+                                        @if($adjustment->reason && $isManual) · {{ $adjustment->reason }} @endif
+                                    </p>
+                                </div>
                             </div>
-                            <div class="text-right">
-                                <p class="text-sm font-semibold {{ $adjustment->isCredit() ? 'text-green-700' : 'text-red-700' }}">
-                                    {{ $adjustment->isCredit() ? '+' : '−' }}{{ $adjustment->points }}
+                            <div class="text-right flex-shrink-0">
+                                <p class="text-sm font-semibold {{ $isCredit ? 'text-green-700' : 'text-red-700' }}">
+                                    {{ $isCredit ? '+' : '−' }}{{ $adjustment->points }}
                                 </p>
                                 <p class="text-xs text-stone-400">Solde : {{ $adjustment->balance_after }}</p>
                             </div>
@@ -256,6 +284,9 @@
                         @endforeach
                     </div>
                 @endif
+            </div>
+
+            @if(auth()->user()->isSuperAdmin())
             </div>
             @endif
         </div>
