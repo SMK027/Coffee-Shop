@@ -74,7 +74,14 @@
                                 @endif
                             </td>
                             <td class="px-5 py-3 text-right">
-                                <a href="{{ route('employee.loyalty-discounts.edit', $discount) }}" class="text-amber-700 hover:text-amber-600 font-medium text-xs">Modifier →</a>
+                                <div class="flex items-center justify-end gap-3">
+                                    <a href="{{ route('employee.loyalty-discounts.edit', $discount) }}" class="text-amber-700 hover:text-amber-600 font-medium text-xs">Modifier</a>
+                                    <form action="{{ route('employee.loyalty-discounts.destroy', $discount) }}" method="POST"
+                                          onsubmit="return confirm('Supprimer la réduction \u00ab {{ addslashes($discount->name) }} \u00bb ?')">
+                                        @csrf @method('DELETE')
+                                        <button type="submit" class="text-red-500 hover:text-red-700 font-medium text-xs transition-colors">Supprimer</button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                         @endforeach
@@ -89,8 +96,9 @@
                     $isValid   = $discount->isValidForUse();
                     $isSoldOut = $discount->isSoldOut();
                 @endphp
-                <a href="{{ route('employee.loyalty-discounts.edit', $discount) }}" class="block px-4 py-3.5 hover:bg-stone-50 transition-colors">
+                <div class="px-4 py-3.5 hover:bg-stone-50 transition-colors">
                     <div class="flex items-start justify-between gap-3">
+                        <a href="{{ route('employee.loyalty-discounts.edit', $discount) }}" class="flex-1 min-w-0 block">
                         <div class="min-w-0">
                             <p class="font-medium text-stone-800 text-sm truncate">{{ $discount->name }}</p>
                             <p class="text-xs text-stone-500 mt-0.5">{{ $discount->points_cost }} pts → {{ $discount->display_value }}</p>
@@ -98,7 +106,8 @@
                                 <span class="inline-flex mt-1 px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs font-medium">Salariés</span>
                             @endif
                         </div>
-                        <div class="flex-shrink-0 flex flex-col items-end gap-1">
+                        </a>
+                        <div class="flex-shrink-0 flex flex-col items-end gap-2">
                             @if(!$discount->is_active)
                                 <span class="px-2.5 py-1 rounded-full text-xs font-medium bg-stone-100 text-stone-600">Désactivée</span>
                             @elseif($isSoldOut)
@@ -108,12 +117,14 @@
                             @else
                                 <span class="px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">Hors plage</span>
                             @endif
-                            <svg class="w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                            </svg>
+                            <form action="{{ route('employee.loyalty-discounts.destroy', $discount) }}" method="POST"
+                                  onsubmit="return confirm('Supprimer cette réduction ?')">
+                                @csrf @method('DELETE')
+                                <button type="submit" class="text-red-500 hover:text-red-700 text-xs font-medium">Supprimer</button>
+                            </form>
                         </div>
                     </div>
-                </a>
+                </div>
                 @endforeach
             </div>
 

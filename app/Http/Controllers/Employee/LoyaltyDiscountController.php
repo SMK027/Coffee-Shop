@@ -86,4 +86,19 @@ class LoyaltyDiscountController extends Controller
 
         return $validated;
     }
+
+    public function destroy(LoyaltyDiscount $loyaltyDiscount)
+    {
+        // Bloquer la suppression si la réduction est liée à des commandes.
+        if ($loyaltyDiscount->orders()->exists()) {
+            return redirect()->route('employee.loyalty-discounts.index')
+                ->with('error', "La réduction « {$loyaltyDiscount->name} » est liée à des commandes et ne peut pas être supprimée. Désactivez-la à la place.");
+        }
+
+        $name = $loyaltyDiscount->name;
+        $loyaltyDiscount->delete();
+
+        return redirect()->route('employee.loyalty-discounts.index')
+            ->with('success', "Réduction « {$name} » supprimée.");
+    }
 }

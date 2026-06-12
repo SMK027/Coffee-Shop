@@ -72,4 +72,12 @@ class ContactController extends Controller
 
         return redirect()->back()->with('success', 'Message archivé.');
     }
+
+    public function destroy(Contact $contact)
+    {
+        $contact->delete();
+
+        return redirect()->route('employee.contacts.index')
+            ->with('success', 'Message supprimé définitivement.');
+    }
 }

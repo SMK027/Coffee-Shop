@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Carbon;
 
 class LoyaltyDiscount extends Model
@@ -40,6 +41,13 @@ class LoyaltyDiscount extends Model
 
     public const TYPE_FIXED = 'fixed';
     public const TYPE_PERCENT = 'percent';
+
+    public function orders(): BelongsToMany
+    {
+        return $this->belongsToMany(Order::class, 'order_loyalty_discounts')
+            ->withPivot('points_spent', 'discount_amount')
+            ->withTimestamps();
+    }
 
     public function isSoldOut(): bool
     {

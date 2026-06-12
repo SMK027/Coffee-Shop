@@ -75,6 +75,7 @@ Route::prefix('espace-employe')->name('employee.')->middleware(['auth', 'employe
     Route::get('/contacts/{contact}', [ContactController::class, 'show'])->name('contacts.show');
     Route::post('/contacts/{contact}/repondre', [ContactController::class, 'reply'])->name('contacts.reply');
     Route::patch('/contacts/{contact}/archiver', [ContactController::class, 'archive'])->name('contacts.archive');
+    Route::delete('/contacts/{contact}', [ContactController::class, 'destroy'])->name('contacts.destroy');
 
     // Statistiques
     Route::get('/statistiques', [StatsController::class, 'index'])->name('stats.index');
@@ -93,6 +94,7 @@ Route::prefix('espace-employe')->name('employee.')->middleware(['auth', 'employe
     Route::post('/fidelite/reductions', [LoyaltyDiscountController::class, 'store'])->name('loyalty-discounts.store');
     Route::get('/fidelite/reductions/{loyaltyDiscount}/modifier', [LoyaltyDiscountController::class, 'edit'])->name('loyalty-discounts.edit');
     Route::put('/fidelite/reductions/{loyaltyDiscount}', [LoyaltyDiscountController::class, 'update'])->name('loyalty-discounts.update');
+    Route::delete('/fidelite/reductions/{loyaltyDiscount}', [LoyaltyDiscountController::class, 'destroy'])->name('loyalty-discounts.destroy');
     Route::get('/fidelite/{loyaltyCard}', [EmployeeLoyaltyController::class, 'show'])->name('loyalty.show');
 
     // Gestion des employés (admin uniquement)

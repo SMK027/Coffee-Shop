@@ -1,6 +1,15 @@
 <x-employee-layout title="{{ $contact->subject }}" subtitle="{{ $contact->name }} &lt;{{ $contact->email }}&gt;">
     <x-slot name="headerActions">
-        <a href="{{ route('employee.contacts.index') }}" class="text-stone-500 hover:text-stone-700 text-sm">← Retour</a>
+        <div class="flex items-center gap-2">
+            <form action="{{ route('employee.contacts.destroy', $contact) }}" method="POST"
+                  onsubmit="return confirm('Supprimer définitivement ce message ?')">
+                @csrf @method('DELETE')
+                <button type="submit" class="bg-red-100 hover:bg-red-200 text-red-700 px-3 py-2 rounded-lg text-sm font-medium transition-colors">
+                    Supprimer
+                </button>
+            </form>
+            <a href="{{ route('employee.contacts.index') }}" class="text-stone-500 hover:text-stone-700 text-sm">← Retour</a>
+        </div>
     </x-slot>
 
     <div class="max-w-3xl space-y-6">
