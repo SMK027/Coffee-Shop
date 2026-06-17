@@ -33,10 +33,9 @@ class LoyaltyController extends Controller
             });
         }
 
-        $cards          = $query->paginate(20)->withQueryString();
-        $pointsPerEuro  = Setting::pointsPerEuro();
+        $cards = $query->paginate(20)->withQueryString();
 
-        return view('employee.loyalty.index', compact('cards', 'pointsPerEuro'));
+        return view('employee.loyalty.index', compact('cards'));
     }
 
     /**
@@ -177,25 +176,17 @@ class LoyaltyController extends Controller
     {
         abort_unless(auth()->user()->isSuperAdmin(), 403);
 
-        $pointsPerEuro = Setting::pointsPerEuro();
-
-        return view('employee.loyalty.settings', compact('pointsPerEuro'));
+        return view('employee.loyalty.settings');
     }
 
     /**
-     * Met à jour le ratio de points par euro (super admin uniquement).
+     * Route conservée pour rétro-compat (le formulaire points_per_euro a été supprimé).
      */
     public function updateSettings(Request $request)
     {
         abort_unless(auth()->user()->isSuperAdmin(), 403);
 
-        $validated = $request->validate([
-            'points_per_euro' => ['required', 'integer', 'min:0', 'max:1000'],
-        ]);
-
-        Setting::set(Setting::KEY_POINTS_PER_EURO, (string) $validated['points_per_euro']);
-
-        return back()->with('success', 'Ratio de fidélité mis à jour : ' . $validated['points_per_euro'] . ' points par euro.');
+        return back()->with('success', 'Les réglages sont désormais gérés directement sur chaque boisson.');
     }
 
     /**

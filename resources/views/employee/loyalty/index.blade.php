@@ -8,9 +8,10 @@
         @endif
     </x-slot>
 
-    {{-- Bandeau ratio --}}
+    {{-- Bandeau programme --}}
     <div class="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 mb-4 sm:mb-6 text-sm text-amber-800">
-        Programme actuel : <strong>{{ $pointsPerEuro }} point{{ $pointsPerEuro > 1 ? 's' : '' }}</strong> crédité(s) par euro dépensé, après clôture de la commande.
+        Les points sont attribués par article commandé. Configurez les points par boisson depuis
+        <a href="{{ route('employee.drinks.index') }}" class="font-medium underline hover:text-amber-900">la gestion du menu</a>.
     </div>
 
     {{-- Recherche --}}

@@ -103,8 +103,9 @@ class Order extends Model
     /**
      * Crédite les points de fidélité sur la carte raccordée à la commande.
      *
-     * À appeler une fois la commande marquée comme terminée. Chaque euro
-     * dépensé donne lieu à un crédit (ratio configurable par les super admins).
+     * Le nombre de points est calculé article par article :
+     *   points = Σ (quantité × boisson.loyalty_points)
+     * Ce système remplace l'ancien ratio par euro dépensé.
      * Sécurisé contre le double-crédit via le champ points_credited.
      */
     public function creditLoyaltyPoints(): void
@@ -113,10 +114,16 @@ class Order extends Model
             return;
         }
 
-        $ratio  = \App\Models\Setting::pointsPerEuro();
-        $points = (int) floor((float) $this->total_amount) * $ratio;
+        // S'assure que les items et leurs boissons sont chargés
+        $this->loadMissing('items.drink');
 
-        $this->loyaltyCard()->increment('points', $points);
+        $points = $this->items->sum(
+            fn (OrderItem $item) => $item->quantity * (int) ($item->drink?->loyalty_points ?? 0)
+        );
+
+        if ($points > 0) {
+            $this->loyaltyCard()->increment('points', $points);
+        }
 
         $this->forceFill([
             'points_credited' => true,

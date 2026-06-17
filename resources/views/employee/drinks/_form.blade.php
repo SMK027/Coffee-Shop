@@ -44,6 +44,15 @@
     </div>
 
     <div>
+        <label for="loyalty_points" class="block text-sm font-medium text-stone-700 mb-1.5">Points de fidélité par unité vendue</label>
+        <input type="number" name="loyalty_points" id="loyalty_points" min="0" max="9999"
+               value="{{ old('loyalty_points', $drink->loyalty_points ?? 0) }}"
+               class="w-32 border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
+        <p class="text-xs text-stone-400 mt-1">Nombre de points crédités par unité commandée. Ex : 15 → 2 unités = 30 points. Laisser à 0 pour ne pas attribuer de points.</p>
+        @error('loyalty_points')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+    </div>
+
+    <div>
         <label for="image" class="block text-sm font-medium text-stone-700 mb-1.5">Photo</label>
         @isset($drink)
             @if($drink->image)

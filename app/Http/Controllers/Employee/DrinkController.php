@@ -49,17 +49,19 @@ class DrinkController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'category_id' => ['required', 'exists:drink_categories,id'],
-            'name'        => ['required', 'string', 'max:150'],
-            'description' => ['nullable', 'string', 'max:500'],
-            'price'       => ['required', 'numeric', 'min:0.01', 'max:99.99'],
-            'available'   => ['boolean'],
-            'sort_order'  => ['integer', 'min:0'],
-            'image'       => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
+            'category_id'    => ['required', 'exists:drink_categories,id'],
+            'name'           => ['required', 'string', 'max:150'],
+            'description'    => ['nullable', 'string', 'max:500'],
+            'price'          => ['required', 'numeric', 'min:0.01', 'max:99.99'],
+            'available'      => ['boolean'],
+            'sort_order'     => ['integer', 'min:0'],
+            'loyalty_points' => ['integer', 'min:0', 'max:9999'],
+            'image'          => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
         ]);
 
         $validated['slug'] = Str::slug($validated['name']);
         $validated['available'] = $request->boolean('available', true);
+        $validated['loyalty_points'] = (int) ($validated['loyalty_points'] ?? 0);
 
         if ($request->hasFile('image')) {
             $validated['image'] = $request->file('image')->store('drinks', 'public');
@@ -81,17 +83,19 @@ class DrinkController extends Controller
     public function update(Request $request, Drink $drink)
     {
         $validated = $request->validate([
-            'category_id' => ['required', 'exists:drink_categories,id'],
-            'name'        => ['required', 'string', 'max:150'],
-            'description' => ['nullable', 'string', 'max:500'],
-            'price'       => ['required', 'numeric', 'min:0.01', 'max:99.99'],
-            'available'   => ['boolean'],
-            'sort_order'  => ['integer', 'min:0'],
-            'image'       => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
+            'category_id'    => ['required', 'exists:drink_categories,id'],
+            'name'           => ['required', 'string', 'max:150'],
+            'description'    => ['nullable', 'string', 'max:500'],
+            'price'          => ['required', 'numeric', 'min:0.01', 'max:99.99'],
+            'available'      => ['boolean'],
+            'sort_order'     => ['integer', 'min:0'],
+            'loyalty_points' => ['integer', 'min:0', 'max:9999'],
+            'image'          => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
         ]);
 
         $validated['slug'] = Str::slug($validated['name']);
         $validated['available'] = $request->boolean('available');
+        $validated['loyalty_points'] = (int) ($validated['loyalty_points'] ?? 0);
 
         if ($request->hasFile('image')) {
             if ($drink->image) {

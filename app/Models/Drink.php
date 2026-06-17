@@ -9,12 +9,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Drink extends Model
 {
     protected $fillable = [
-        'category_id', 'name', 'slug', 'description', 'price', 'image', 'available', 'sort_order',
+        'category_id', 'name', 'slug', 'description', 'price', 'image', 'available', 'sort_order', 'loyalty_points',
     ];
 
     protected $casts = [
-        'available' => 'boolean',
-        'price'     => 'decimal:2',
+        'available'      => 'boolean',
+        'price'          => 'decimal:2',
+        'loyalty_points' => 'integer',
     ];
 
     public function category(): BelongsTo
