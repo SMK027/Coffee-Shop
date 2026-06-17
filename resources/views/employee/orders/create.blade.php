@@ -92,11 +92,15 @@
                     </div>
                 </div>
 
-                {{-- Nom du client (masqué si carte passée) --}}
+                {{-- Nom du client (optionnel, masqué si carte passée) --}}
                 <div id="customer-name-block" class="{{ old('use_loyalty') ? 'hidden' : '' }}">
-                    <label for="customer_name" class="block text-sm font-medium text-stone-700 mb-1.5">Nom du client *</label>
+                    <label for="customer_name" class="block text-sm font-medium text-stone-700 mb-1.5">
+                        Nom du client
+                        <span class="font-normal text-stone-400">(optionnel)</span>
+                    </label>
                     <input type="text" name="customer_name" id="customer_name" maxlength="100"
                            value="{{ old('customer_name') }}"
+                           placeholder="Laisser vide pour une commande anonyme"
                            class="w-full border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
                     @error('customer_name')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
                 </div>
@@ -415,7 +419,7 @@
                 const useLoyalty = toggle.checked;
                 loyaltyBlk.classList.toggle('hidden', !useLoyalty);
                 nameBlk.classList.toggle('hidden', useLoyalty);
-                if (nameInput) nameInput.required = !useLoyalty;
+                if (nameInput) nameInput.required = false;
                 if (!useLoyalty) {
                     currentCard = null; clearStatus();
                     if (pinBlock) pinBlock.classList.add('hidden');

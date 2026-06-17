@@ -70,6 +70,11 @@ class Order extends Model
         return self::STATUS_LABELS[$this->status] ?? $this->status;
     }
 
+    public function getDisplayNameAttribute(): string
+    {
+        return $this->customer_name ?? 'Anonyme #' . str_pad($this->id, 4, '0', STR_PAD_LEFT);
+    }
+
     public function scopeActive($query)
     {
         return $query->whereNotIn('status', ['completed', 'cancelled']);

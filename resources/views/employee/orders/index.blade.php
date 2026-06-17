@@ -76,7 +76,7 @@
                         @endphp
                         <tr class="hover:bg-stone-50 transition-colors">
                             <td class="px-5 py-3 font-mono text-stone-500 text-xs">#{{ str_pad($order->id, 4, '0', STR_PAD_LEFT) }}</td>
-                            <td class="px-5 py-3 font-medium text-stone-800">{{ $order->customer_name }}</td>
+                            <td class="px-5 py-3 font-medium text-stone-800">{{ $order->display_name }}</td>
                             <td class="px-5 py-3 text-stone-500">{{ $order->items->count() }} article(s)</td>
                             <td class="px-5 py-3 font-medium">{{ number_format($order->total_amount, 2, ',', ' ') }} €</td>
                             <td class="px-5 py-3">
@@ -114,7 +114,7 @@
                                 {{ $order->status_label }}
                             </span>
                         </div>
-                        <p class="font-medium text-stone-800 text-sm truncate">{{ $order->customer_name }}</p>
+                        <p class="font-medium text-stone-800 text-sm truncate">{{ $order->display_name }}</p>
                         <p class="text-xs text-stone-400 mt-0.5">{{ $order->items->count() }} article(s) · {{ $order->created_at->format('d/m H:i') }}</p>
                     </div>
                     <div class="text-right flex-shrink-0">

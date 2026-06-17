@@ -1,4 +1,4 @@
-<x-employee-layout title="Commande #{{ str_pad($order->id, 4, '0', STR_PAD_LEFT) }}" subtitle="{{ $order->customer_name }}">
+<x-employee-layout title="Commande #{{ str_pad($order->id, 4, '0', STR_PAD_LEFT) }}" subtitle="{{ $order->display_name }}">
     <x-slot name="headerActions">
         <a href="{{ route('employee.orders.index') }}" class="text-stone-500 hover:text-stone-700 text-sm">← Retour</a>
     </x-slot>
@@ -63,7 +63,7 @@
                 <dl class="space-y-3 text-sm">
                     <div>
                         <dt class="text-stone-500">Client</dt>
-                        <dd class="font-medium text-stone-800">{{ $order->customer_name }}</dd>
+                        <dd class="font-medium text-stone-800">{{ $order->display_name }}</dd>
                     </div>
                     @if($order->is_employee_order)
                     <div>

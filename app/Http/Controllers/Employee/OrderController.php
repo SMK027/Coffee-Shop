@@ -120,7 +120,7 @@ class OrderController extends Controller
         $validated = $request->validate([
             'use_loyalty'            => ['nullable', 'boolean'],
             'is_employee_order'      => ['nullable', 'boolean'],
-            'customer_name'          => [Rule::requiredIf(!$useLoyalty), 'nullable', 'string', 'max:100'],
+            'customer_name'          => ['nullable', 'string', 'max:100'],
             'loyalty_card_number'    => [Rule::requiredIf($useLoyalty), 'nullable', 'string', 'max:20'],
             'loyalty_discount_ids'   => ['nullable', 'array'],
             'loyalty_discount_ids.*' => ['integer', 'exists:loyalty_discounts,id'],
@@ -130,7 +130,6 @@ class OrderController extends Controller
             'items.*.drink_id'       => ['required', 'integer', 'exists:drinks,id'],
             'items.*.quantity'       => ['required', 'integer', 'min:1', 'max:20'],
         ], [
-            'customer_name.required'       => 'Le nom du client est requis (ou passez une carte de fidélité).',
             'loyalty_card_number.required' => 'Le numéro de carte de fidélité est requis.',
         ]);
 
@@ -301,7 +300,7 @@ class OrderController extends Controller
             }
 
             $order = Order::create([
-                'customer_name'           => $lockedCard ? $lockedCard->full_name : $validated['customer_name'],
+                'customer_name'           => $lockedCard ? $lockedCard->full_name : ($validated['customer_name'] ?? null),
                 'loyalty_card_id'         => $lockedCard?->id,
                 'is_employee_order'       => $isEmployeeOrder,
                 'notes'                   => $validated['notes'] ?? null,
