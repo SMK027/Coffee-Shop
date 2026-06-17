@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Employee;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Models\OrderStatus;
 use App\Models\Drink;
 use App\Models\LoyaltyCard;
 use App\Models\LoyaltyDiscount;
@@ -40,17 +41,34 @@ class OrderController extends Controller
         }
 
         $orders = $query->paginate(20);
-        $statusLabels = Order::STATUS_LABELS;
+        $allStatuses  = OrderStatus::orderBy('sort_order')->get();
+        $statusLabels = $allStatuses->pluck('label', 'key')->all();
 
-        return view('employee.orders.index', compact('orders', 'statusLabels'));
+        return view('employee.orders.index', compact('orders', 'statusLabels', 'allStatuses'));
     }
 
     public function show(Order $order)
     {
         $order->load('items.drink', 'handler', 'loyaltyCard', 'loyaltyDiscounts');
-        $statusLabels = Order::STATUS_LABELS;
 
-        return view('employee.orders.show', compact('order', 'statusLabels'));
+        $allStatuses  = OrderStatus::orderBy('sort_order')->get();
+        $statusLabels = $allStatuses->pluck('label', 'key')->all();
+
+        // Calcule les transitions disponibles depuis le statut courant
+        $currentStatus = $allStatuses->firstWhere('key', $order->status);
+        $availableTransitions = collect();
+        if ($currentStatus && !$currentStatus->is_terminal) {
+            $availableTransitions = $allStatuses->filter(
+                fn (OrderStatus $s) => $s->is_active
+                    && $s->key !== $order->status
+                    && (
+                        $s->is_terminal
+                        || $s->sort_order > $currentStatus->sort_order
+                    )
+            )->values();
+        }
+
+        return view('employee.orders.show', compact('order', 'statusLabels', 'availableTransitions'));
     }
 
     public function create()
@@ -349,20 +367,23 @@ class OrderController extends Controller
 
     public function updateStatus(Request $request, Order $order)
     {
+        $validKeys = OrderStatus::where('is_active', true)->pluck('key')->all();
+
         $validated = $request->validate([
-            'status' => ['required', 'in:pending,preparing,serving,completed,cancelled'],
+            'status' => ['required', 'string', Rule::in($validKeys)],
         ]);
 
+        $newStatus = OrderStatus::where('key', $validated['status'])->first();
         $data = ['status' => $validated['status'], 'handled_by' => auth()->id()];
 
-        if ($validated['status'] === Order::STATUS_COMPLETED) {
+        if ($newStatus?->triggers_loyalty_credit) {
             $data['completed_at'] = now();
         }
 
         $order->update($data);
 
-        // Crédite automatiquement les points de fidélité une fois la commande terminée
-        if ($validated['status'] === Order::STATUS_COMPLETED) {
+        // Crédite automatiquement les points de fidélité si le statut le demande
+        if ($newStatus?->triggers_loyalty_credit) {
             $order->refresh()->creditLoyaltyPoints();
         }
 

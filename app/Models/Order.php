@@ -32,6 +32,7 @@ class Order extends Model
     const STATUS_COMPLETED = 'completed';
     const STATUS_CANCELLED = 'cancelled';
 
+    /** Libellés de repli si la table order_statuses n'est pas encore disponible. */
     const STATUS_LABELS = [
         'pending'   => 'En attente',
         'preparing' => 'Préparation en cours',
@@ -58,6 +59,11 @@ class Order extends Model
         return $this->belongsTo(LoyaltyCard::class);
     }
 
+    public function orderStatus(): BelongsTo
+    {
+        return $this->belongsTo(OrderStatus::class, 'status', 'key');
+    }
+
     public function loyaltyDiscounts(): BelongsToMany
     {
         return $this->belongsToMany(LoyaltyDiscount::class, 'order_loyalty_discounts')
@@ -67,6 +73,15 @@ class Order extends Model
 
     public function getStatusLabelAttribute(): string
     {
+        // Priorité à la table dynamique, repli sur la constante pour la rétro-compat.
+        try {
+            $label = OrderStatus::where('key', $this->status)->value('label');
+            if ($label !== null) {
+                return $label;
+            }
+        } catch (\Exception) {
+            // Table pas encore migrée (ex : lors des seeds initiaux)
+        }
         return self::STATUS_LABELS[$this->status] ?? $this->status;
     }
 
@@ -77,7 +92,12 @@ class Order extends Model
 
     public function scopeActive($query)
     {
-        return $query->whereNotIn('status', ['completed', 'cancelled']);
+        try {
+            $terminalKeys = OrderStatus::where('is_terminal', true)->pluck('key');
+            return $query->whereNotIn('status', $terminalKeys);
+        } catch (\Exception) {
+            return $query->whereNotIn('status', ['completed', 'cancelled']);
+        }
     }
 
     /**

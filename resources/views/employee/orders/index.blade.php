@@ -30,14 +30,16 @@
 
     {{-- Filtres --}}
     <div class="bg-white rounded-xl p-3 sm:p-4 shadow-sm border border-stone-100 mb-4 sm:mb-6 flex flex-wrap gap-2">
-        @php
-            $statuses = ['all' => 'Toutes'] + \App\Models\Order::STATUS_LABELS;
-        @endphp
-        @foreach($statuses as $key => $label)
-            <a href="{{ route('employee.orders.index', array_filter(['status' => $key !== 'all' ? $key : null, 'q' => request('q')])) }}"
+        <a href="{{ route('employee.orders.index', array_filter(['q' => request('q')])) }}"
+           class="px-4 py-1.5 rounded-full text-sm font-medium transition-colors
+                  {{ !request()->filled('status') ? 'bg-amber-700 text-white' : 'bg-stone-100 text-stone-600 hover:bg-stone-200' }}">
+            Toutes
+        </a>
+        @foreach($allStatuses as $s)
+            <a href="{{ route('employee.orders.index', array_filter(['status' => $s->key, 'q' => request('q')])) }}"
                class="px-4 py-1.5 rounded-full text-sm font-medium transition-colors
-                      {{ (request('status', 'all') === $key) ? 'bg-amber-700 text-white' : 'bg-stone-100 text-stone-600 hover:bg-stone-200' }}">
-                {{ $label }}
+                      {{ request('status') === $s->key ? 'bg-amber-700 text-white' : 'bg-stone-100 text-stone-600 hover:bg-stone-200' }}">
+                {{ $s->label }}
             </a>
         @endforeach
     </div>
@@ -64,23 +66,15 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-stone-50">
+                        @php $badgeMap = $allStatuses->pluck('badge_class', 'key'); @endphp
                         @foreach($orders as $order)
-                        @php
-                            $statusColors = [
-                                'pending'   => 'bg-stone-100 text-stone-600',
-                                'preparing' => 'bg-amber-100 text-amber-700',
-                                'serving'   => 'bg-blue-100 text-blue-700',
-                                'completed' => 'bg-green-100 text-green-700',
-                                'cancelled' => 'bg-red-100 text-red-700',
-                            ];
-                        @endphp
                         <tr class="hover:bg-stone-50 transition-colors">
                             <td class="px-5 py-3 font-mono text-stone-500 text-xs">#{{ str_pad($order->id, 4, '0', STR_PAD_LEFT) }}</td>
                             <td class="px-5 py-3 font-medium text-stone-800">{{ $order->display_name }}</td>
                             <td class="px-5 py-3 text-stone-500">{{ $order->items->count() }} article(s)</td>
                             <td class="px-5 py-3 font-medium">{{ number_format($order->total_amount, 2, ',', ' ') }} €</td>
                             <td class="px-5 py-3">
-                                <span class="px-2.5 py-1 rounded-full text-xs font-medium {{ $statusColors[$order->status] ?? '' }}">
+                                <span class="px-2.5 py-1 rounded-full text-xs font-medium {{ $badgeMap[$order->status] ?? 'bg-stone-100 text-stone-600' }}">
                                     {{ $order->status_label }}
                                 </span>
                             </td>
@@ -96,21 +90,13 @@
 
             {{-- Vue mobile (cards) --}}
             <div class="sm:hidden divide-y divide-stone-100">
+                @php $badgeMap = $badgeMap ?? $allStatuses->pluck('badge_class', 'key'); @endphp
                 @foreach($orders as $order)
-                @php
-                    $statusColors = [
-                        'pending'   => 'bg-stone-100 text-stone-600',
-                        'preparing' => 'bg-amber-100 text-amber-700',
-                        'serving'   => 'bg-blue-100 text-blue-700',
-                        'completed' => 'bg-green-100 text-green-700',
-                        'cancelled' => 'bg-red-100 text-red-700',
-                    ];
-                @endphp
                 <a href="{{ route('employee.orders.show', $order) }}" class="flex items-center gap-3 px-4 py-3.5 hover:bg-stone-50 transition-colors">
                     <div class="flex-1 min-w-0">
                         <div class="flex items-center gap-2 mb-0.5">
                             <span class="font-mono text-xs text-stone-400">#{{ str_pad($order->id, 4, '0', STR_PAD_LEFT) }}</span>
-                            <span class="px-2 py-0.5 rounded-full text-xs font-medium {{ $statusColors[$order->status] ?? '' }}">
+                            <span class="px-2 py-0.5 rounded-full text-xs font-medium {{ $badgeMap[$order->status] ?? 'bg-stone-100 text-stone-600' }}">
                                 {{ $order->status_label }}
                             </span>
                         </div>

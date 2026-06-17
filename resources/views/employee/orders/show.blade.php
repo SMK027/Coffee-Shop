@@ -116,29 +116,17 @@
             </div>
 
             {{-- Changement de statut --}}
-            @if(!in_array($order->status, ['completed', 'cancelled']))
+            @if($availableTransitions->isNotEmpty())
             <div class="bg-white rounded-xl shadow-sm border border-stone-100 p-4 sm:p-6">
                 <h2 class="font-semibold text-stone-800 mb-4">Changer le statut</h2>
-                @php
-                    $nextStatuses = [
-                        'pending'   => ['preparing' => 'Démarrer la préparation', 'cancelled' => 'Annuler'],
-                        'preparing' => ['serving' => 'Passer au service', 'cancelled' => 'Annuler'],
-                        'serving'   => ['completed' => 'Marquer comme terminée', 'cancelled' => 'Annuler'],
-                    ];
-                    $buttonColors = [
-                        'preparing' => 'bg-amber-600 hover:bg-amber-500 text-white',
-                        'serving'   => 'bg-blue-600 hover:bg-blue-500 text-white',
-                        'completed' => 'bg-green-600 hover:bg-green-500 text-white',
-                        'cancelled' => 'bg-red-100 hover:bg-red-200 text-red-700',
-                    ];
-                @endphp
                 <div class="space-y-2">
-                    @foreach($nextStatuses[$order->status] ?? [] as $status => $label)
+                    @foreach($availableTransitions as $transition)
                     <form action="{{ route('employee.orders.status', $order) }}" method="POST">
                         @csrf @method('PATCH')
-                        <input type="hidden" name="status" value="{{ $status }}">
-            <button type="submit" class="w-full py-3 sm:py-2.5 px-4 rounded-lg text-sm font-medium transition-colors {{ $buttonColors[$status] ?? '' }}">
-                            {{ $label }}
+                        <input type="hidden" name="status" value="{{ $transition->key }}">
+                        <button type="submit"
+                                class="w-full py-3 sm:py-2.5 px-4 rounded-lg text-sm font-medium transition-colors {{ $transition->button_class }}">
+                            {{ $transition->label }}
                         </button>
                     </form>
                     @endforeach
@@ -146,8 +134,12 @@
             </div>
             @else
             <div class="bg-white rounded-xl shadow-sm border border-stone-100 p-4 sm:p-6">
+                @php
+                    $currentOrderStatus = \App\Models\OrderStatus::where('key', $order->status)->first();
+                    $isSuccess = $currentOrderStatus?->triggers_loyalty_credit ?? ($order->status === 'completed');
+                @endphp
                 <p class="text-sm text-stone-500 text-center">
-                    Cette commande est <strong class="{{ $order->status === 'completed' ? 'text-green-600' : 'text-red-600' }}">{{ $order->status_label }}</strong>.
+                    Cette commande est <strong class="{{ $isSuccess ? 'text-green-600' : 'text-red-600' }}">{{ $order->status_label }}</strong>.
                 </p>
             </div>
             @endif

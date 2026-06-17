@@ -11,6 +11,7 @@ use App\Http\Controllers\Employee\StatsController;
 use App\Http\Controllers\Employee\UserController;
 use App\Http\Controllers\Employee\LoyaltyController as EmployeeLoyaltyController;
 use App\Http\Controllers\Employee\LoyaltyDiscountController;
+use App\Http\Controllers\Employee\OrderStatusController;
 use App\Http\Controllers\Auth\EmployeePasswordResetController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
@@ -50,6 +51,16 @@ Route::prefix('espace-employe')->name('employee.')->middleware(['auth', 'employe
     Route::get('/commandes/verification-carte-fidelite', [OrderController::class, 'checkLoyaltyCard'])->name('orders.loyalty-check');
     Route::post('/commandes/verification-pin-carte', [OrderController::class, 'verifyCardPin'])->name('orders.pin-verify');
     Route::post('/commandes', [OrderController::class, 'store'])->name('orders.store');
+
+    // Statuts de commande (lecture seule admin ; CRUD super admin)
+    Route::get('/commandes/statuts', [OrderStatusController::class, 'index'])->name('order-statuses.index');
+    Route::get('/commandes/statuts/nouveau', [OrderStatusController::class, 'create'])->name('order-statuses.create');
+    Route::post('/commandes/statuts', [OrderStatusController::class, 'store'])->name('order-statuses.store');
+    Route::get('/commandes/statuts/{orderStatus}/modifier', [OrderStatusController::class, 'edit'])->name('order-statuses.edit');
+    Route::put('/commandes/statuts/{orderStatus}', [OrderStatusController::class, 'update'])->name('order-statuses.update');
+    Route::patch('/commandes/statuts/{orderStatus}/activation', [OrderStatusController::class, 'toggleActive'])->name('order-statuses.toggle');
+    Route::delete('/commandes/statuts/{orderStatus}', [OrderStatusController::class, 'destroy'])->name('order-statuses.destroy');
+
     Route::get('/commandes/{order}', [OrderController::class, 'show'])->name('orders.show');
     Route::patch('/commandes/{order}/statut', [OrderController::class, 'updateStatus'])->name('orders.status');
 

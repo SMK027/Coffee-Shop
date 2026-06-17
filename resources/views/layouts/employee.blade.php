@@ -78,6 +78,20 @@
                             Salariés
                         </a>
                     </li>
+
+                    {{-- Statuts de commande : admins uniquement --}}
+                    @if(auth()->user()->isAdmin())
+                    <li>
+                        <a href="{{ route('employee.order-statuses.index') }}"
+                           class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium
+                                  {{ request()->routeIs('employee.order-statuses*') ? 'bg-amber-800 text-white' : 'text-amber-100 hover:bg-amber-800 hover:text-white' }}">
+                            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 8l2 2 4-4"/>
+                            </svg>
+                            Statuts de commande
+                        </a>
+                    </li>
+                    @endif
                 </ul>
             </nav>
 
