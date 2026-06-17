@@ -4,7 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="{{ $description ?? 'Bienvenue au Coffee Shop - Votre café artisanal au cœur de la ville' }}">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="{{ url()->current() }}">
     <title>{{ $title ?? 'Accueil' }} | {{ config('app.name', 'Le Coffee Shop') }}</title>
+    {{--
+        Vite génère des balises <script type="module"> qui sont différées (defer)
+        nativement par la spec HTML5 — aucun attribut supplémentaire requis.
+        Le CSS est chargé en premier pour éviter le flash de contenu non stylisé.
+    --}}
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="bg-stone-50 text-stone-800 font-sans">

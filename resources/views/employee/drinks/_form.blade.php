@@ -57,7 +57,7 @@
         @isset($drink)
             @if($drink->image)
                 <div class="mb-2">
-                    <img src="{{ Storage::url($drink->image) }}" alt="{{ $drink->name }}" class="h-24 w-24 object-cover rounded-lg border border-stone-200">
+                    <img src="{{ Storage::url($drink->image) }}" alt="{{ $drink->name }}" loading="lazy" class="h-24 w-24 object-cover rounded-lg border border-stone-200">
                     <p class="text-xs text-stone-500 mt-1">Image actuelle. Téléchargez une nouvelle image pour la remplacer.</p>
                 </div>
             @endif

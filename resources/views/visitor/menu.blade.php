@@ -41,6 +41,7 @@
                 <div class="bg-white rounded-2xl border border-stone-100 shadow-sm hover:shadow-md transition-shadow overflow-hidden group">
                     @if($drink->image)
                         <img src="{{ Storage::url($drink->image) }}" alt="{{ $drink->name }}"
+                             loading="lazy"
                              class="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-300">
                     @else
                         <div class="w-full h-36 bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center">

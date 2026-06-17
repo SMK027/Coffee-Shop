@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\LoyaltyController;
+use App\Http\Controllers\SeoController;
 use App\Http\Controllers\Employee\DashboardController;
 use App\Http\Controllers\Employee\OrderController;
 use App\Http\Controllers\Employee\DrinkController;
@@ -26,6 +27,10 @@ Route::get('/menu', [HomeController::class, 'menu'])->name('menu');
 Route::get('/contact', [HomeController::class, 'contact'])->name('contact');
 Route::post('/contact', [HomeController::class, 'submitContact'])->name('contact.submit');
 Route::post('/temoignages', [HomeController::class, 'submitTestimonial'])->name('testimonial.submit');
+
+// SEO
+Route::get('/sitemap.xml', [SeoController::class, 'sitemap'])->name('sitemap');
+Route::get('/robots.txt', [SeoController::class, 'robots'])->name('robots');
 
 // Carte de fidélité (publique)
 Route::get('/fidelite', [LoyaltyController::class, 'create'])->name('loyalty.create');

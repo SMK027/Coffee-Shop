@@ -1,2 +1,8 @@
 User-agent: *
-Disallow:
+Disallow: /espace-employe/
+Disallow: /login
+Disallow: /reset-employe/
+Disallow: /fidelite/reinitialiser-pin/
+Allow: /
+
+Sitemap: http://localhost:8099/sitemap.xml
