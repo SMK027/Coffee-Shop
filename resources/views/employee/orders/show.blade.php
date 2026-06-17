@@ -13,7 +13,12 @@
                     @foreach($order->items as $item)
                     <div class="py-3 flex items-center justify-between">
                         <div>
-                            <p class="font-medium text-stone-800 text-sm">{{ $item->drink->name }}</p>
+                            <p class="font-medium text-stone-800 text-sm">
+                                {{ $item->display_name }}
+                                @if(!$item->drink_id)
+                                    <span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-stone-100 text-stone-500">Article libre</span>
+                                @endif
+                            </p>
                             <p class="text-xs text-stone-500">{{ number_format($item->unit_price, 2, ',', ' ') }} € l'unité</p>
                         </div>
                         <div class="text-right">

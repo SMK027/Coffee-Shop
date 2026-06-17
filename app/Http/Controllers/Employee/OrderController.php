@@ -145,7 +145,9 @@ class OrderController extends Controller
             'card_pin'               => ['nullable', 'string', 'max:10'],
             'notes'                  => ['nullable', 'string', 'max:500'],
             'items'                  => ['required', 'array', 'min:1'],
-            'items.*.drink_id'       => ['required', 'integer', 'exists:drinks,id'],
+            'items.*.drink_id'       => ['nullable', 'integer', 'exists:drinks,id'],
+            'items.*.custom_label'   => ['nullable', 'string', 'max:150'],
+            'items.*.custom_price'   => ['nullable', 'numeric', 'min:0.01', 'max:999.99'],
             'items.*.quantity'       => ['required', 'integer', 'min:1', 'max:20'],
         ], [
             'loyalty_card_number.required' => 'Le numéro de carte de fidélité est requis.',
@@ -211,24 +213,40 @@ class OrderController extends Controller
             }
         }
 
-        // Filtre les lignes sans boisson sélectionnée
-        $rawItems = collect($validated['items'])->filter(fn ($item) => !empty($item['drink_id']));
+        // Filtre les lignes sans boisson ni article libre valide
+        $rawItems = collect($validated['items'])->filter(function ($item) {
+            $hasDrink  = !empty($item['drink_id']);
+            $hasCustom = !empty($item['custom_label']) && isset($item['custom_price']) && (float) $item['custom_price'] > 0;
+            return $hasDrink || $hasCustom;
+        });
 
         if ($rawItems->isEmpty()) {
-            return back()->withInput()->withErrors(['items' => 'Veuillez sélectionner au moins une boisson.']);
+            return back()->withInput()->withErrors(['items' => 'Veuillez sélectionner au moins une boisson ou saisir un article libre.']);
         }
 
         $subtotal   = 0;
         $orderItems = [];
 
         foreach ($rawItems as $item) {
-            $drink        = Drink::findOrFail($item['drink_id']);
-            $subtotal    += $drink->price * $item['quantity'];
-            $orderItems[] = [
-                'drink_id'   => $drink->id,
-                'quantity'   => (int) $item['quantity'],
-                'unit_price' => $drink->price,
-            ];
+            if (!empty($item['drink_id'])) {
+                $drink        = Drink::findOrFail($item['drink_id']);
+                $price        = (float) $drink->price;
+                $orderItems[] = [
+                    'drink_id'   => $drink->id,
+                    'quantity'   => (int) $item['quantity'],
+                    'unit_price' => $price,
+                ];
+            } else {
+                $price        = round((float) $item['custom_price'], 2);
+                $orderItems[] = [
+                    'drink_id'     => null,
+                    'custom_label' => trim($item['custom_label']),
+                    'custom_price' => $price,
+                    'quantity'     => (int) $item['quantity'],
+                    'unit_price'   => $price,
+                ];
+            }
+            $subtotal += $price * (int) $item['quantity'];
         }
 
         // 1. Réductions fidélité appliquées en premier sur le prix brut.

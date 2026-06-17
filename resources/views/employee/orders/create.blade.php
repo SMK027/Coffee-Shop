@@ -157,10 +157,16 @@
                     </div>
                 </div>
 
-                <button type="button" id="add-item" class="flex items-center gap-2 text-amber-700 hover:text-amber-600 text-sm font-medium transition-colors">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                    Ajouter une boisson
-                </button>
+                <div class="flex flex-wrap gap-3">
+                    <button type="button" id="add-item" class="flex items-center gap-2 text-amber-700 hover:text-amber-600 text-sm font-medium transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                        Ajouter une boisson
+                    </button>
+                    <button type="button" id="add-custom-item" class="flex items-center gap-2 text-stone-500 hover:text-stone-700 text-sm font-medium transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                        Article libre (hors catalogue)
+                    </button>
+                </div>
 
                 <div class="mt-5 pt-4 border-t border-stone-100 space-y-1.5 text-sm">
                     <div id="loyalty-discount-line" class="hidden justify-between text-blue-700">
@@ -603,16 +609,58 @@
             return div;
         }
 
+        /* ── Construction HTML d'une ligne libre ───────────────── */
+        function buildCustomRow(index) {
+            const div = document.createElement('div');
+            div.className = 'item-row item-row-custom flex gap-3 items-start';
+            div.innerHTML = `
+                <div class="flex-1">
+                    <input type="text"
+                           name="items[${index}][custom_label]"
+                           class="custom-label-input w-full border border-stone-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+                           placeholder="Description de l'article (ex : Formule spéciale)"
+                           maxlength="150"
+                           autocomplete="off">
+                </div>
+                <div class="w-28">
+                    <input type="number"
+                           name="items[${index}][custom_price]"
+                           class="custom-price-input w-full border border-stone-300 rounded-lg px-3 py-2.5 text-sm text-right focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+                           placeholder="Prix €"
+                           min="0.01" max="999.99" step="0.01">
+                </div>
+                <div class="w-20">
+                    <input type="number" name="items[${index}][quantity]" value="1" min="1" max="20" required
+                           class="qty-input w-full border border-stone-300 rounded-lg px-3 py-2.5 text-sm text-center focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
+                </div>
+                <button type="button" class="remove-item flex-shrink-0 text-stone-400 hover:text-red-500 mt-2.5 transition-colors" title="Supprimer">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>`;
+            /* Recalcule le total à chaque frappe sur label ou prix */
+            div.querySelector('.custom-price-input').addEventListener('input', updateTotal);
+            return div;
+        }
+
         /* ── Init des lignes existantes ────────────────────────── */
         document.querySelectorAll('.item-row').forEach(initRow);
 
-        /* ── Ajout d'une ligne ─────────────────────────────────── */
+        /* ── Ajout d'une ligne catalogue ───────────────────────── */
         document.getElementById('add-item').addEventListener('click', () => {
             const row = buildRow(itemCount++);
             document.getElementById('items-container').appendChild(row);
             initRow(row);
             updateRemoveButtons();
             row.querySelector('.drink-search').focus();
+        });
+
+        /* ── Ajout d'une ligne libre ────────────────────────────── */
+        document.getElementById('add-custom-item').addEventListener('click', () => {
+            const row = buildCustomRow(itemCount++);
+            document.getElementById('items-container').appendChild(row);
+            updateRemoveButtons();
+            row.querySelector('.custom-label-input').focus();
         });
 
         /* ── Suppression d'une ligne ───────────────────────────── */
@@ -636,11 +684,18 @@
         function updateTotal() {
             let subtotal = 0;
             document.querySelectorAll('.item-row').forEach(row => {
-                const hidden = row.querySelector('.drink-id-input');
-                const qty    = row.querySelector('.qty-input');
-                if (hidden && hidden.value && qty) {
-                    const drink = drinks.find(d => d.id == hidden.value);
-                    if (drink) subtotal += drink.price * parseInt(qty.value || 1, 10);
+                const qty = parseInt(row.querySelector('.qty-input')?.value || 1, 10);
+                if (row.classList.contains('item-row-custom')) {
+                    /* Ligne libre : lire le prix saisi directement */
+                    const price = parseFloat(row.querySelector('.custom-price-input')?.value || 0);
+                    if (price > 0) subtotal += price * qty;
+                } else {
+                    /* Ligne catalogue */
+                    const hidden = row.querySelector('.drink-id-input');
+                    if (hidden && hidden.value) {
+                        const drink = drinks.find(d => d.id == hidden.value);
+                        if (drink) subtotal += drink.price * qty;
+                    }
                 }
             });
 
@@ -724,19 +779,28 @@
             }
 
             document.querySelectorAll('.item-row').forEach(row => {
-                const hidden = row.querySelector('.drink-id-input');
-                const search = row.querySelector('.drink-search');
-                // Resync le hidden input depuis l'attribut value du row avant validation
-                if (row.getAttribute('value')) hidden.value = row.getAttribute('value');
-                if (!hidden.value) {
-                    search.classList.add('border-red-400', 'bg-red-50');
-                    search.classList.remove('border-stone-300');
-                    invalid = true;
+                if (row.classList.contains('item-row-custom')) {
+                    const labelInput = row.querySelector('.custom-label-input');
+                    const priceInput = row.querySelector('.custom-price-input');
+                    const price      = parseFloat(priceInput?.value || 0);
+                    if (!labelInput?.value.trim() || !(price > 0)) {
+                        if (labelInput) { labelInput.classList.add('border-red-400', 'bg-red-50'); labelInput.classList.remove('border-stone-300'); }
+                        if (priceInput) { priceInput.classList.add('border-red-400', 'bg-red-50'); priceInput.classList.remove('border-stone-300'); }
+                        invalid = true;
+                    }
+                } else {
+                    const hidden = row.querySelector('.drink-id-input');
+                    const search = row.querySelector('.drink-search');
+                    if (row.getAttribute('value')) hidden.value = row.getAttribute('value');
+                    if (!hidden.value) {
+                        search.classList.add('border-red-400', 'bg-red-50');
+                        search.classList.remove('border-stone-300');
+                        invalid = true;
+                    }
                 }
             });
             if (invalid) {
                 e.preventDefault();
-                document.querySelector('.item-row .drink-search').focus();
             }
         });
 
