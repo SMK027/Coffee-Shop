@@ -96,15 +96,16 @@
             </nav>
 
             <div class="px-3 py-4 border-t border-amber-800">
-                <div class="flex items-center gap-3 px-3 py-2 mb-2">
-                    <div class="w-8 h-8 bg-amber-700 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">
+                <a href="{{ route('employee.profile.edit') }}"
+                   class="flex items-center gap-3 px-3 py-2 mb-2 rounded-lg transition-colors hover:bg-amber-800 group">
+                    <div class="w-8 h-8 bg-amber-700 group-hover:bg-amber-600 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 transition-colors">
                         {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
                     </div>
                     <div class="min-w-0">
-                        <p class="text-sm font-medium truncate">{{ auth()->user()->name }}</p>
+                        <p class="text-sm font-medium truncate group-hover:text-white">{{ auth()->user()->name }}</p>
                         <p class="text-xs text-amber-300 truncate">{{ auth()->user()->email }}</p>
                     </div>
-                </div>
+                </a>
                 <a href="{{ route('home') }}" class="flex items-center gap-2 px-3 py-2 text-sm text-amber-200 hover:text-white hover:bg-amber-800 rounded-lg transition-colors">
                     <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
