@@ -14,7 +14,8 @@
             placeholder="ex : en_livraison"
             pattern="[a-z0-9_]+"
             title="Lettres minuscules, chiffres et underscores uniquement"
-            {{ $s ? 'readonly' : 'required' }} />
+            :readonly="(bool)$s"
+            :required="!$s" />
         @if($s)
             <p class="mt-1 text-xs text-stone-400">La clé ne peut pas être modifiée après création (des commandes peuvent y faire référence).</p>
             <input type="hidden" name="key" value="{{ $s->key }}">
