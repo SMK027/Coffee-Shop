@@ -14,7 +14,7 @@
                 <path d="M18 3c0-1.1-.9-2-2-2H8C6.9 1 6 1.9 6 3v2h12V3z"/>
             </svg>
             <h1 class="text-2xl font-bold text-white">Espace Salarié</h1>
-            <p class="text-amber-300 text-sm mt-1">Le Coffee Shop</p>
+            <p class="text-amber-300 text-sm mt-1">{{ config('app.name') }}</p>
         </div>
 
         <div class="bg-white rounded-2xl p-8 shadow-2xl">

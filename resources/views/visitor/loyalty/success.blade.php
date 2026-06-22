@@ -15,7 +15,7 @@
             {{-- Carte visuelle --}}
             <div class="bg-gradient-to-br from-amber-800 to-amber-900 text-amber-50 rounded-2xl shadow-lg p-6 text-left mb-8">
                 <div class="flex items-center justify-between mb-8">
-                    <span class="font-bold text-lg tracking-wide">Le Coffee Shop</span>
+                    <span class="font-bold text-lg tracking-wide">{{ config('app.name') }}</span>
                     <svg class="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M2 21v-2h2V7h16v2h-2v12h2v2H2zm4-2h8v-2H6v2zm0-4h8v-2H6v2zm0-4h8V9H6v2z"/>
                         <path d="M18 3c0-1.1-.9-2-2-2H8C6.9 1 6 1.9 6 3v2h12V3z"/>

@@ -6,7 +6,7 @@
         <div class="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-24 md:py-36 text-center">
             <p class="text-amber-300 text-sm font-semibold uppercase tracking-widest mb-4">Bienvenue</p>
             <h1 class="text-4xl md:text-6xl font-bold leading-tight mb-6">
-                Le Coffee Shop<br>
+                {{ config('app.name') }}<br>
                 <span class="text-amber-300">Un café, une histoire</span>
             </h1>
             <p class="text-amber-100 text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed">

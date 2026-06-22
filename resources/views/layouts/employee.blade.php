@@ -28,7 +28,7 @@
                         <path d="M2 21v-2h2V7h16v2h-2v12h2v2H2zm4-2h8v-2H6v2zm0-4h8v-2H6v2zm0-4h8V9H6v2zm10 6h2v-2h-2v2zm0-4h2v-2h-2v2z"/>
                         <path d="M18 3c0-1.1-.9-2-2-2H8C6.9 1 6 1.9 6 3v2h12V3z"/>
                     </svg>
-                    <span class="font-bold text-lg leading-tight truncate">Coffee Shop</span>
+                    <span class="font-bold text-lg leading-tight truncate">{{ config('app.name') }}</span>
                 </a>
                 {{-- Bouton fermer (mobile uniquement) --}}
                 <button id="sidebar-close" class="lg:hidden text-amber-300 hover:text-white p-1 flex-shrink-0" aria-label="Fermer le menu">

@@ -26,7 +26,7 @@
                         <path d="M2 21v-2h2V7h16v2h-2v12h2v2H2zm4-2h8v-2H6v2zm0-4h8v-2H6v2zm0-4h8V9H6v2zm10 6h2v-2h-2v2zm0-4h2v-2h-2v2z"/>
                         <path d="M18 3c0-1.1-.9-2-2-2H8C6.9 1 6 1.9 6 3v2h12V3z"/>
                     </svg>
-                    <span class="text-xl font-bold tracking-wide">Le Coffee Shop</span>
+                    <span class="text-xl font-bold tracking-wide">{{ config('app.name') }}</span>
                 </a>
 
                 {{-- Menu Desktop --}}
@@ -93,7 +93,7 @@
         <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <div>
-                    <h3 class="text-amber-400 font-bold text-lg mb-4">Le Coffee Shop</h3>
+                    <h3 class="text-amber-400 font-bold text-lg mb-4">{{ config('app.name') }}</h3>
                     <p class="text-sm leading-relaxed">Un espace chaleureux où chaque tasse est préparée avec passion. Café de spécialité, ambiance conviviale.</p>
                 </div>
                 <div>
@@ -116,7 +116,7 @@
                 </div>
             </div>
             <div class="border-t border-stone-700 mt-8 pt-6 text-center text-xs text-stone-500">
-                <p>&copy; {{ date('Y') }} Le Coffee Shop. Tous droits réservés.</p>
+                <p>&copy; {{ date('Y') }} {{ config('app.name') }}. Tous droits réservés.</p>
             </div>
         </div>
     </footer>
