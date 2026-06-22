@@ -52,6 +52,8 @@ Route::prefix('espace-employe')->name('employee.')->middleware(['auth', 'employe
 
     // Commandes
     Route::get('/commandes', [OrderController::class, 'index'])->name('orders.index');
+    Route::get('/commandes/identification', [OrderController::class, 'identify'])->name('orders.identify');
+    Route::post('/commandes/identification', [OrderController::class, 'storeIdentification'])->name('orders.identify.store');
     Route::get('/commandes/nouvelle', [OrderController::class, 'create'])->name('orders.create');
     Route::get('/commandes/verification-carte-fidelite', [OrderController::class, 'checkLoyaltyCard'])->name('orders.loyalty-check');
     Route::post('/commandes/verification-pin-carte', [OrderController::class, 'verifyCardPin'])->name('orders.pin-verify');

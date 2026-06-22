@@ -73,14 +73,132 @@ class OrderController extends Controller
 
     public function create()
     {
-        $drinks = Drink::available()->with('category')->orderBy('category_id')->orderBy('sort_order')->get();
+        // Étape 2 : nécessite que l'étape 1 ait été complétée
+        if (!session()->has('order_draft_customer')) {
+            return redirect()->route('employee.orders.identify');
+        }
+
+        $drinks    = Drink::available()->with('category')->orderBy('category_id')->orderBy('sort_order')->get();
+        $customer  = session('order_draft_customer');
+
+        // Charge les réductions pour le calcul du total en JS
+        $loyaltyDiscounts = collect();
+        if (!empty($customer['loyalty_discount_ids'])) {
+            $loyaltyDiscounts = LoyaltyDiscount::whereIn('id', $customer['loyalty_discount_ids'])->get();
+        }
+
+        return view('employee.orders.create', compact('drinks', 'customer', 'loyaltyDiscounts'));
+    }
+
+    public function identify()
+    {
         $discounts = LoyaltyDiscount::where('is_active', true)
             ->latest()
             ->get()
-            ->filter(fn (LoyaltyDiscount $discount) => $discount->isValidForUse())
+            ->filter(fn(LoyaltyDiscount $d) => $d->isValidForUse())
             ->values();
 
-        return view('employee.orders.create', compact('drinks', 'discounts'));
+        // Pré-remplit si on revient en arrière depuis l'étape 2
+        $draft = session('order_draft_customer');
+
+        return view('employee.orders.identify', compact('discounts', 'draft'));
+    }
+
+    public function storeIdentification(Request $request)
+    {
+        $useLoyalty    = $request->boolean('use_loyalty');
+        $usesDiscounts = !empty($request->input('loyalty_discount_ids'));
+
+        $validated = $request->validate([
+            'use_loyalty'            => ['nullable', 'boolean'],
+            'is_employee_order'      => ['nullable', 'boolean'],
+            'customer_name'          => ['nullable', 'string', 'max:100'],
+            'loyalty_card_number'    => [Rule::requiredIf($useLoyalty), 'nullable', 'string', 'max:20'],
+            'loyalty_discount_ids'   => ['nullable', 'array'],
+            'loyalty_discount_ids.*' => ['integer', 'exists:loyalty_discounts,id'],
+            'card_pin'               => [Rule::requiredIf($usesDiscounts), 'nullable', 'string', 'max:10'],
+            'notes'                  => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $isEmployeeOrder = $request->boolean('is_employee_order');
+        $loyaltyCard     = null;
+
+        if ($useLoyalty) {
+            $cardNumber  = str_replace(' ', '', $validated['loyalty_card_number']);
+            $loyaltyCard = LoyaltyCard::where('card_number', $cardNumber)->first();
+
+            if (!$loyaltyCard) {
+                return back()->withInput()->withErrors([
+                    'loyalty_card_number' => 'Aucune carte de fidélité ne correspond à ce numéro.',
+                ]);
+            }
+
+            if ($loyaltyCard->hasEmployeeBenefits()) {
+                $isEmployeeOrder = true;
+            }
+        }
+
+        // Vérification du PIN et des réductions (si des réductions sont sélectionnées)
+        $discountIds  = array_values(array_filter((array) ($validated['loyalty_discount_ids'] ?? [])));
+        $pinVerified  = false;
+
+        if (!empty($discountIds)) {
+            if (!$loyaltyCard) {
+                return back()->withInput()->withErrors([
+                    'loyalty_discount_ids' => 'Les réductions fidélité nécessitent une carte valide.',
+                ]);
+            }
+
+            $pin = $validated['card_pin'] ?? '';
+            if (!$pin || !Hash::check($pin, $loyaltyCard->pin)) {
+                return back()->withInput()->withErrors([
+                    'card_pin' => 'Code de carte incorrect ou manquant.',
+                ]);
+            }
+
+            $selectedDiscounts = LoyaltyDiscount::whereIn('id', $discountIds)->get();
+            $totalPointsCost   = 0;
+
+            foreach ($selectedDiscounts as $discount) {
+                if (!$discount->isValidForUse()) {
+                    return back()->withInput()->withErrors([
+                        'loyalty_discount_ids' => "La réduction « {$discount->name} » n'est plus valide.",
+                    ]);
+                }
+                if ($discount->employee_only && !$loyaltyCard->hasEmployeeBenefits()) {
+                    return back()->withInput()->withErrors([
+                        'loyalty_discount_ids' => "La réduction « {$discount->name} » est réservée aux salariés.",
+                    ]);
+                }
+                $totalPointsCost += $discount->points_cost;
+            }
+
+            if ($loyaltyCard->points < $totalPointsCost) {
+                return back()->withInput()->withErrors([
+                    'loyalty_discount_ids' => 'Points insuffisants pour appliquer toutes les réductions sélectionnées.',
+                ]);
+            }
+
+            $pinVerified = true;
+        }
+
+        session([
+            'order_draft_customer' => [
+                'customer_name'        => $useLoyalty ? null : ($validated['customer_name'] ?? null),
+                'use_loyalty'          => $useLoyalty,
+                'loyalty_card_id'      => $loyaltyCard?->id,
+                'loyalty_card_number'  => $useLoyalty ? str_replace(' ', '', $validated['loyalty_card_number'] ?? '') : null,
+                'card_full_name'       => $loyaltyCard?->full_name,
+                'card_points'          => $loyaltyCard?->points,
+                'card_has_benefits'    => $loyaltyCard ? $loyaltyCard->hasEmployeeBenefits() : false,
+                'is_employee_order'    => $isEmployeeOrder,
+                'loyalty_discount_ids' => $discountIds,
+                'pin_verified'         => $pinVerified,
+                'notes'                => $validated['notes'] ?? null,
+            ],
+        ]);
+
+        return redirect()->route('employee.orders.create');
     }
 
     public function checkLoyaltyCard(Request $request): JsonResponse
@@ -132,63 +250,45 @@ class OrderController extends Controller
 
     public function store(Request $request)
     {
-        $useLoyalty      = $request->boolean('use_loyalty');
-        $isEmployeeOrder = $request->boolean('is_employee_order');
+        // Étape 2 : données client depuis la session (étape 1)
+        $customer = session('order_draft_customer');
+        if (!$customer) {
+            return redirect()->route('employee.orders.identify')
+                ->with('error', 'Session expirée. Veuillez recommencer.');
+        }
 
         $validated = $request->validate([
-            'use_loyalty'            => ['nullable', 'boolean'],
-            'is_employee_order'      => ['nullable', 'boolean'],
-            'customer_name'          => ['nullable', 'string', 'max:100'],
-            'loyalty_card_number'    => [Rule::requiredIf($useLoyalty), 'nullable', 'string', 'max:20'],
-            'loyalty_discount_ids'   => ['nullable', 'array'],
-            'loyalty_discount_ids.*' => ['integer', 'exists:loyalty_discounts,id'],
-            'card_pin'               => ['nullable', 'string', 'max:10'],
-            'notes'                  => ['nullable', 'string', 'max:500'],
             'items'                  => ['required', 'array', 'min:1'],
             'items.*.drink_id'       => ['nullable', 'integer', 'exists:drinks,id'],
             'items.*.custom_label'   => ['nullable', 'string', 'max:150'],
             'items.*.custom_price'   => ['nullable', 'numeric', 'min:0.01', 'max:999.99'],
             'items.*.quantity'       => ['required', 'integer', 'min:1', 'max:20'],
-        ], [
-            'loyalty_card_number.required' => 'Le numéro de carte de fidélité est requis.',
         ]);
 
-        // Rattachement éventuel à une carte de fidélité
+        // Reconstruction depuis la session
+        $useLoyalty      = (bool) $customer['use_loyalty'];
+        $isEmployeeOrder = (bool) $customer['is_employee_order'];
+        $discountIds     = (array) ($customer['loyalty_discount_ids'] ?? []);
+        $pinVerified     = (bool) ($customer['pin_verified'] ?? false);
+
         $loyaltyCard = null;
-        if ($useLoyalty) {
-            $cardNumber  = str_replace(' ', '', $validated['loyalty_card_number']);
-            $loyaltyCard = LoyaltyCard::where('card_number', $cardNumber)->first();
-
+        if ($useLoyalty && !empty($customer['loyalty_card_id'])) {
+            $loyaltyCard = LoyaltyCard::find($customer['loyalty_card_id']);
             if (!$loyaltyCard) {
-                throw ValidationException::withMessages([
-                    'loyalty_card_number' => 'Aucune carte de fidélité ne correspond à ce numéro.',
-                ]);
-            }
-
-            if ($loyaltyCard->hasEmployeeBenefits()) {
-                $isEmployeeOrder = true;
+                session()->forget('order_draft_customer');
+                return redirect()->route('employee.orders.identify')
+                    ->with('error', 'La carte de fidélité est introuvable. Veuillez recommencer.');
             }
         }
 
-        // Sélection de réductions fidélité (plusieurs possibles)
-        $discountIds      = array_values(array_filter((array) ($validated['loyalty_discount_ids'] ?? [])));
+        // Chargement des réductions depuis la session
         $loyaltyDiscounts = collect();
-
         if (!empty($discountIds)) {
-            if (!$useLoyalty || !$loyaltyCard) {
-                throw ValidationException::withMessages([
-                    'loyalty_discount_ids' => 'Les réductions fidélité nécessitent une carte valide.',
-                ]);
+            if (!$pinVerified || !$loyaltyCard) {
+                session()->forget('order_draft_customer');
+                return redirect()->route('employee.orders.identify')
+                    ->with('error', 'Erreur de session. Veuillez recommencer.');
             }
-
-            // Vérification du code de la carte
-            $pin = $validated['card_pin'] ?? '';
-            if (!$pin || !Hash::check($pin, $loyaltyCard->pin)) {
-                throw ValidationException::withMessages([
-                    'card_pin' => 'Code de carte incorrect ou manquant.',
-                ]);
-            }
-
             $loyaltyDiscounts = LoyaltyDiscount::whereIn('id', $discountIds)->get();
 
             $totalPointsCost = 0;
@@ -282,7 +382,7 @@ class OrderController extends Controller
         $total            = round(max(0.0, $subtotalAfterLoyalty - $employeeDiscount), 2);
 
         $order = DB::transaction(function () use (
-            $validated, $loyaltyCard, $isEmployeeOrder, $total,
+            $validated, $customer, $loyaltyCard, $isEmployeeOrder, $total,
             $employeeDiscount, $loyaltyDiscounts, $discountRows,
             $totalLoyaltyPoints, $totalLoyaltyAmount, $orderItems
         ) {
@@ -336,10 +436,10 @@ class OrderController extends Controller
             }
 
             $order = Order::create([
-                'customer_name'           => $lockedCard ? $lockedCard->full_name : ($validated['customer_name'] ?? null),
+                'customer_name'           => $lockedCard ? $lockedCard->full_name : ($customer['customer_name'] ?? null),
                 'loyalty_card_id'         => $lockedCard?->id,
                 'is_employee_order'       => $isEmployeeOrder,
-                'notes'                   => $validated['notes'] ?? null,
+                'notes'                   => $customer['notes'] ?? null,
                 'total_amount'            => $total,
                 'discount_amount'         => $employeeDiscount,
                 'loyalty_points_spent'    => $totalPointsNeeded,
@@ -378,6 +478,8 @@ class OrderController extends Controller
 
             return $order;
         });
+
+        session()->forget('order_draft_customer');
 
         return redirect()->route('employee.orders.show', $order)
             ->with('success', 'Commande créée avec succès.');

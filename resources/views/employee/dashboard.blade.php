@@ -74,7 +74,7 @@
         @if($recent_orders->isEmpty())
             <div class="px-6 py-10 text-center text-stone-500">
                 <p class="text-sm">Aucune commande active pour le moment.</p>
-                <a href="{{ route('employee.orders.create') }}" class="mt-3 inline-block text-amber-600 hover:text-amber-700 text-sm font-medium">+ Créer une commande</a>
+                <a href="{{ route('employee.orders.identify') }}" class="mt-3 inline-block text-amber-600 hover:text-amber-700 text-sm font-medium">+ Créer une commande</a>
             </div>
         @else
             <div class="divide-y divide-stone-50">
@@ -107,7 +107,7 @@
 
     {{-- Accès rapides --}}
     <div class="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <a href="{{ route('employee.orders.create') }}" class="bg-amber-700 hover:bg-amber-600 text-white rounded-xl p-5 text-center transition-colors">
+        <a href="{{ route('employee.orders.identify') }}" class="bg-amber-700 hover:bg-amber-600 text-white rounded-xl p-5 text-center transition-colors">
             <svg class="w-6 h-6 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
             </svg>
