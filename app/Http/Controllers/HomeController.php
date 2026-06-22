@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\DrinkCategory;
+use App\Models\Setting;
 use App\Models\Testimonial;
 use App\Services\CaptchaService;
 use Illuminate\Http\Request;
@@ -16,7 +17,14 @@ class HomeController extends Controller
             ->take(6)
             ->get();
 
-        return view('visitor.home', compact('testimonials'));
+        $homeImages = [
+            'hero'     => Setting::get(Setting::KEY_HOME_IMAGE_HERO),
+            'ambiance' => Setting::get(Setting::KEY_HOME_IMAGE_AMBIANCE),
+            'barista'  => Setting::get(Setting::KEY_HOME_IMAGE_BARISTA),
+            'salle'    => Setting::get(Setting::KEY_HOME_IMAGE_SALLE),
+        ];
+
+        return view('visitor.home', compact('testimonials', 'homeImages'));
     }
 
     public function menu()

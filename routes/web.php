@@ -9,6 +9,7 @@ use App\Http\Controllers\Employee\DrinkController;
 use App\Http\Controllers\Employee\TestimonialController;
 use App\Http\Controllers\Employee\ContactController;
 use App\Http\Controllers\Employee\StatsController;
+use App\Http\Controllers\Employee\HomeImageController;
 use App\Http\Controllers\Employee\UserController;
 use App\Http\Controllers\Employee\LoyaltyController as EmployeeLoyaltyController;
 use App\Http\Controllers\Employee\LoyaltyDiscountController;
@@ -98,6 +99,11 @@ Route::prefix('espace-employe')->name('employee.')->middleware(['auth', 'employe
 
     // Statistiques
     Route::get('/statistiques', [StatsController::class, 'index'])->name('stats.index');
+
+    // Images page d'accueil
+    Route::get('/accueil/images', [HomeImageController::class, 'index'])->name('home-images.index');
+    Route::post('/accueil/images/{key}', [HomeImageController::class, 'update'])->name('home-images.update');
+    Route::delete('/accueil/images/{key}', [HomeImageController::class, 'destroy'])->name('home-images.destroy');
 
     // Fidélité
     Route::get('/fidelite', [EmployeeLoyaltyController::class, 'index'])->name('loyalty.index');

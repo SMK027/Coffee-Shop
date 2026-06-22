@@ -50,6 +50,7 @@
                         ['route' => 'employee.stats.index',        'label' => 'Statistiques',    'icon' => 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z'],
                         ['route' => 'employee.loyalty.index',      'label' => 'Fidélité',        'icon' => 'M3 5a2 2 0 012-2h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5zm0 5h18M7 15h4'],
                         ['route' => 'employee.loyalty-discounts.index', 'label' => 'Réductions', 'icon' => 'M12 8c-2.21 0-4 1.79-4 4h-2l3 4 3-4h-2c0-1.1.9-2 2-2s2 .9 2 2h2c0-2.21-1.79-4-4-4zm-6 9h12v2H6z'],
+                        ['route' => 'employee.home-images.index',  'label' => "Images d'accueil", 'icon' => 'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z'],
                     ];
                 @endphp
 

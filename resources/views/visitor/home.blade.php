@@ -2,6 +2,12 @@
 
     {{-- Hero Section --}}
     <section class="relative bg-amber-900 text-white overflow-hidden">
+        @if(!empty($homeImages['hero']))
+            <img src="{{ Storage::url($homeImages['hero']) }}"
+                 alt="Bannière principale"
+                 class="absolute inset-0 w-full h-full object-cover"
+                 loading="eager">
+        @endif
         <div class="absolute inset-0 bg-black/40"></div>
         <div class="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-24 md:py-36 text-center">
             <p class="text-amber-300 text-sm font-semibold uppercase tracking-widest mb-4">Bienvenue</p>
@@ -58,28 +64,49 @@
             </div>
             <div class="grid grid-cols-2 gap-4">
                 <div class="bg-amber-100 rounded-2xl h-48 md:h-64 flex items-center justify-center overflow-hidden">
-                    <div class="text-center text-amber-700">
-                        <svg class="w-16 h-16 mx-auto mb-2 opacity-40" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M20 3H4v10c0 2.21 1.79 4 4 4h6c2.21 0 4-1.79 4-4v-3h2c1.11 0 2-.89 2-2V5c0-1.11-.89-2-2-2zm0 5h-2V5h2v3zM4 19h16v2H4z"/>
-                        </svg>
-                        <p class="text-sm font-medium opacity-60">Photo ambiance</p>
-                    </div>
+                    @if(!empty($homeImages['ambiance']))
+                        <img src="{{ Storage::url($homeImages['ambiance']) }}"
+                             alt="Ambiance du café"
+                             loading="lazy"
+                             class="w-full h-full object-cover">
+                    @else
+                        <div class="text-center text-amber-700">
+                            <svg class="w-16 h-16 mx-auto mb-2 opacity-40" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M20 3H4v10c0 2.21 1.79 4 4 4h6c2.21 0 4-1.79 4-4v-3h2c1.11 0 2-.89 2-2V5c0-1.11-.89-2-2-2zm0 5h-2V5h2v3zM4 19h16v2H4z"/>
+                            </svg>
+                            <p class="text-sm font-medium opacity-60">Photo ambiance</p>
+                        </div>
+                    @endif
                 </div>
                 <div class="bg-stone-200 rounded-2xl h-48 md:h-64 mt-8 flex items-center justify-center overflow-hidden">
-                    <div class="text-center text-stone-500">
-                        <svg class="w-16 h-16 mx-auto mb-2 opacity-40" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
-                        </svg>
-                        <p class="text-sm font-medium opacity-60">Photo barista</p>
-                    </div>
+                    @if(!empty($homeImages['barista']))
+                        <img src="{{ Storage::url($homeImages['barista']) }}"
+                             alt="Notre barista"
+                             loading="lazy"
+                             class="w-full h-full object-cover">
+                    @else
+                        <div class="text-center text-stone-500">
+                            <svg class="w-16 h-16 mx-auto mb-2 opacity-40" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
+                            </svg>
+                            <p class="text-sm font-medium opacity-60">Photo barista</p>
+                        </div>
+                    @endif
                 </div>
                 <div class="bg-amber-200 rounded-2xl h-36 md:h-48 flex items-center justify-center overflow-hidden col-span-2">
-                    <div class="text-center text-amber-800">
-                        <svg class="w-16 h-16 mx-auto mb-2 opacity-40" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M2 21v-2h2V7h16v2h-2v12h2v2H2zm4-2h8v-2H6v2z"/>
-                        </svg>
-                        <p class="text-sm font-medium opacity-60">Photo salle</p>
-                    </div>
+                    @if(!empty($homeImages['salle']))
+                        <img src="{{ Storage::url($homeImages['salle']) }}"
+                             alt="La salle"
+                             loading="lazy"
+                             class="w-full h-full object-cover">
+                    @else
+                        <div class="text-center text-amber-800">
+                            <svg class="w-16 h-16 mx-auto mb-2 opacity-40" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M2 21v-2h2V7h16v2h-2v12h2v2H2zm4-2h8v-2H6v2z"/>
+                            </svg>
+                            <p class="text-sm font-medium opacity-60">Photo salle</p>
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>

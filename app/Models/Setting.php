@@ -12,6 +12,19 @@ class Setting extends Model
     /** Ratio de points crédités par euro dépensé. */
     public const KEY_POINTS_PER_EURO = 'loyalty_points_per_euro';
 
+    /** Images de la page d'accueil. */
+    public const KEY_HOME_IMAGE_HERO     = 'home_image_hero';
+    public const KEY_HOME_IMAGE_AMBIANCE = 'home_image_ambiance';
+    public const KEY_HOME_IMAGE_BARISTA  = 'home_image_barista';
+    public const KEY_HOME_IMAGE_SALLE    = 'home_image_salle';
+
+    public const HOME_IMAGE_KEYS = [
+        self::KEY_HOME_IMAGE_HERO     => 'Image hero (bandeau principal)',
+        self::KEY_HOME_IMAGE_AMBIANCE => 'Photo ambiance',
+        self::KEY_HOME_IMAGE_BARISTA  => 'Photo barista',
+        self::KEY_HOME_IMAGE_SALLE    => 'Photo salle',
+    ];
+
     public const DEFAULTS = [
         self::KEY_POINTS_PER_EURO => '5',
     ];
