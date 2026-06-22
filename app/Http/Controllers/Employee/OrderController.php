@@ -201,6 +201,39 @@ class OrderController extends Controller
         return redirect()->route('employee.orders.create');
     }
 
+    public function searchLoyaltyCard(Request $request): JsonResponse
+    {
+        $query = trim((string) $request->query('q', ''));
+
+        if (mb_strlen($query) < 2) {
+            return response()->json(['results' => []]);
+        }
+
+        $cards = LoyaltyCard::query()
+            ->where(function ($q) use ($query) {
+                $q->where('last_name',   'like', "%{$query}%")
+                  ->orWhere('first_name', 'like', "%{$query}%")
+                  ->orWhere('email',      'like', "%{$query}%")
+                  ->orWhere('phone',      'like', "%{$query}%")
+                  ->orWhere('card_number','like', "%{$query}%");
+            })
+            ->orderBy('last_name')
+            ->orderBy('first_name')
+            ->limit(8)
+            ->get(['id', 'card_number', 'last_name', 'first_name', 'email', 'phone', 'points']);
+
+        return response()->json([
+            'results' => $cards->map(fn(LoyaltyCard $c) => [
+                'card_number'         => $c->card_number,
+                'full_name'           => $c->full_name,
+                'email'               => $c->email,
+                'phone'               => $c->phone,
+                'points'              => (int) $c->points,
+                'has_employee_benefits' => (bool) $c->hasEmployeeBenefits(),
+            ]),
+        ]);
+    }
+
     public function checkLoyaltyCard(Request $request): JsonResponse
     {
         $validated = $request->validate([

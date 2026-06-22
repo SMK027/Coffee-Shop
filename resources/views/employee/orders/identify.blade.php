@@ -52,6 +52,21 @@
                 {{-- Bloc carte de fidélité --}}
                 <div id="loyalty-block" class="{{ $old('use_loyalty') ? '' : 'hidden' }} bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-4">
 
+                    {{-- Recherche par nom / prénom / email / téléphone --}}
+                    <div>
+                        <label for="card-search" class="block text-sm font-medium text-stone-700 mb-1.5">
+                            Rechercher un client
+                            <span class="font-normal text-stone-400">(nom, prénom, e-mail ou téléphone)</span>
+                        </label>
+                        <div class="relative">
+                            <input type="text" id="card-search" autocomplete="off"
+                                   placeholder="Tapez au moins 2 caractères…"
+                                   class="w-full border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
+                            <ul id="card-search-results"
+                                class="hidden absolute z-30 w-full bg-white border border-stone-200 rounded-lg shadow-lg mt-1 max-h-64 overflow-y-auto"></ul>
+                        </div>
+                    </div>
+
                     <div>
                         <label for="loyalty_card_number" class="block text-sm font-medium text-stone-700 mb-1.5">Numéro de carte</label>
                         <input type="text" name="loyalty_card_number" id="loyalty_card_number"
@@ -157,8 +172,9 @@
 
     <script>
     (function () {
-        const loyaltyCheckUrl = @json(route('employee.orders.loyalty-check'));
-        const pinVerifyUrl    = @json(route('employee.orders.pin-verify'));
+        const loyaltyCheckUrl  = @json(route('employee.orders.loyalty-check'));
+        const loyaltySearchUrl = @json(route('employee.orders.loyalty-search'));
+        const pinVerifyUrl     = @json(route('employee.orders.pin-verify'));
 
         const toggle       = document.getElementById('use_loyalty');
         const loyaltyBlk   = document.getElementById('loyalty-block');
@@ -361,6 +377,78 @@
         document.querySelectorAll('.discount-checkbox').forEach(cb => {
             cb.addEventListener('change', refreshDiscountEligibility);
         });
+
+        /* ── Recherche de carte par nom / prénom / email / tél ───── */
+        (function () {
+            const searchInput  = document.getElementById('card-search');
+            const resultsList  = document.getElementById('card-search-results');
+            if (!searchInput || !resultsList) return;
+
+            let debounce = null;
+            let reqSeq   = 0;
+
+            function closeResults() { resultsList.classList.add('hidden'); resultsList.innerHTML = ''; }
+
+            function pickCard(card) {
+                // Remplit le numéro de carte et déclenche la vérification AJAX
+                cardInput.value = card.card_number;
+                searchInput.value = '';
+                closeResults();
+                checkCard();
+            }
+
+            async function doSearch() {
+                const q = searchInput.value.trim();
+                if (q.length < 2) { closeResults(); return; }
+                const seq = ++reqSeq;
+                try {
+                    const res  = await fetch(`${loyaltySearchUrl}?q=${encodeURIComponent(q)}`, {
+                        headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                    });
+                    if (seq !== reqSeq) return;
+                    const data = await res.json();
+                    const results = data.results || [];
+
+                    resultsList.innerHTML = '';
+                    if (!results.length) {
+                        resultsList.innerHTML = '<li class="px-4 py-3 text-sm text-stone-400 italic">Aucun résultat</li>';
+                        resultsList.classList.remove('hidden');
+                        return;
+                    }
+                    results.forEach(card => {
+                        const li = document.createElement('li');
+                        li.className = 'flex items-center justify-between gap-3 px-4 py-2.5 cursor-pointer hover:bg-amber-50 transition-colors text-sm border-b border-stone-50 last:border-0';
+                        const empBadge = card.has_employee_benefits
+                            ? '<span class="ml-1 px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs font-medium">Salarié</span>'
+                            : '';
+                        const contact = [card.email, card.phone].filter(Boolean).join(' · ');
+                        li.innerHTML = `
+                            <span class="min-w-0">
+                                <span class="font-medium text-stone-800">${card.full_name}</span>${empBadge}
+                                ${contact ? `<span class="block text-xs text-stone-400 truncate">${contact}</span>` : ''}
+                            </span>
+                            <span class="flex-shrink-0 text-right">
+                                <span class="block font-mono text-xs text-stone-500">${card.card_number}</span>
+                                <span class="block text-xs text-amber-700 font-medium">${card.points} pts</span>
+                            </span>`;
+                        li.addEventListener('mousedown', e => e.preventDefault());
+                        li.addEventListener('click', () => pickCard(card));
+                        resultsList.appendChild(li);
+                    });
+                    resultsList.classList.remove('hidden');
+                } catch (_) { closeResults(); }
+            }
+
+            searchInput.addEventListener('input', () => {
+                if (debounce) clearTimeout(debounce);
+                debounce = setTimeout(doSearch, 280);
+            });
+            searchInput.addEventListener('blur', () => setTimeout(closeResults, 200));
+            searchInput.addEventListener('keydown', e => {
+                if (e.key === 'Escape') { closeResults(); searchInput.value = ''; }
+                if (e.key === 'Enter') { e.preventDefault(); }
+            });
+        })();
 
         sync();
     })();
