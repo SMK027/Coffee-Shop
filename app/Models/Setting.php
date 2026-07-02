@@ -25,8 +25,18 @@ class Setting extends Model
         self::KEY_HOME_IMAGE_SALLE    => 'Photo salle',
     ];
 
+    /** Informations boutique. */
+    public const KEY_SHOP_ADDRESS = 'shop_address';
+    public const KEY_SHOP_PHONE   = 'shop_phone';
+    public const KEY_SHOP_EMAIL   = 'shop_email';
+    public const KEY_SHOP_HOURS   = 'shop_hours';
+
     public const DEFAULTS = [
         self::KEY_POINTS_PER_EURO => '5',
+        self::KEY_SHOP_ADDRESS    => "12 Rue des Arômes\n75001 Paris",
+        self::KEY_SHOP_PHONE      => '01 23 45 67 89',
+        self::KEY_SHOP_EMAIL      => 'contact@lecoffeeshop.fr',
+        self::KEY_SHOP_HOURS      => "Lun – Ven : 7h00 – 19h00\nSamedi : 8h00 – 20h00\nDimanche : 9h00 – 18h00",
     ];
 
     /**

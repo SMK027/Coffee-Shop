@@ -31,7 +31,7 @@
                         </div>
                         <div>
                             <p class="font-semibold text-stone-800 text-sm">Adresse</p>
-                            <p class="text-stone-600 text-sm mt-1">12 Rue des Arômes<br>75001 Paris</p>
+                            <address class="text-stone-600 text-sm mt-1 not-italic leading-relaxed">{!! nl2br(e($shopAddress)) !!}</address>
                         </div>
                     </div>
                     <div class="flex gap-4">
@@ -43,9 +43,9 @@
                         <div>
                             <p class="font-semibold text-stone-800 text-sm">Horaires</p>
                             <div class="text-stone-600 text-sm mt-1 space-y-0.5">
-                                <p>Lun – Ven : 7h00 – 19h00</p>
-                                <p>Samedi : 8h00 – 20h00</p>
-                                <p>Dimanche : 9h00 – 18h00</p>
+                                @foreach(array_filter(explode("\n", $shopHours)) as $line)
+                                    <p>{{ trim($line) }}</p>
+                                @endforeach
                             </div>
                         </div>
                     </div>
@@ -57,9 +57,22 @@
                         </div>
                         <div>
                             <p class="font-semibold text-stone-800 text-sm">Email</p>
-                            <p class="text-stone-600 text-sm mt-1">contact@lecoffeeshop.fr</p>
+                            <p class="text-stone-600 text-sm mt-1">{{ $shopEmail }}</p>
                         </div>
                     </div>
+                    @if($shopPhone)
+                    <div class="flex gap-4">
+                        <div class="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <svg class="w-5 h-5 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="font-semibold text-stone-800 text-sm">Téléphone</p>
+                            <p class="text-stone-600 text-sm mt-1">{{ $shopPhone }}</p>
+                        </div>
+                    </div>
+                    @endif
                 </div>
 
                 <div class="mt-8 p-4 bg-amber-50 rounded-xl border border-amber-100">

@@ -99,16 +99,17 @@
                 <div>
                     <h3 class="text-amber-400 font-bold text-lg mb-4">Horaires</h3>
                     <ul class="text-sm space-y-1">
-                        <li>Lundi – Vendredi : 7h00 – 19h00</li>
-                        <li>Samedi : 8h00 – 20h00</li>
-                        <li>Dimanche : 9h00 – 18h00</li>
+                        @foreach(array_filter(explode("\n", \App\Models\Setting::get(\App\Models\Setting::KEY_SHOP_HOURS, \App\Models\Setting::DEFAULTS[\App\Models\Setting::KEY_SHOP_HOURS]))) as $line)
+                            <li>{{ trim($line) }}</li>
+                        @endforeach
                     </ul>
                 </div>
                 <div>
                     <h3 class="text-amber-400 font-bold text-lg mb-4">Nous trouver</h3>
                     <address class="text-sm not-italic space-y-1">
-                        <p>12 Rue des Arômes</p>
-                        <p>75001 Paris</p>
+                        @foreach(array_filter(explode("\n", \App\Models\Setting::get(\App\Models\Setting::KEY_SHOP_ADDRESS, \App\Models\Setting::DEFAULTS[\App\Models\Setting::KEY_SHOP_ADDRESS]))) as $line)
+                            <p>{{ trim($line) }}</p>
+                        @endforeach
                         <p class="mt-2">
                             <a href="{{ route('contact') }}" class="text-amber-400 hover:text-amber-300 underline">Nous contacter</a>
                         </p>
