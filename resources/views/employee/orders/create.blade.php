@@ -121,6 +121,13 @@
 
                 {{-- Total estimé --}}
                 <div class="mt-5 pt-4 border-t border-stone-100 space-y-1.5 text-sm">
+                    <div id="points-earned-line" class="hidden justify-between text-amber-600">
+                        <span class="flex items-center gap-1">
+                            <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                            Points gagnés
+                        </span>
+                        <span id="points-earned-display">0 pt</span>
+                    </div>
                     <div id="loyalty-discount-line" class="hidden justify-between text-blue-700">
                         <span>Réduction fidélité</span>
                         <span id="loyalty-discount-display">0,00 €</span>
@@ -151,10 +158,11 @@
 
     @php
         $drinksData = $drinks->map(fn($d) => [
-            'id'       => $d->id,
-            'name'     => $d->name,
-            'price'    => (float) $d->price,
-            'category' => $d->category->name,
+            'id'             => $d->id,
+            'name'           => $d->name,
+            'price'          => (float) $d->price,
+            'category'       => $d->category->name,
+            'loyalty_points' => (int) $d->loyalty_points,
         ]);
 
         $discountsData = $loyaltyDiscounts->map(fn($d) => [
@@ -175,6 +183,7 @@
         /* ── Calcul du total ──────────────────────────────────── */
         function updateTotal() {
             let subtotal = 0;
+            let totalPoints = 0;
             document.querySelectorAll('.item-row').forEach(row => {
                 const qty = parseInt(row.querySelector('.qty-input')?.value || 1, 10);
                 if (row.classList.contains('item-row-custom')) {
@@ -184,10 +193,22 @@
                     const hidden = row.querySelector('.drink-id-input');
                     if (hidden && hidden.value) {
                         const drink = drinks.find(d => d.id == hidden.value);
-                        if (drink) subtotal += drink.price * qty;
+                        if (drink) {
+                            subtotal += drink.price * qty;
+                            totalPoints += (drink.loyalty_points || 0) * qty;
+                        }
                     }
                 }
             });
+
+            const ptLine = document.getElementById('points-earned-line');
+            const ptDisp = document.getElementById('points-earned-display');
+            if (totalPoints > 0) {
+                ptLine.classList.remove('hidden'); ptLine.classList.add('flex');
+                ptDisp.textContent = '+' + totalPoints + ' pt' + (totalPoints > 1 ? 's' : '');
+            } else {
+                ptLine.classList.add('hidden'); ptLine.classList.remove('flex');
+            }
 
             // 1. Réductions fidélité (depuis session)
             let remaining    = subtotal;
@@ -246,7 +267,8 @@
                 li.className = ['flex items-center justify-between gap-3 px-3 py-2.5 cursor-pointer text-sm transition-colors',
                     i === activeIdx ? 'bg-amber-50' : 'hover:bg-stone-50'].join(' ');
                 li.dataset.id = d.id;
-                li.innerHTML = `<span class="min-w-0"><span class="text-xs text-stone-400">${d.category}</span><span class="ml-1 font-medium text-stone-800">${d.name}</span></span><span class="text-amber-700 font-semibold whitespace-nowrap text-xs">${d.price.toFixed(2).replace('.', ',')} €</span>`;
+                const pts = d.loyalty_points > 0 ? `<span class="ml-1.5 inline-flex items-center gap-0.5 bg-amber-50 border border-amber-200 text-amber-600 text-xs px-1.5 py-0.5 rounded-full">★ ${d.loyalty_points} pt${d.loyalty_points > 1 ? 's' : ''}</span>` : '';
+                li.innerHTML = `<span class="min-w-0 flex items-center gap-1"><span class="text-xs text-stone-400">${d.category}</span><span class="ml-1 font-medium text-stone-800">${d.name}</span>${pts}</span><span class="text-amber-700 font-semibold whitespace-nowrap text-xs">${d.price.toFixed(2).replace('.', ',')} €</span>`;
                 dd.appendChild(li);
             });
             dd.classList.remove('hidden');
