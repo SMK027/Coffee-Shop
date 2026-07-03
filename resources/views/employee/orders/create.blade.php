@@ -267,8 +267,8 @@
                 li.className = ['flex items-center justify-between gap-3 px-3 py-2.5 cursor-pointer text-sm transition-colors',
                     i === activeIdx ? 'bg-amber-50' : 'hover:bg-stone-50'].join(' ');
                 li.dataset.id = d.id;
-                const pts = d.loyalty_points > 0 ? `<span class="ml-1.5 inline-flex items-center gap-0.5 bg-amber-50 border border-amber-200 text-amber-600 text-xs px-1.5 py-0.5 rounded-full">★ ${d.loyalty_points} pt${d.loyalty_points > 1 ? 's' : ''}</span>` : '';
-                li.innerHTML = `<span class="min-w-0 flex items-center gap-1"><span class="text-xs text-stone-400">${d.category}</span><span class="ml-1 font-medium text-stone-800">${d.name}</span>${pts}</span><span class="text-amber-700 font-semibold whitespace-nowrap text-xs">${d.price.toFixed(2).replace('.', ',')} €</span>`;
+                const pts = d.loyalty_points > 0 ? `<span class="flex-shrink-0 ml-1.5 inline-flex items-center gap-0.5 bg-amber-50 border border-amber-200 text-amber-600 text-xs px-1.5 py-0.5 rounded-full">★ ${d.loyalty_points} pt${d.loyalty_points > 1 ? 's' : ''}</span>` : '';
+                li.innerHTML = `<span class="min-w-0 flex items-center gap-1 flex-1 overflow-hidden"><span class="text-xs text-stone-400 flex-shrink-0">${d.category}</span><span class="ml-1 font-medium text-stone-800 truncate">${d.name}</span>${pts}</span><span class="text-amber-700 font-semibold whitespace-nowrap text-xs flex-shrink-0 ml-2">${d.price.toFixed(2).replace('.', ',')} €</span>`;
                 dd.appendChild(li);
             });
             dd.classList.remove('hidden');
