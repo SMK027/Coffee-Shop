@@ -39,12 +39,15 @@ class HomeController extends Controller
 
     public function contact(Request $request, CaptchaService $captcha)
     {
+        $hours = Setting::getHours();
+
         return view('visitor.contact', [
-            'captchaQuestion' => $captcha->refreshChallenge($request, 'contact_form'),
-            'shopAddress'     => Setting::get(Setting::KEY_SHOP_ADDRESS, Setting::DEFAULTS[Setting::KEY_SHOP_ADDRESS]),
-            'shopPhone'       => Setting::get(Setting::KEY_SHOP_PHONE,   Setting::DEFAULTS[Setting::KEY_SHOP_PHONE]),
-            'shopEmail'       => Setting::get(Setting::KEY_SHOP_EMAIL,   Setting::DEFAULTS[Setting::KEY_SHOP_EMAIL]),
-            'shopHours'       => Setting::get(Setting::KEY_SHOP_HOURS,   Setting::DEFAULTS[Setting::KEY_SHOP_HOURS]),
+            'captchaQuestion'     => $captcha->refreshChallenge($request, 'contact_form'),
+            'shopAddress'         => Setting::get(Setting::KEY_SHOP_ADDRESS, Setting::DEFAULTS[Setting::KEY_SHOP_ADDRESS]),
+            'shopPhone'           => Setting::get(Setting::KEY_SHOP_PHONE,   Setting::DEFAULTS[Setting::KEY_SHOP_PHONE]),
+            'shopEmail'           => Setting::get(Setting::KEY_SHOP_EMAIL,   Setting::DEFAULTS[Setting::KEY_SHOP_EMAIL]),
+            'shopHoursLines'      => Setting::formatHoursLines($hours),
+            'shopHoursExceptions' => Setting::upcomingExceptions($hours),
         ]);
     }
 

@@ -43,10 +43,26 @@
                         <div>
                             <p class="font-semibold text-stone-800 text-sm">Horaires</p>
                             <div class="text-stone-600 text-sm mt-1 space-y-0.5">
-                                @foreach(array_filter(explode("\n", $shopHours)) as $line)
-                                    <p>{{ trim($line) }}</p>
+                                @foreach($shopHoursLines as $line)
+                                    <p>{{ $line }}</p>
                                 @endforeach
                             </div>
+                            @if(!empty($shopHoursExceptions))
+                                <div class="mt-3 space-y-1">
+                                    <p class="text-xs font-semibold text-stone-500 uppercase tracking-wide">Dates exceptionnelles</p>
+                                    @foreach($shopHoursExceptions as $exc)
+                                        <p class="text-xs {{ $exc['open'] ? 'text-green-700' : 'text-red-600' }}">
+                                            {{ \Carbon\Carbon::parse($exc['date'])->isoFormat('D MMM') }}
+                                            — {{ $exc['label'] }}
+                                            @if($exc['open'])
+                                                ({{ $exc['from'] }} – {{ $exc['to'] }})
+                                            @else
+                                                (fermé)
+                                            @endif
+                                        </p>
+                                    @endforeach
+                                </div>
+                            @endif
                         </div>
                     </div>
                     <div class="flex gap-4">

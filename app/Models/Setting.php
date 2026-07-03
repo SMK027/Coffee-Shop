@@ -36,8 +36,128 @@ class Setting extends Model
         self::KEY_SHOP_ADDRESS    => "12 Rue des Arômes\n75001 Paris",
         self::KEY_SHOP_PHONE      => '01 23 45 67 89',
         self::KEY_SHOP_EMAIL      => 'contact@lecoffeeshop.fr',
-        self::KEY_SHOP_HOURS      => "Lun – Ven : 7h00 – 19h00\nSamedi : 8h00 – 20h00\nDimanche : 9h00 – 18h00",
+        self::KEY_SHOP_HOURS      => '{"regular":{"monday":{"open":true,"from":"07:00","to":"19:00"},"tuesday":{"open":true,"from":"07:00","to":"19:00"},"wednesday":{"open":true,"from":"07:00","to":"19:00"},"thursday":{"open":true,"from":"07:00","to":"19:00"},"friday":{"open":true,"from":"07:00","to":"19:00"},"saturday":{"open":true,"from":"08:00","to":"20:00"},"sunday":{"open":true,"from":"09:00","to":"18:00"}},"exceptions":[]}',
     ];
+
+    /**
+     * Retourne la structure par défaut des horaires.
+     */
+    public static function defaultHours(): array
+    {
+        return [
+            'regular' => [
+                'monday'    => ['open' => true,  'from' => '07:00', 'to' => '19:00'],
+                'tuesday'   => ['open' => true,  'from' => '07:00', 'to' => '19:00'],
+                'wednesday' => ['open' => true,  'from' => '07:00', 'to' => '19:00'],
+                'thursday'  => ['open' => true,  'from' => '07:00', 'to' => '19:00'],
+                'friday'    => ['open' => true,  'from' => '07:00', 'to' => '19:00'],
+                'saturday'  => ['open' => true,  'from' => '08:00', 'to' => '20:00'],
+                'sunday'    => ['open' => true,  'from' => '09:00', 'to' => '18:00'],
+            ],
+            'exceptions' => [],
+        ];
+    }
+
+    /**
+     * Retourne les horaires décodés depuis la base (migration automatique depuis l'ancien format texte).
+     */
+    public static function getHours(): array
+    {
+        $raw  = self::get(self::KEY_SHOP_HOURS);
+        $data = $raw ? json_decode($raw, true) : null;
+
+        if (!$data || !isset($data['regular'])) {
+            // Ancien format texte ou valeur manquante → migration vers le nouveau format
+            $default = self::defaultHours();
+            self::set(self::KEY_SHOP_HOURS, json_encode($default));
+            return $default;
+        }
+
+        // Garantit que la clé exceptions existe toujours
+        $data['exceptions'] = $data['exceptions'] ?? [];
+        return $data;
+    }
+
+    /**
+     * Formate les horaires réguliers en lignes lisibles, en regroupant les jours consécutifs
+     * ayant les mêmes horaires. Ex : ["Lun – Ven : 7h00 – 19h00", "Sam : 8h00 – 20h00", …]
+     */
+    public static function formatHoursLines(array $hours): array
+    {
+        $labels = [
+            'monday'    => 'Lun',
+            'tuesday'   => 'Mar',
+            'wednesday' => 'Mer',
+            'thursday'  => 'Jeu',
+            'friday'    => 'Ven',
+            'saturday'  => 'Sam',
+            'sunday'    => 'Dim',
+        ];
+        $keys  = array_keys($labels);
+        $n     = count($keys);
+        $lines = [];
+        $i     = 0;
+
+        while ($i < $n) {
+            $key     = $keys[$i];
+            $current = $hours['regular'][$key] ?? ['open' => false];
+            $j       = $i;
+
+            while ($j + 1 < $n) {
+                $next     = $hours['regular'][$keys[$j + 1]] ?? ['open' => false];
+                $sameOpen = $current['open'] === $next['open'];
+                $sameTime = !$current['open'] || (
+                    ($current['from'] ?? '') === ($next['from'] ?? '') &&
+                    ($current['to']   ?? '') === ($next['to']   ?? '')
+                );
+                if ($sameOpen && $sameTime) {
+                    $j++;
+                } else {
+                    break;
+                }
+            }
+
+            $range = $i === $j
+                ? $labels[$keys[$i]]
+                : $labels[$keys[$i]] . ' – ' . $labels[$keys[$j]];
+
+            $lines[] = $current['open']
+                ? $range . ' : ' . self::formatTime($current['from'] ?? '') . ' – ' . self::formatTime($current['to'] ?? '')
+                : $range . ' : Fermé';
+
+            $i = $j + 1;
+        }
+
+        return $lines;
+    }
+
+    /**
+     * Retourne les exceptions à venir (aujourd'hui inclus) dans la limite donnée en jours.
+     */
+    public static function upcomingExceptions(array $hours, int $days = 60): array
+    {
+        $today = now()->startOfDay();
+        $limit = now()->addDays($days)->endOfDay();
+
+        $exc = array_filter($hours['exceptions'] ?? [], function ($e) use ($today, $limit) {
+            try {
+                $d = \Carbon\Carbon::parse($e['date']);
+                return $d->gte($today) && $d->lte($limit);
+            } catch (\Exception) {
+                return false;
+            }
+        });
+
+        usort($exc, fn($a, $b) => strcmp($a['date'], $b['date']));
+        return array_values($exc);
+    }
+
+    private static function formatTime(string $time): string
+    {
+        if (!$time || !str_contains($time, ':')) return $time;
+        [$h, $m] = explode(':', $time);
+        return (int)$h . 'h' . $m;
+    }
 
     /**
      * Récupère une valeur de paramètre (avec valeur par défaut), mise en cache.

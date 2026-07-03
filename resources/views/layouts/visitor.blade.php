@@ -99,8 +99,8 @@
                 <div>
                     <h3 class="text-amber-400 font-bold text-lg mb-4">Horaires</h3>
                     <ul class="text-sm space-y-1">
-                        @foreach(array_filter(explode("\n", \App\Models\Setting::get(\App\Models\Setting::KEY_SHOP_HOURS, \App\Models\Setting::DEFAULTS[\App\Models\Setting::KEY_SHOP_HOURS]))) as $line)
-                            <li>{{ trim($line) }}</li>
+                        @foreach(\App\Models\Setting::formatHoursLines(\App\Models\Setting::getHours()) as $line)
+                            <li>{{ $line }}</li>
                         @endforeach
                     </ul>
                 </div>

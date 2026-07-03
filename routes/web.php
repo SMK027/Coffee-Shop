@@ -109,6 +109,8 @@ Route::prefix('espace-employe')->name('employee.')->middleware(['auth', 'employe
     // Paramètres de la boutique (super admin)
     Route::get('/parametres-boutique', [ShopSettingsController::class, 'index'])->name('shop-settings.index');
     Route::post('/parametres-boutique', [ShopSettingsController::class, 'update'])->name('shop-settings.update');
+    Route::post('/parametres-boutique/exceptions', [ShopSettingsController::class, 'addException'])->name('shop-settings.exception.add');
+    Route::delete('/parametres-boutique/exceptions/{date}', [ShopSettingsController::class, 'removeException'])->name('shop-settings.exception.remove');
 
     // Fidélité
     Route::get('/fidelite', [EmployeeLoyaltyController::class, 'index'])->name('loyalty.index');
