@@ -114,6 +114,8 @@ Route::prefix('espace-employe')->name('employee.')->middleware(['auth', 'employe
 
     // Fidélité
     Route::get('/fidelite', [EmployeeLoyaltyController::class, 'index'])->name('loyalty.index');
+    Route::get('/fidelite/nouvelle-carte', [EmployeeLoyaltyController::class, 'create'])->name('loyalty.create');
+    Route::post('/fidelite/nouvelle-carte', [EmployeeLoyaltyController::class, 'store'])->name('loyalty.store');
     Route::get('/fidelite/reglages', [EmployeeLoyaltyController::class, 'settings'])->name('loyalty.settings');
     Route::patch('/fidelite/reglages', [EmployeeLoyaltyController::class, 'updateSettings'])->name('loyalty.settings.update');
     Route::get('/fidelite/employes/recherche', [EmployeeLoyaltyController::class, 'searchEmployees'])->name('loyalty.employees.search');
