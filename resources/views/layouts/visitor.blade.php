@@ -83,6 +83,59 @@
         </div>
     @endif
 
+    {{-- Bandeau exceptions horaires (aujourd'hui + 6 jours à venir) --}}
+    @php
+        $today     = now()->startOfDay();
+        $weekLimit = now()->addDays(6)->endOfDay();
+        $weekExcs  = collect(\App\Models\Setting::getHours()['exceptions'] ?? [])
+            ->filter(function ($e) use ($today, $weekLimit) {
+                try {
+                    $d = \Carbon\Carbon::parse($e['date']);
+                    return $d->gte($today) && $d->lte($weekLimit);
+                } catch (\Throwable) { return false; }
+            })
+            ->sortBy('date')
+            ->values();
+
+        $todayExc    = $weekExcs->first(fn($e) => $e['date'] === $today->format('Y-m-d'));
+        $upcomingExcs = $weekExcs->filter(fn($e) => $e['date'] !== $today->format('Y-m-d'));
+    @endphp
+
+    {{-- Exception du jour --}}
+    @if($todayExc)
+        @if(!$todayExc['open'])
+            <div class="bg-red-600 text-white text-sm text-center px-4 py-2.5 font-medium">
+                🔒 Fermeture exceptionnelle aujourd'hui — {{ $todayExc['label'] }}. Nous vous accueillons à nouveau prochainement.
+            </div>
+        @else
+            <div class="bg-green-700 text-white text-sm text-center px-4 py-2.5 font-medium">
+                ✅ Ouverture exceptionnelle aujourd'hui ({{ $todayExc['label'] }}) — {{ $todayExc['from'] }} à {{ $todayExc['to'] }}.
+            </div>
+        @endif
+    @endif
+
+    {{-- Exceptions à venir dans la semaine --}}
+    @if($upcomingExcs->isNotEmpty())
+        <div class="bg-amber-50 border-b border-amber-200 px-4 py-2.5">
+            <div class="max-w-6xl mx-auto flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-amber-800">
+                <span class="font-semibold flex-shrink-0">📅 Cette semaine :</span>
+                @foreach($upcomingExcs as $exc)
+                    @php $d = \Carbon\Carbon::parse($exc['date']); @endphp
+                    <span>
+                        <span class="font-medium">{{ $d->isoFormat('ddd D MMM') }}</span>
+                        —
+                        @if(!$exc['open'])
+                            <span class="text-red-600 font-medium">Fermé</span> ({{ $exc['label'] }})
+                        @else
+                            <span class="text-green-700 font-medium">Ouvert {{ $exc['from'] }}–{{ $exc['to'] }}</span> ({{ $exc['label'] }})
+                        @endif
+                    </span>
+                    @if(!$loop->last)<span class="text-amber-300">·</span>@endif
+                @endforeach
+            </div>
+        </div>
+    @endif
+
     {{-- Contenu principal --}}
     <main>
         {{ $slot }}
