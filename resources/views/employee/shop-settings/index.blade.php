@@ -193,7 +193,7 @@
 
                 <div>
                     <button type="submit"
-                            class="bg-stone-700 hover:bg-stone-600 text-white px-5 py-2 rounded-lg font-medium text-sm transition-colors">
+                            class="bg-amber-700 hover:bg-amber-600 text-white px-5 py-2 rounded-lg font-medium text-sm transition-colors">
                         + Ajouter l'exception
                     </button>
                 </div>
