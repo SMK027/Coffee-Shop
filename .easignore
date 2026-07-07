@@ -1,0 +1,37 @@
+# Fichiers exclus du tarball EAS Build (build APK/AAB)
+# Le mobile est dans un monorepo Laravel — on n'a besoin que du dossier mobile/
+
+# Docker data (permissions root)
+data/
+
+# Laravel backend (non requis pour build mobile)
+app/
+bootstrap/cache/
+config/
+database/
+lang/
+public/
+resources/
+routes/
+storage/
+tests/
+vendor/
+scripts/
+vendor
+node_modules
+
+# Fichiers PHP racine
+composer.json
+composer.lock
+artisan
+phpunit.xml
+docker-compose*.yml
+Dockerfile*
+docker-entrypoint.sh
+postcss.config.js
+tailwind.config.js
+vite.config.js
+package.json
+package-lock.json
+Prompt.md
+README.md
