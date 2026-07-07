@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -53,6 +53,14 @@ export default function CreateOrderScreen() {
   // Étape 2 — Panier & notes
   const [cart, setCart] = useState<CartItem[]>([]);
   const [notes, setNotes] = useState('');
+
+  // Modal recherche carte fidélité
+  const [cardSearchVisible, setCardSearchVisible] = useState(false);
+  const [cardSearchQuery, setCardSearchQuery] = useState('');
+  const [cardSearchResults, setCardSearchResults] = useState<LoyaltyCard[]>([]);
+  const [cardSearchLoading, setCardSearchLoading] = useState(false);
+  const [cardSearched, setCardSearched] = useState(false);
+  const cardSearchDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Modaux
   const [drinkModalVisible, setDrinkModalVisible] = useState(false);
@@ -109,6 +117,55 @@ export default function CreateOrderScreen() {
     setSelectedDiscountIds([]);
     if (!loyaltyCard?.has_employee_benefits) setIsEmployeeOrder(false);
   };
+
+  const selectLoyaltyCard = (card: LoyaltyCard) => {
+    setLoyaltyCard(card);
+    setLoyaltyCardNumber(card.card_number);
+    setLoyaltyCardError('');
+    if (card.has_employee_benefits) setIsEmployeeOrder(true);
+    const [fn, ...rest] = String(card.full_name || '').split(' ');
+    if (!firstName && fn) setFirstName(fn);
+    if (!lastName && rest.length) setLastName(rest.join(' '));
+    setCardSearchVisible(false);
+    setCardSearchQuery('');
+    setCardSearchResults([]);
+    setCardSearched(false);
+  };
+
+  const openCardSearch = () => {
+    setCardSearchQuery('');
+    setCardSearchResults([]);
+    setCardSearched(false);
+    setCardSearchVisible(true);
+  };
+
+  // Debounce recherche carte fidélité
+  useEffect(() => {
+    if (!cardSearchVisible) return;
+    if (cardSearchDebounce.current) clearTimeout(cardSearchDebounce.current);
+    const q = cardSearchQuery.trim();
+    if (q.length < 2) {
+      setCardSearchResults([]);
+      setCardSearched(false);
+      return;
+    }
+    cardSearchDebounce.current = setTimeout(async () => {
+      setCardSearchLoading(true);
+      try {
+        const { data } = await api.get('/loyalty-cards', { params: { q } });
+        setCardSearchResults(data.data ?? []);
+        setCardSearched(true);
+      } catch {
+        setCardSearchResults([]);
+        setCardSearched(true);
+      } finally {
+        setCardSearchLoading(false);
+      }
+    }, 350);
+    return () => {
+      if (cardSearchDebounce.current) clearTimeout(cardSearchDebounce.current);
+    };
+  }, [cardSearchQuery, cardSearchVisible]);
 
   const toggleDiscount = (id: number) => {
     setPinError('');
@@ -292,6 +349,7 @@ export default function CreateOrderScreen() {
             loyaltyCardNumber={loyaltyCardNumber} setLoyaltyCardNumber={setLoyaltyCardNumber}
             loyaltyCard={loyaltyCard} loyaltyCardError={loyaltyCardError}
             checkingCard={checkingCard} onCheck={checkLoyaltyCard} onClearCard={clearLoyaltyCard}
+            onOpenCardSearch={openCardSearch}
             discounts={discounts} selectedDiscountIds={selectedDiscountIds} onToggleDiscount={toggleDiscount}
             cardPin={cardPin} setCardPin={setCardPin} pinError={pinError}
             isEmployeeOrder={isEmployeeOrder} setIsEmployeeOrder={setIsEmployeeOrder}
@@ -417,6 +475,60 @@ export default function CreateOrderScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      {/* ── Modal recherche client (carte fidélité) ── */}
+      <Modal visible={cardSearchVisible} animationType="slide" presentationStyle="pageSheet">
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Rechercher un client</Text>
+            <TouchableOpacity onPress={() => setCardSearchVisible(false)}>
+              <Text style={styles.modalClose}>Fermer</Text>
+            </TouchableOpacity>
+          </View>
+          <TextInput
+            style={styles.modalSearch}
+            placeholder="Nom, prénom, e-mail, téléphone ou n° de carte…"
+            placeholderTextColor="#9ca3af"
+            value={cardSearchQuery}
+            onChangeText={setCardSearchQuery}
+            autoFocus
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          {cardSearchLoading ? (
+            <ActivityIndicator style={{ marginTop: 20 }} color="#92400e" />
+          ) : cardSearchQuery.trim().length < 2 ? (
+            <Text style={styles.empty}>Saisissez au moins 2 caractères pour lancer la recherche.</Text>
+          ) : cardSearched && cardSearchResults.length === 0 ? (
+            <Text style={styles.empty}>Aucun client trouvé.</Text>
+          ) : (
+            <FlatList
+              data={cardSearchResults}
+              keyExtractor={(c) => String(c.id)}
+              keyboardShouldPersistTaps="handled"
+              renderItem={({ item: c }) => (
+                <TouchableOpacity style={styles.modalCardRow} onPress={() => selectLoyaltyCard(c)}>
+                  <View style={{ flex: 1 }}>
+                    <View style={styles.modalCardHeader}>
+                      <Text style={styles.modalCardName}>{c.full_name}</Text>
+                      {c.has_employee_benefits && (
+                        <View style={styles.badgeEmployee}>
+                          <Text style={[styles.badgeText, { color: '#92400e' }]}>Salarié</Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={styles.modalCardNum}>{c.card_number}</Text>
+                    {c.email && <Text style={styles.modalCardContact}>{c.email}</Text>}
+                    {c.phone && <Text style={styles.modalCardContact}>{c.phone}</Text>}
+                    <Text style={styles.modalCardPoints}>🏆 {c.points} point{c.points > 1 ? 's' : ''}</Text>
+                  </View>
+                  <Text style={styles.chevron}>›</Text>
+                </TouchableOpacity>
+              )}
+            />
+          )}
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -444,6 +556,7 @@ function Step1Client(props: {
   loyaltyCardNumber: string; setLoyaltyCardNumber: (v: string) => void;
   loyaltyCard: LoyaltyCard | null; loyaltyCardError: string;
   checkingCard: boolean; onCheck: () => void; onClearCard: () => void;
+  onOpenCardSearch: () => void;
   discounts: LoyaltyDiscount[]; selectedDiscountIds: number[]; onToggleDiscount: (id: number) => void;
   cardPin: string; setCardPin: (v: string) => void; pinError: string;
   isEmployeeOrder: boolean; setIsEmployeeOrder: (v: boolean) => void;
@@ -451,7 +564,7 @@ function Step1Client(props: {
   const {
     firstName, setFirstName, lastName, setLastName,
     loyaltyCardNumber, setLoyaltyCardNumber, loyaltyCard, loyaltyCardError,
-    checkingCard, onCheck, onClearCard,
+    checkingCard, onCheck, onClearCard, onOpenCardSearch,
     discounts, selectedDiscountIds, onToggleDiscount,
     cardPin, setCardPin, pinError,
     isEmployeeOrder, setIsEmployeeOrder,
@@ -485,6 +598,17 @@ function Step1Client(props: {
       <View style={styles.card}>
         {!loyaltyCard ? (
           <>
+            <TouchableOpacity style={styles.searchClientBtn} onPress={onOpenCardSearch}>
+              <Text style={styles.searchClientBtnIcon}>🔍</Text>
+              <Text style={styles.searchClientBtnText}>Rechercher un client (nom, e-mail, tél.)</Text>
+            </TouchableOpacity>
+
+            <View style={styles.divider}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>ou par n° de carte</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
             <View style={styles.cardNumberRow}>
               <TextInput
                 style={[styles.input, { flex: 1, marginBottom: 0 }]}
@@ -502,7 +626,7 @@ function Step1Client(props: {
                 {checkingCard ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
-                  <Text style={styles.checkBtnText}>Rechercher</Text>
+                  <Text style={styles.checkBtnText}>Vérifier</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -841,5 +965,22 @@ const styles = StyleSheet.create({
   modalDrinkName: { fontSize: 16, fontWeight: '600', color: '#1f2937' },
   modalDrinkCat: { fontSize: 13, color: '#9ca3af' },
   modalDrinkPrice: { fontSize: 16, fontWeight: '700', color: '#92400e' },
-  empty: { textAlign: 'center', color: '#9ca3af', marginTop: 40, fontSize: 15 },
+  modalCardRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
+  modalCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 },
+  modalCardName: { fontSize: 16, fontWeight: '700', color: '#1f2937' },
+  modalCardNum: { fontSize: 12, color: '#9ca3af', fontFamily: 'monospace', marginBottom: 2 },
+  modalCardContact: { fontSize: 13, color: '#6b7280' },
+  modalCardPoints: { fontSize: 13, color: '#d97706', fontWeight: '600', marginTop: 4 },
+  chevron: { fontSize: 24, color: '#d1d5db', fontWeight: '400', marginLeft: 8 },
+  searchClientBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: '#fef3c7', borderRadius: 10,
+    paddingHorizontal: 14, paddingVertical: 12, marginBottom: 12,
+  },
+  searchClientBtnIcon: { fontSize: 18 },
+  searchClientBtnText: { color: '#92400e', fontWeight: '600', fontSize: 14, flex: 1 },
+  divider: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: '#e5e7eb' },
+  dividerText: { fontSize: 11, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 0.5 },
+  empty: { textAlign: 'center', color: '#9ca3af', marginTop: 40, fontSize: 15, paddingHorizontal: 20 },
 });
