@@ -70,6 +70,7 @@ class AuthController extends Controller
         $user = Auth::guard('api')->user();
         return response()->json([
             'id'          => $user->id,
+            'username'    => $user->username,
             'name'        => $user->name,
             'email'       => $user->email,
             'global_role' => $user->global_role,
@@ -85,6 +86,7 @@ class AuthController extends Controller
             'expires_in'   => Auth::guard('api')->factory()->getTTL() * 60,
             'user'         => [
                 'id'          => $user->id,
+                'username'    => $user->username,
                 'name'        => $user->name,
                 'email'       => $user->email,
                 'global_role' => $user->global_role,

@@ -11,6 +11,7 @@ import OrderDetailScreen from '../screens/OrderDetailScreen';
 import CreateOrderScreen from '../screens/CreateOrderScreen';
 import LoyaltyCardsScreen from '../screens/LoyaltyCardsScreen';
 import LoyaltyCardDetailScreen from '../screens/LoyaltyCardDetailScreen';
+import ProfileScreen from '../screens/ProfileScreen';
 
 const Tab = createBottomTabNavigator();
 const OrderStack = createNativeStackNavigator();
@@ -74,6 +75,7 @@ function AppTabs() {
             Orders: '📋',
             Menu: '☕',
             LoyaltyCards: '🎁',
+            Profile: '👤',
           };
           return <Text style={{ fontSize: focused ? 22 : 18 }}>{icons[route.name] ?? '•'}</Text>;
         },
@@ -82,6 +84,7 @@ function AppTabs() {
       <Tab.Screen name="Orders" component={OrdersStack} options={{ title: 'Commandes', headerShown: false }} />
       <Tab.Screen name="Menu" component={MenuScreen} options={{ title: 'Menu' }} />
       <Tab.Screen name="LoyaltyCards" component={LoyaltyStackNavigator} options={{ title: 'Fidélité', headerShown: false }} />
+      <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: 'Profil' }} />
     </Tab.Navigator>
   );
 }
