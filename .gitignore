@@ -16,6 +16,9 @@
 /data
 /node_modules
 /public/build
+# Application mobile Expo
+/mobile/node_modules
+/mobile/.expo
 /public/fonts-manifest.dev.json
 /public/hot
 /public/storage
