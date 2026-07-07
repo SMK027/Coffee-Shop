@@ -10,10 +10,12 @@ import {
   RefreshControl,
   Alert,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import api from '../api/client';
 import { LoyaltyCard } from '../types';
 
 export default function LoyaltyCardsScreen() {
+  const navigation = useNavigation<any>();
   const [cards, setCards] = useState<LoyaltyCard[]>([]);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -95,7 +97,11 @@ export default function LoyaltyCardsScreen() {
             loadingMore ? <ActivityIndicator style={{ marginVertical: 16 }} color="#92400e" /> : null
           }
           renderItem={({ item: card }) => (
-            <View style={styles.card}>
+            <TouchableOpacity
+              style={styles.card}
+              onPress={() => navigation.navigate('LoyaltyCardDetail', { cardId: card.id, fullName: card.full_name })}
+              activeOpacity={0.7}
+            >
               <View style={styles.cardHeader}>
                 <Text style={styles.fullName}>{card.full_name}</Text>
                 <View style={[styles.badge, card.has_employee_benefits ? styles.badgeEmployee : styles.badgeClient]}>
@@ -109,8 +115,9 @@ export default function LoyaltyCardsScreen() {
               {card.phone && <Text style={styles.contact}>{card.phone}</Text>}
               <View style={styles.pointsRow}>
                 <Text style={styles.points}>🏆 {card.points} point{card.points > 1 ? 's' : ''}</Text>
+                <Text style={styles.chevron}>›</Text>
               </View>
-            </View>
+            </TouchableOpacity>
           )}
           contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
         />
@@ -158,6 +165,7 @@ const styles = StyleSheet.create({
   badgeClientText: { color: '#6b7280' },
   cardNumber: { fontSize: 13, color: '#9ca3af', fontFamily: 'monospace', marginBottom: 4 },
   contact: { fontSize: 14, color: '#6b7280', marginTop: 2 },
-  pointsRow: { marginTop: 8 },
+  pointsRow: { marginTop: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   points: { fontSize: 15, fontWeight: '600', color: '#d97706' },
+  chevron: { fontSize: 22, color: '#d1d5db', fontWeight: '400' },
 });

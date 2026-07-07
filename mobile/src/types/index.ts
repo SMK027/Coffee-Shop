@@ -113,3 +113,41 @@ export interface CreateOrderPayload {
   notes?: string;
   items: NewOrderItem[];
 }
+
+export interface LoyaltyCardOrderSummary {
+  id: number;
+  status: string;
+  status_label: string;
+  is_employee_order: boolean;
+  total_amount: number;
+  discount_amount: number;
+  loyalty_discount_amount: number;
+  loyalty_points_spent: number;
+  points_awarded: number;
+  items_count: number;
+  created_at: string;
+  completed_at: string | null;
+}
+
+export interface LoyaltyPointAdjustment {
+  id: number;
+  type: 'credit' | 'debit';
+  source: 'manual' | 'order_debit' | 'order_credit';
+  points: number;
+  balance_after: number;
+  reason: string | null;
+  order_id: number | null;
+  user_name: string | null;
+  created_at: string;
+}
+
+export interface LoyaltyCardDetail {
+  card: LoyaltyCard;
+  orders: LoyaltyCardOrderSummary[];
+  adjustments: LoyaltyPointAdjustment[];
+  totals: {
+    orders_count: number;
+    points_credited: number;
+    points_debited: number;
+  };
+}

@@ -10,9 +10,11 @@ import OrdersScreen from '../screens/OrdersScreen';
 import OrderDetailScreen from '../screens/OrderDetailScreen';
 import CreateOrderScreen from '../screens/CreateOrderScreen';
 import LoyaltyCardsScreen from '../screens/LoyaltyCardsScreen';
+import LoyaltyCardDetailScreen from '../screens/LoyaltyCardDetailScreen';
 
 const Tab = createBottomTabNavigator();
 const OrderStack = createNativeStackNavigator();
+const LoyaltyStack = createNativeStackNavigator();
 
 function OrdersStack() {
   return (
@@ -27,6 +29,21 @@ function OrdersStack() {
       <OrderStack.Screen name="OrderDetail" component={OrderDetailScreen} options={{ title: 'Détail' }} />
       <OrderStack.Screen name="CreateOrder" component={CreateOrderScreen} options={{ title: 'Nouvelle commande' }} />
     </OrderStack.Navigator>
+  );
+}
+
+function LoyaltyStackNavigator() {
+  return (
+    <LoyaltyStack.Navigator
+      screenOptions={{
+        headerStyle: { backgroundColor: '#78350f' },
+        headerTintColor: '#fff',
+        headerTitleStyle: { fontWeight: '700' },
+      }}
+    >
+      <LoyaltyStack.Screen name="LoyaltyCardsList" component={LoyaltyCardsScreen} options={{ title: 'Fidélité' }} />
+      <LoyaltyStack.Screen name="LoyaltyCardDetail" component={LoyaltyCardDetailScreen} options={{ title: 'Fiche fidélité' }} />
+    </LoyaltyStack.Navigator>
   );
 }
 
@@ -64,7 +81,7 @@ function AppTabs() {
     >
       <Tab.Screen name="Orders" component={OrdersStack} options={{ title: 'Commandes', headerShown: false }} />
       <Tab.Screen name="Menu" component={MenuScreen} options={{ title: 'Menu' }} />
-      <Tab.Screen name="LoyaltyCards" component={LoyaltyCardsScreen} options={{ title: 'Fidélité' }} />
+      <Tab.Screen name="LoyaltyCards" component={LoyaltyStackNavigator} options={{ title: 'Fidélité', headerShown: false }} />
     </Tab.Navigator>
   );
 }

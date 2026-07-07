@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\LoyaltyCard;
+use App\Models\LoyaltyPointAdjustment;
+use App\Models\Order;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -57,6 +59,62 @@ class LoyaltyCardController extends Controller
         return response()->json([
             'found' => true,
             'card'  => $this->formatCard($card),
+        ]);
+    }
+
+    /**
+     * Fiche détaillée d'une carte : infos + commandes + historique de points.
+     */
+    public function show(LoyaltyCard $card): JsonResponse
+    {
+        $orders = $card->orders()
+            ->with('items')
+            ->latest()
+            ->limit(50)
+            ->get()
+            ->map(fn(Order $o) => [
+                'id'                      => $o->id,
+                'status'                  => $o->status,
+                'status_label'            => $o->status_label,
+                'is_employee_order'       => (bool) $o->is_employee_order,
+                'total_amount'            => (float) $o->total_amount,
+                'discount_amount'         => (float) $o->discount_amount,
+                'loyalty_discount_amount' => (float) $o->loyalty_discount_amount,
+                'loyalty_points_spent'    => (int) $o->loyalty_points_spent,
+                'points_awarded'          => (int) ($o->points_awarded ?? 0),
+                'items_count'             => $o->items->sum('quantity'),
+                'created_at'              => $o->created_at?->toIso8601String(),
+                'completed_at'            => $o->completed_at?->toIso8601String(),
+            ]);
+
+        $adjustments = $card->pointAdjustments()
+            ->with('user:id,name', 'order:id')
+            ->latest()
+            ->limit(100)
+            ->get()
+            ->map(fn(LoyaltyPointAdjustment $a) => [
+                'id'            => $a->id,
+                'type'          => $a->type,
+                'source'        => $a->source,
+                'points'        => (int) $a->points,
+                'balance_after' => (int) $a->balance_after,
+                'reason'        => $a->reason,
+                'order_id'      => $a->order_id,
+                'user_name'     => $a->user?->name,
+                'created_at'    => $a->created_at?->toIso8601String(),
+            ]);
+
+        $totals = [
+            'orders_count'    => $card->orders()->count(),
+            'points_credited' => (int) $card->pointAdjustments()->where('type', LoyaltyPointAdjustment::TYPE_CREDIT)->sum('points'),
+            'points_debited'  => (int) $card->pointAdjustments()->where('type', LoyaltyPointAdjustment::TYPE_DEBIT)->sum('points'),
+        ];
+
+        return response()->json([
+            'card'        => $this->formatCard($card),
+            'orders'      => $orders,
+            'adjustments' => $adjustments,
+            'totals'      => $totals,
         ]);
     }
 
