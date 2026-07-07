@@ -8,4 +8,4 @@
  * • Appareil physique (Wi-Fi)      → 'http://192.168.1.XXX:8099'
  * • Production                     → 'https://votre-domaine.com'
  */
-export const API_BASE_URL = 'http://192.168.1.3:8099';
+export const API_BASE_URL = 'https://coffee.leofranz.fr';
