@@ -16,10 +16,12 @@ import { useNavigation } from '@react-navigation/native';
 import api from '../api/client';
 import { Drink, LoyaltyCard, LoyaltyDiscount } from '../types';
 
-interface CartItem {
-  drink: Drink;
-  quantity: number;
-}
+type CartItem =
+  | { uid: string; type: 'drink'; drink: Drink; quantity: number }
+  | { uid: string; type: 'custom'; label: string; unitPrice: number; quantity: number };
+
+let cartUidCounter = 0;
+const nextCartUid = () => `item-${++cartUidCounter}`;
 
 export default function CreateOrderScreen() {
   const navigation = useNavigation<any>();
@@ -50,6 +52,13 @@ export default function CreateOrderScreen() {
   // Modal sélection boisson
   const [drinkModalVisible, setDrinkModalVisible] = useState(false);
   const [drinkSearch, setDrinkSearch] = useState('');
+
+  // Modal article libre
+  const [customModalVisible, setCustomModalVisible] = useState(false);
+  const [customLabel, setCustomLabel] = useState('');
+  const [customPrice, setCustomPrice] = useState('');
+  const [customQuantity, setCustomQuantity] = useState('1');
+  const [customError, setCustomError] = useState('');
 
   // Soumission
   const [submitting, setSubmitting] = useState(false);
@@ -99,24 +108,68 @@ export default function CreateOrderScreen() {
 
   const addToCart = (drink: Drink) => {
     setCart((prev) => {
-      const existing = prev.find((i) => i.drink.id === drink.id);
-      if (existing) return prev.map((i) => i.drink.id === drink.id ? { ...i, quantity: i.quantity + 1 } : i);
-      return [...prev, { drink, quantity: 1 }];
+      const existing = prev.find((i) => i.type === 'drink' && i.drink.id === drink.id);
+      if (existing) {
+        return prev.map((i) =>
+          i.uid === existing.uid ? { ...i, quantity: i.quantity + 1 } : i
+        );
+      }
+      return [...prev, { uid: nextCartUid(), type: 'drink', drink, quantity: 1 }];
     });
     setDrinkModalVisible(false);
     setDrinkSearch('');
   };
 
-  const updateQuantity = (drinkId: number, delta: number) => {
+  const openCustomModal = () => {
+    setCustomLabel('');
+    setCustomPrice('');
+    setCustomQuantity('1');
+    setCustomError('');
+    setCustomModalVisible(true);
+  };
+
+  const addCustomItem = () => {
+    const label = customLabel.trim();
+    const price = parseFloat(customPrice.replace(',', '.'));
+    const qty = parseInt(customQuantity, 10);
+
+    if (!label) {
+      setCustomError('Le libellé est obligatoire.');
+      return;
+    }
+    if (!Number.isFinite(price) || price < 0.01 || price > 999.99) {
+      setCustomError('Le tarif doit être compris entre 0,01 € et 999,99 €.');
+      return;
+    }
+    if (!Number.isFinite(qty) || qty < 1 || qty > 20) {
+      setCustomError('La quantité doit être comprise entre 1 et 20.');
+      return;
+    }
+
+    setCart((prev) => [
+      ...prev,
+      { uid: nextCartUid(), type: 'custom', label, unitPrice: Math.round(price * 100) / 100, quantity: qty },
+    ]);
+    setCustomModalVisible(false);
+  };
+
+  const updateQuantity = (uid: string, delta: number) => {
     setCart((prev) =>
       prev
-        .map((i) => i.drink.id === drinkId ? { ...i, quantity: i.quantity + delta } : i)
+        .map((i) => (i.uid === uid ? { ...i, quantity: i.quantity + delta } : i))
         .filter((i) => i.quantity > 0)
     );
   };
 
+  const removeItem = (uid: string) => {
+    setCart((prev) => prev.filter((i) => i.uid !== uid));
+  };
+
+  const itemUnitPrice = (i: CartItem) => (i.type === 'drink' ? i.drink.price : i.unitPrice);
+  const itemLabel = (i: CartItem) => (i.type === 'drink' ? i.drink.name : i.label);
+
   const computeTotals = () => {
-    const subtotal = cart.reduce((sum, i) => sum + i.drink.price * i.quantity, 0);
+    const subtotal = cart.reduce((sum, i) => sum + itemUnitPrice(i) * i.quantity, 0);
     let remaining = subtotal;
     let loyaltyDiscount = 0;
 
@@ -154,7 +207,11 @@ export default function CreateOrderScreen() {
     setSubmitting(true);
     try {
       const payload: Record<string, any> = {
-        items: cart.map((i) => ({ drink_id: i.drink.id, quantity: i.quantity })),
+        items: cart.map((i) =>
+          i.type === 'drink'
+            ? { drink_id: i.drink.id, quantity: i.quantity }
+            : { custom_label: i.label, custom_price: i.unitPrice, quantity: i.quantity }
+        ),
         is_employee_order: isEmployeeOrder,
         notes: notes.trim() || undefined,
       };
@@ -308,29 +365,42 @@ export default function CreateOrderScreen() {
 
       {/* ── Panier ── */}
       <View style={styles.cartHeader}>
-        <Text style={styles.sectionTitle}>Boissons</Text>
-        <TouchableOpacity style={styles.addDrinkBtn} onPress={() => setDrinkModalVisible(true)}>
-          <Text style={styles.addDrinkBtnText}>+ Ajouter</Text>
-        </TouchableOpacity>
+        <Text style={styles.sectionTitle}>Articles</Text>
+        <View style={styles.cartHeaderBtns}>
+          <TouchableOpacity style={styles.addCustomBtn} onPress={openCustomModal}>
+            <Text style={styles.addCustomBtnText}>+ Libre</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.addDrinkBtn} onPress={() => setDrinkModalVisible(true)}>
+            <Text style={styles.addDrinkBtnText}>+ Boisson</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {cart.length === 0 ? (
         <View style={[styles.card, styles.emptyCart]}>
-          <Text style={styles.emptyCartText}>Aucune boisson ajoutée</Text>
+          <Text style={styles.emptyCartText}>Aucun article ajouté</Text>
         </View>
       ) : (
         <View style={styles.card}>
           {cart.map((item) => (
-            <View key={item.drink.id} style={styles.cartRow}>
-              <Text style={styles.cartItemName} numberOfLines={1}>{item.drink.name}</Text>
-              <Text style={styles.cartItemPrice}>{item.drink.price.toFixed(2)} €</Text>
+            <View key={item.uid} style={styles.cartRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.cartItemName} numberOfLines={1}>
+                  {itemLabel(item)}
+                  {item.type === 'custom' && <Text style={styles.customBadge}>  libre</Text>}
+                </Text>
+                <Text style={styles.cartItemPrice}>{itemUnitPrice(item).toFixed(2)} €</Text>
+              </View>
               <View style={styles.qtyControls}>
-                <TouchableOpacity style={styles.qtyBtn} onPress={() => updateQuantity(item.drink.id, -1)}>
+                <TouchableOpacity style={styles.qtyBtn} onPress={() => updateQuantity(item.uid, -1)}>
                   <Text style={styles.qtyBtnText}>−</Text>
                 </TouchableOpacity>
                 <Text style={styles.qty}>{item.quantity}</Text>
-                <TouchableOpacity style={styles.qtyBtn} onPress={() => updateQuantity(item.drink.id, 1)}>
+                <TouchableOpacity style={styles.qtyBtn} onPress={() => updateQuantity(item.uid, 1)}>
                   <Text style={styles.qtyBtnText}>+</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.removeBtn} onPress={() => removeItem(item.uid)}>
+                  <Text style={styles.removeBtnText}>✕</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -428,6 +498,52 @@ export default function CreateOrderScreen() {
           />
         </View>
       </Modal>
+
+      {/* ── Modal article libre ── */}
+      <Modal visible={customModalVisible} animationType="slide" presentationStyle="pageSheet">
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Article libre</Text>
+            <TouchableOpacity onPress={() => setCustomModalVisible(false)}>
+              <Text style={styles.modalClose}>Annuler</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={{ padding: 16 }}>
+            <Text style={styles.subLabel}>Libellé</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Ex. Supplément lait végétal"
+              placeholderTextColor="#9ca3af"
+              value={customLabel}
+              onChangeText={setCustomLabel}
+              maxLength={150}
+              autoFocus
+            />
+            <Text style={styles.subLabel}>Tarif unitaire (€)</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="0.00"
+              placeholderTextColor="#9ca3af"
+              value={customPrice}
+              onChangeText={setCustomPrice}
+              keyboardType="decimal-pad"
+            />
+            <Text style={styles.subLabel}>Quantité</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="1"
+              placeholderTextColor="#9ca3af"
+              value={customQuantity}
+              onChangeText={setCustomQuantity}
+              keyboardType="number-pad"
+            />
+            {customError ? <Text style={styles.error}>{customError}</Text> : null}
+            <TouchableOpacity style={styles.submitBtn} onPress={addCustomItem}>
+              <Text style={styles.submitBtnText}>Ajouter au panier</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -457,17 +573,23 @@ const styles = StyleSheet.create({
   switchRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12, marginTop: 4 },
   switchLabel: { fontSize: 15, color: '#374151' },
   cartHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  cartHeaderBtns: { flexDirection: 'row', gap: 8 },
   addDrinkBtn: { backgroundColor: '#d97706', paddingHorizontal: 14, paddingVertical: 6, borderRadius: 16 },
   addDrinkBtnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
+  addCustomBtn: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#d97706', paddingHorizontal: 14, paddingVertical: 6, borderRadius: 16 },
+  addCustomBtnText: { color: '#d97706', fontWeight: '700', fontSize: 13 },
   emptyCart: { alignItems: 'center', paddingVertical: 20 },
   emptyCartText: { color: '#9ca3af', fontSize: 15 },
   cartRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
-  cartItemName: { flex: 1, fontSize: 15, color: '#1f2937' },
-  cartItemPrice: { fontSize: 14, color: '#6b7280', marginRight: 12 },
-  qtyControls: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  cartItemName: { fontSize: 15, color: '#1f2937' },
+  customBadge: { fontSize: 11, color: '#d97706', fontWeight: '600', textTransform: 'uppercase' },
+  cartItemPrice: { fontSize: 13, color: '#6b7280', marginTop: 2 },
+  qtyControls: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   qtyBtn: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#f3f4f6', justifyContent: 'center', alignItems: 'center' },
   qtyBtnText: { fontSize: 18, fontWeight: '700', color: '#374151', lineHeight: 22 },
   qty: { fontSize: 16, fontWeight: '700', color: '#1f2937', minWidth: 20, textAlign: 'center' },
+  removeBtn: { width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginLeft: 4 },
+  removeBtnText: { fontSize: 14, color: '#ef4444', fontWeight: '700' },
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 },
   summaryLabel: { fontSize: 14, color: '#6b7280' },
   summaryValue: { fontSize: 14, color: '#374151', fontWeight: '500' },
