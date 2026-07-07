@@ -11,6 +11,20 @@ if [ -z "$APP_KEY" ]; then
     echo "[entrypoint] APP_KEY généré."
 fi
 
+# Générer JWT_SECRET si absent (utilisé par l'API mobile via jwt-auth).
+# On persiste la clé dans storage/ pour qu'elle survive aux redémarrages
+# (sinon tous les tokens seraient invalidés à chaque restart).
+if [ -z "$JWT_SECRET" ]; then
+    JWT_SECRET_FILE=/var/www/html/storage/jwt.secret
+    if [ ! -f "$JWT_SECRET_FILE" ]; then
+        php -r "echo bin2hex(random_bytes(32));" > "$JWT_SECRET_FILE"
+        chown www-data:www-data "$JWT_SECRET_FILE"
+        chmod 600 "$JWT_SECRET_FILE"
+        echo "[entrypoint] JWT_SECRET généré et persisté dans storage/jwt.secret."
+    fi
+    export JWT_SECRET="$(cat "$JWT_SECRET_FILE")"
+fi
+
 # Lien symbolique storage → public/storage
 php artisan storage:link --no-interaction 2>/dev/null || true
 
