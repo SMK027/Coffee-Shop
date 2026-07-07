@@ -35,6 +35,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = async (email: string, password: string) => {
+    // Purge d'éventuels anciens tokens (issus d'une session antérieure avec
+    // un JWT_SECRET différent) pour éviter d'envoyer un Bearer invalide.
+    await SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY);
+    await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
+
     const { data } = await api.post('/auth/login', { email, password });
     await SecureStore.setItemAsync(ACCESS_TOKEN_KEY, data.access_token);
     // On stocke également l'access token comme refresh token (il est valide 30j)

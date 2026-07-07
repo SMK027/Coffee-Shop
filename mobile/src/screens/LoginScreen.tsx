@@ -27,8 +27,24 @@ export default function LoginScreen() {
     try {
       await login(email.trim(), password);
     } catch (err: any) {
-      const msg =
-        err?.response?.data?.message ?? 'Impossible de se connecter. Vérifiez vos identifiants.';
+      const status = err?.response?.status;
+      const data = err?.response?.data;
+      const serverMsg = data?.message;
+
+      let msg: string;
+      if (status === 401) {
+        msg = 'Identifiants incorrects.';
+      } else if (status === 403) {
+        msg = serverMsg ?? 'Accès refusé.';
+      } else if (status === 422 && data?.errors) {
+        msg = Object.values(data.errors).flat().join('\n');
+      } else if (status) {
+        msg = `Erreur ${status}${serverMsg ? ' : ' + serverMsg : ''}`;
+      } else if (err?.message) {
+        msg = `Impossible de joindre le serveur.\n${err.message}`;
+      } else {
+        msg = 'Erreur inconnue.';
+      }
       Alert.alert('Connexion échouée', msg);
     } finally {
       setLoading(false);
