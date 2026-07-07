@@ -41,6 +41,45 @@ class LoyaltyCardController extends Controller
     }
 
     /**
+     * Crée une nouvelle carte de fidélité.
+     */
+    public function store(Request $request): JsonResponse
+    {
+        $maxBirthDate = now()->subYears(LoyaltyCard::MIN_AGE)->toDateString();
+
+        $validated = $request->validate([
+            'first_name' => ['required', 'string', 'max:100'],
+            'last_name'  => ['required', 'string', 'max:100'],
+            'email'      => ['required', 'email', 'max:150', 'unique:loyalty_cards,email'],
+            'phone'      => ['required', 'string', 'max:30', 'regex:/^[0-9 +().-]{6,30}$/'],
+            'birth_date' => ['required', 'date', 'before_or_equal:' . $maxBirthDate],
+            'pin'        => ['required', 'confirmed', 'digits_between:4,6'],
+        ], [
+            'birth_date.before_or_equal' => 'Le titulaire doit avoir au moins ' . LoyaltyCard::MIN_AGE . ' ans.',
+            'pin.digits_between'         => 'Le code PIN doit contenir entre 4 et 6 chiffres.',
+            'pin.confirmed'              => 'La confirmation du code PIN ne correspond pas.',
+            'phone.regex'                => 'Le numéro de téléphone n\'est pas valide.',
+            'email.unique'               => 'Une carte de fidélité existe déjà avec cet email.',
+        ]);
+
+        $card = LoyaltyCard::create([
+            'card_number' => LoyaltyCard::generateCardNumber(),
+            'first_name'  => $validated['first_name'],
+            'last_name'   => $validated['last_name'],
+            'email'       => $validated['email'],
+            'phone'       => $validated['phone'],
+            'birth_date'  => $validated['birth_date'],
+            'pin'         => $validated['pin'],
+            'points'      => 0,
+        ]);
+
+        return response()->json([
+            'message' => 'Carte de fidélité créée avec succès.',
+            'card'    => $this->formatCard($card),
+        ], 201);
+    }
+
+    /**
      * Vérifie l'existence d'une carte et retourne ses infos.
      */
     public function check(Request $request): JsonResponse
