@@ -33,6 +33,10 @@ class OrderController extends Controller
             $query->active();
         }
 
+        if ($request->has('employee') && $request->input('employee') !== '') {
+            $query->where('is_employee_order', $request->boolean('employee'));
+        }
+
         $search = trim((string) $request->query('q', ''));
         if ($search !== '') {
             $query->where(function ($filter) use ($search) {
