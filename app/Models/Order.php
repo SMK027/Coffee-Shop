@@ -11,14 +11,16 @@ class Order extends Model
 {
     protected $fillable = [
         'customer_name', 'loyalty_card_id', 'is_employee_order', 'status', 'notes',
-        'total_amount', 'discount_amount', 'loyalty_points_spent', 'loyalty_discount_amount', 'handled_by', 'completed_at',
-        'points_credited', 'points_awarded',
+        'total_amount', 'discount_amount', 'loyalty_points_spent', 'loyalty_discount_amount',
+        'refunded_amount', 'handled_by', 'completed_at',
+        'points_credited', 'points_awarded', 'points_refunded',
     ];
 
     protected $casts = [
         'total_amount'      => 'decimal:2',
         'discount_amount'   => 'decimal:2',
         'loyalty_discount_amount' => 'decimal:2',
+        'refunded_amount'         => 'decimal:2',
         'is_employee_order' => 'boolean',
         'loyalty_points_spent' => 'integer',
         'completed_at'      => 'datetime',

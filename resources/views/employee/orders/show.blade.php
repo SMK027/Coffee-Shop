@@ -1,6 +1,15 @@
 <x-employee-layout title="Commande #{{ str_pad($order->id, 4, '0', STR_PAD_LEFT) }}" subtitle="{{ $order->display_name }}">
     <x-slot name="headerActions">
-        <a href="{{ route('employee.orders.index') }}" class="text-stone-500 hover:text-stone-700 text-sm">← Retour</a>
+        <div class="flex items-center gap-3">
+            @if(auth()->user()->isSuperAdmin())
+            <a href="{{ route('employee.orders.refund', $order) }}"
+               class="flex items-center gap-1.5 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 text-sm font-medium px-3 py-1.5 rounded-lg transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+                Remboursement
+            </a>
+            @endif
+            <a href="{{ route('employee.orders.index') }}" class="text-stone-500 hover:text-stone-700 text-sm">← Retour</a>
+        </div>
     </x-slot>
 
     <div class="grid lg:grid-cols-3 gap-4 sm:gap-6">
@@ -11,19 +20,21 @@
                 <h2 class="font-semibold text-stone-800 mb-4">Articles commandés</h2>
                 <div class="divide-y divide-stone-100">
                     @foreach($order->items as $item)
-                    <div class="py-3 flex items-center justify-between">
+                    <div class="py-3 flex items-center justify-between {{ $item->is_refund ? 'bg-red-50 -mx-4 sm:-mx-6 px-4 sm:px-6' : '' }}">
                         <div>
-                            <p class="font-medium text-stone-800 text-sm">
+                            <p class="font-medium text-sm {{ $item->is_refund ? 'text-red-700' : 'text-stone-800' }}">
                                 {{ $item->display_name }}
-                                @if(!$item->drink_id)
+                                @if($item->is_refund)
+                                    <span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-red-100 text-red-600">Remboursement</span>
+                                @elseif(!$item->drink_id)
                                     <span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-stone-100 text-stone-500">Article libre</span>
                                 @endif
                             </p>
-                            <p class="text-xs text-stone-500">{{ number_format($item->unit_price, 2, ',', ' ') }} € l'unité</p>
+                            <p class="text-xs {{ $item->is_refund ? 'text-red-500' : 'text-stone-500' }}">{{ number_format($item->unit_price, 2, ',', ' ') }} € l'unité</p>
                         </div>
                         <div class="text-right">
-                            <p class="text-sm font-medium text-stone-800">x{{ $item->quantity }}</p>
-                            <p class="text-xs text-stone-500">{{ number_format($item->subtotal, 2, ',', ' ') }} €</p>
+                            <p class="text-sm font-medium {{ $item->is_refund ? 'text-red-700' : 'text-stone-800' }}">x{{ $item->quantity }}</p>
+                            <p class="text-xs font-medium {{ $item->is_refund ? 'text-red-600' : 'text-stone-500' }}">{{ number_format($item->subtotal, 2, ',', ' ') }} €</p>
                         </div>
                     </div>
                     @endforeach
@@ -51,6 +62,16 @@
                         <span class="font-semibold text-stone-800">Total</span>
                         <span class="font-bold text-stone-800 text-lg">{{ number_format($order->total_amount, 2, ',', ' ') }} €</span>
                     </div>
+                    @if($order->refunded_amount > 0)
+                    <div class="flex justify-between text-sm text-red-700">
+                        <span>Remboursé</span>
+                        <span>-{{ number_format($order->refunded_amount, 2, ',', ' ') }} €</span>
+                    </div>
+                    <div class="flex justify-between font-semibold text-red-800">
+                        <span>Net dû</span>
+                        <span>{{ number_format(max(0, $order->total_amount - $order->refunded_amount), 2, ',', ' ') }} €</span>
+                    </div>
+                    @endif
                 </div>
                 @if($order->notes)
                     <div class="mt-4 p-3 bg-amber-50 rounded-lg">
@@ -97,7 +118,11 @@
                     @if($order->points_credited)
                     <div>
                         <dt class="text-stone-500">Points crédités</dt>
-                        <dd class="font-medium text-green-700">+{{ $order->points_awarded }} points</dd>
+                        <dd class="font-medium text-green-700">+{{ $order->points_awarded }} points
+                            @if($order->points_refunded > 0)
+                                <span class="text-red-600 font-normal text-xs">({{ $order->points_refunded }} pts débités)</span>
+                            @endif
+                        </dd>
                     </div>
                     @endif
                     @endif

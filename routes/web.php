@@ -8,6 +8,7 @@ use App\Http\Controllers\Employee\OrderController;
 use App\Http\Controllers\Employee\DrinkController;
 use App\Http\Controllers\Employee\TestimonialController;
 use App\Http\Controllers\Employee\ContactController;
+use App\Http\Controllers\Employee\RefundController;
 use App\Http\Controllers\Employee\StatsController;
 use App\Http\Controllers\Employee\HomeImageController;
 use App\Http\Controllers\Employee\ShopSettingsController;
@@ -73,6 +74,10 @@ Route::prefix('espace-employe')->name('employee.')->middleware(['auth', 'employe
 
     Route::get('/commandes/{order}', [OrderController::class, 'show'])->name('orders.show');
     Route::patch('/commandes/{order}/statut', [OrderController::class, 'updateStatus'])->name('orders.status');
+
+    // Remboursements (super admin uniquement)
+    Route::get('/commandes/{order}/remboursement', [RefundController::class, 'create'])->name('orders.refund');
+    Route::post('/commandes/{order}/remboursement', [RefundController::class, 'store'])->name('orders.refund.store');
 
     // Gestion du menu
     Route::get('/boissons', [DrinkController::class, 'index'])->name('drinks.index');
