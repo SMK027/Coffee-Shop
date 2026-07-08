@@ -137,26 +137,22 @@ class LoyaltyController extends Controller
         $isCredit = $validated['type'] === LoyaltyPointAdjustment::TYPE_CREDIT;
         $delta    = $isCredit ? $validated['points'] : -$validated['points'];
 
-        if (!$isCredit && $validated['points'] > $loyaltyCard->points) {
-            return back()->withInput()->withErrors([
-                'points' => "Solde insuffisant : la carte ne dispose que de {$loyaltyCard->points} point(s).",
-            ]);
-        }
-
         DB::transaction(function () use ($loyaltyCard, $delta, $isCredit, $validated) {
-            $loyaltyCard->increment('points', $delta);
-            $loyaltyCard->refresh();
+            // Calcul direct pour autoriser un solde négatif (colonne INT signée)
+            $newBalance = $loyaltyCard->points + $delta;
+            $loyaltyCard->update(['points' => $newBalance]);
 
             LoyaltyPointAdjustment::create([
                 'loyalty_card_id' => $loyaltyCard->id,
                 'user_id'         => auth()->id(),
                 'type'            => $validated['type'],
                 'points'          => $validated['points'],
-                'balance_after'   => $loyaltyCard->points,
+                'balance_after'   => $newBalance,
                 'reason'          => $validated['reason'] ?? null,
             ]);
         });
 
+        $loyaltyCard->refresh();
         $verb = $isCredit ? 'crédités' : 'débités';
 
         return back()->with('success', "{$validated['points']} point(s) {$verb}. Nouveau solde : {$loyaltyCard->points} point(s).");
