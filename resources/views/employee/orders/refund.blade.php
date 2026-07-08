@@ -152,14 +152,17 @@
     </div>
 
     @push('scripts')
+    @php
+        $itemDefsJson = json_encode($refundableItems->map(fn($i) => [
+            'id'     => $i->id,
+            'maxQty' => $i->refundable_qty,
+            'price'  => (float) $i->unit_price,
+            'points' => $i->drink?->loyalty_points ?? 0,
+        ])->values());
+    @endphp
     <script>
     function refundForm() {
-        const itemDefs = @json($refundableItems->map(fn($i) => [
-            'id'       => $i->id,
-            'maxQty'   => $i->refundable_qty,
-            'price'    => (float) $i->unit_price,
-            'points'   => $i->drink?->loyalty_points ?? 0,
-        ]));
+        const itemDefs = {!! $itemDefsJson !!};
 
         // État par item dans un seul objet plat — pas de scope imbriqué
         const itemsState = {};
