@@ -96,9 +96,11 @@ class RefundController extends Controller
             if ($order->loyalty_card_id && $order->points_awarded > 0) {
                 $pointsToDebit = $order->points_awarded - $order->points_refunded;
                 if ($pointsToDebit > 0) {
-                    $order->loyaltyCard()->decrement('points', $pointsToDebit);
+                    // Calcul direct pour autoriser un solde négatif (unsigned interdit par MySQL sinon)
+                    $card         = $order->loyaltyCard()->lockForUpdate()->first();
+                    $newBalance   = $card->points - $pointsToDebit;
+                    $card->update(['points' => $newBalance]);
                     $order->increment('points_refunded', $pointsToDebit);
-                    $balanceAfter = $order->loyaltyCard()->value('points');
                     LoyaltyPointAdjustment::create([
                         'loyalty_card_id' => $order->loyalty_card_id,
                         'order_id'        => $order->id,
@@ -106,7 +108,7 @@ class RefundController extends Controller
                         'type'            => LoyaltyPointAdjustment::TYPE_DEBIT,
                         'source'          => LoyaltyPointAdjustment::SOURCE_REFUND,
                         'points'          => $pointsToDebit,
-                        'balance_after'   => $balanceAfter,
+                        'balance_after'   => $newBalance,
                         'reason'          => 'Remboursement total — commande #' . str_pad($order->id, 4, '0', STR_PAD_LEFT),
                     ]);
                 }
@@ -168,9 +170,11 @@ class RefundController extends Controller
             }
 
             if ($totalPointsToDebit > 0) {
-                $order->loyaltyCard()->decrement('points', $totalPointsToDebit);
+                // Calcul direct pour autoriser un solde négatif (unsigned interdit par MySQL sinon)
+                $card       = $order->loyaltyCard()->lockForUpdate()->first();
+                $newBalance = $card->points - $totalPointsToDebit;
+                $card->update(['points' => $newBalance]);
                 $order->increment('points_refunded', $totalPointsToDebit);
-                $balanceAfter = $order->loyaltyCard()->value('points');
                 LoyaltyPointAdjustment::create([
                     'loyalty_card_id' => $order->loyalty_card_id,
                     'order_id'        => $order->id,
@@ -178,7 +182,7 @@ class RefundController extends Controller
                     'type'            => LoyaltyPointAdjustment::TYPE_DEBIT,
                     'source'          => LoyaltyPointAdjustment::SOURCE_REFUND,
                     'points'          => $totalPointsToDebit,
-                    'balance_after'   => $balanceAfter,
+                    'balance_after'   => $newBalance,
                     'reason'          => 'Remboursement partiel — commande #' . str_pad($order->id, 4, '0', STR_PAD_LEFT),
                 ]);
             }
