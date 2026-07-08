@@ -307,7 +307,7 @@ class OrderController extends Controller
 
         return response()->json([
             'message' => 'Statut mis à jour.',
-            'order'   => $this->formatOrder($order->fresh()->load('items.drink')),
+            'order'   => $this->formatOrder($order->fresh()->load('items.drink', 'loyaltyCard', 'loyaltyDiscounts'), true),
         ]);
     }
 
