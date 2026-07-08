@@ -9,10 +9,14 @@
     "newArchEnabled": false,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "fr.leofranz.coffeeshop"
+      "bundleIdentifier": "fr.leofranz.coffeeshop",
+      "infoPlist": {
+        "NSCameraUsageDescription": "La caméra est utilisée pour scanner les QR codes et codes-barres des cartes de fidélité."
+      }
     },
     "android": {
       "package": "fr.leofranz.coffeeshop",
+      "permissions": ["android.permission.CAMERA"],
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",

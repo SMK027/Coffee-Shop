@@ -15,6 +15,7 @@ import {
   Platform,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import api from '../api/client';
 import { Drink, LoyaltyCard, LoyaltyDiscount } from '../types';
 
@@ -58,6 +59,11 @@ export default function CreateOrderScreen() {
   const [cardSearchVisible, setCardSearchVisible] = useState(false);
   const [cardSearchQuery, setCardSearchQuery] = useState('');
   const [cardSearchResults, setCardSearchResults] = useState<LoyaltyCard[]>([]);
+
+  // Scanner QR carte fidélité
+  const [scannerVisible, setScannerVisible] = useState(false);
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+  const scannerLocked = useRef(false);
   const [cardSearchLoading, setCardSearchLoading] = useState(false);
   const [cardSearched, setCardSearched] = useState(false);
   const cardSearchDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -137,6 +143,47 @@ export default function CreateOrderScreen() {
     setCardSearchResults([]);
     setCardSearched(false);
     setCardSearchVisible(true);
+  };
+
+  const openQrScanner = async () => {
+    if (!cameraPermission?.granted) {
+      const result = await requestCameraPermission();
+      if (!result.granted) {
+        Alert.alert('Permission refusée', 'L\'accès à la caméra est requis pour scanner le QR code.');
+        return;
+      }
+    }
+    scannerLocked.current = false;
+    setScannerVisible(true);
+  };
+
+  const onQrScanned = async ({ data }: { data: string }) => {
+    if (scannerLocked.current) return;
+    const cleaned = data.replace(/\s/g, '');
+    if (!/^\d{12}$/.test(cleaned)) return; // pas un numéro de carte valide
+    scannerLocked.current = true;
+    setScannerVisible(false);
+    setLoyaltyCardNumber(cleaned);
+    // Vérification automatique
+    setCheckingCard(true);
+    setLoyaltyCardError('');
+    try {
+      const { data: res } = await api.post('/loyalty-cards/check', { card_number: cleaned });
+      if (res.found) {
+        setLoyaltyCard(res.card);
+        if (res.card.has_employee_benefits) setIsEmployeeOrder(true);
+        const [fn, ...rest] = String(res.card.full_name || '').split(' ');
+        if (!firstName && fn) setFirstName(fn);
+        if (!lastName && rest.length) setLastName(rest.join(' '));
+      } else {
+        setLoyaltyCard(null);
+        setLoyaltyCardError(res.message);
+      }
+    } catch {
+      setLoyaltyCardError('Erreur lors de la vérification.');
+    } finally {
+      setCheckingCard(false);
+    }
   };
 
   // Debounce recherche carte fidélité
@@ -350,6 +397,7 @@ export default function CreateOrderScreen() {
             loyaltyCard={loyaltyCard} loyaltyCardError={loyaltyCardError}
             checkingCard={checkingCard} onCheck={checkLoyaltyCard} onClearCard={clearLoyaltyCard}
             onOpenCardSearch={openCardSearch}
+            onOpenScanner={openQrScanner}
             discounts={discounts} selectedDiscountIds={selectedDiscountIds} onToggleDiscount={toggleDiscount}
             cardPin={cardPin} setCardPin={setCardPin} pinError={pinError}
             isEmployeeOrder={isEmployeeOrder} setIsEmployeeOrder={setIsEmployeeOrder}
@@ -529,6 +577,28 @@ export default function CreateOrderScreen() {
           )}
         </View>
       </Modal>
+
+      {/* ── Modal scanner QR carte fidélité ── */}
+      <Modal visible={scannerVisible} animationType="slide" presentationStyle="fullScreen">
+        <View style={{ flex: 1, backgroundColor: '#000' }}>
+          <View style={styles.scannerHeader}>
+            <Text style={styles.scannerTitle}>Scanner la carte de fidélité</Text>
+            <TouchableOpacity onPress={() => setScannerVisible(false)} style={styles.scannerCloseBtn}>
+              <Text style={styles.scannerCloseText}>Annuler</Text>
+            </TouchableOpacity>
+          </View>
+          <CameraView
+            style={{ flex: 1 }}
+            facing="back"
+            barcodeScannerSettings={{ barcodeTypes: ['qr', 'code128'] }}
+            onBarcodeScanned={onQrScanned}
+          />
+          <View style={styles.scannerOverlay}>
+            <View style={styles.scannerFrame} />
+            <Text style={styles.scannerHint}>Pointez vers le QR code ou le code-barres de la carte</Text>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -557,6 +627,7 @@ function Step1Client(props: {
   loyaltyCard: LoyaltyCard | null; loyaltyCardError: string;
   checkingCard: boolean; onCheck: () => void; onClearCard: () => void;
   onOpenCardSearch: () => void;
+  onOpenScanner: () => void;
   discounts: LoyaltyDiscount[]; selectedDiscountIds: number[]; onToggleDiscount: (id: number) => void;
   cardPin: string; setCardPin: (v: string) => void; pinError: string;
   isEmployeeOrder: boolean; setIsEmployeeOrder: (v: boolean) => void;
@@ -564,7 +635,7 @@ function Step1Client(props: {
   const {
     firstName, setFirstName, lastName, setLastName,
     loyaltyCardNumber, setLoyaltyCardNumber, loyaltyCard, loyaltyCardError,
-    checkingCard, onCheck, onClearCard, onOpenCardSearch,
+    checkingCard, onCheck, onClearCard, onOpenCardSearch, onOpenScanner,
     discounts, selectedDiscountIds, onToggleDiscount,
     cardPin, setCardPin, pinError,
     isEmployeeOrder, setIsEmployeeOrder,
@@ -608,6 +679,11 @@ function Step1Client(props: {
               <Text style={styles.dividerText}>ou par n° de carte</Text>
               <View style={styles.dividerLine} />
             </View>
+
+            <TouchableOpacity style={styles.scanQrBtn} onPress={onOpenScanner}>
+              <Text style={styles.scanQrIcon}>📷</Text>
+              <Text style={styles.scanQrText}>Scanner le QR code / code-barres</Text>
+            </TouchableOpacity>
 
             <View style={styles.cardNumberRow}>
               <TextInput
@@ -983,4 +1059,31 @@ const styles = StyleSheet.create({
   dividerLine: { flex: 1, height: 1, backgroundColor: '#e5e7eb' },
   dividerText: { fontSize: 11, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 0.5 },
   empty: { textAlign: 'center', color: '#9ca3af', marginTop: 40, fontSize: 15, paddingHorizontal: 20 },
+
+  // Scanner QR
+  scanQrBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: '#e0f2fe', borderRadius: 10,
+    paddingHorizontal: 14, paddingVertical: 12, marginBottom: 10,
+  },
+  scanQrIcon: { fontSize: 20 },
+  scanQrText: { color: '#0369a1', fontWeight: '600', fontSize: 14, flex: 1 },
+  scannerHeader: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingHorizontal: 16, paddingTop: 56, paddingBottom: 16,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+  },
+  scannerTitle: { color: '#fff', fontSize: 18, fontWeight: '700' },
+  scannerCloseBtn: { padding: 8 },
+  scannerCloseText: { color: '#fbbf24', fontSize: 16, fontWeight: '600' },
+  scannerOverlay: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    alignItems: 'center', paddingBottom: 60,
+  },
+  scannerFrame: {
+    width: 220, height: 220,
+    borderWidth: 2, borderColor: '#fbbf24', borderRadius: 12,
+    marginBottom: 24,
+  },
+  scannerHint: { color: '#fff', fontSize: 14, textAlign: 'center', paddingHorizontal: 40, opacity: 0.85 },
 });
