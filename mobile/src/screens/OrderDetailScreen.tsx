@@ -10,12 +10,15 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import api from '../api/client';
+import { useAuth } from '../context/AuthContext';
 import { Order, OrderStatus } from '../types';
 
 export default function OrderDetailScreen() {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
   const { orderId } = route.params;
+  const { user } = useAuth();
+  const isSuperAdmin = user?.global_role === 'superadmin';
 
   const [order, setOrder] = useState<Order | null>(null);
   const [statuses, setStatuses] = useState<OrderStatus[]>([]);
@@ -50,7 +53,7 @@ export default function OrderDetailScreen() {
   }
 
   const currentStatus = statuses.find((s) => s.key === order.status);
-  const availableTransitions = currentStatus?.is_terminal
+  const availableTransitions = (currentStatus?.is_terminal && !isSuperAdmin)
     ? []
     : statuses.filter((s) => s.is_active && s.key !== order.status);
 

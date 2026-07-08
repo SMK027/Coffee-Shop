@@ -10,6 +10,7 @@ use App\Models\LoyaltyCard;
 use App\Models\LoyaltyDiscount;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
@@ -57,12 +58,14 @@ class OrderController extends Controller
         // Calcule les transitions disponibles depuis le statut courant
         $currentStatus = $allStatuses->firstWhere('key', $order->status);
         $availableTransitions = collect();
-        if ($currentStatus && !$currentStatus->is_terminal) {
+        $isSuperAdmin = Auth::user()?->isSuperAdmin();
+        if ($currentStatus && (!$currentStatus->is_terminal || $isSuperAdmin)) {
             $availableTransitions = $allStatuses->filter(
                 fn (OrderStatus $s) => $s->is_active
                     && $s->key !== $order->status
                     && (
-                        $s->is_terminal
+                        $isSuperAdmin
+                        || $s->is_terminal
                         || $s->sort_order > $currentStatus->sort_order
                     )
             )->values();

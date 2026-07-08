@@ -299,6 +299,11 @@ class OrderController extends Controller
             'status' => ['required', 'string', 'exists:order_statuses,key'],
         ]);
 
+        $currentStatus = $order->orderStatus;
+        if ($currentStatus?->is_terminal && !Auth::user()?->isSuperAdmin()) {
+            return response()->json(['message' => 'Ce statut est terminal et ne peut pas être modifié.'], 403);
+        }
+
         $order->update(['status' => $validated['status']]);
 
         if ($order->fresh()->orderStatus?->is_terminal) {
