@@ -11,6 +11,22 @@
                 <p class="text-amber-300 text-xs uppercase tracking-wider mb-2">Solde de points</p>
                 <p class="text-5xl font-bold">{{ $loyaltyCard->points }}</p>
             </div>
+
+            {{-- QR code + code-barres --}}
+            <div class="bg-white rounded-xl shadow-sm border border-stone-100 p-4 sm:p-6 text-center">
+                <p class="text-xs font-medium text-stone-500 uppercase tracking-wider mb-3">N° de carte</p>
+                <p class="font-mono text-stone-800 text-sm font-semibold mb-4 tracking-widest">
+                    {{ chunk_split($loyaltyCard->card_number, 4, ' ') }}
+                </p>
+                {{-- QR Code --}}
+                <div class="flex justify-center mb-4">
+                    <div id="qrcode" class="p-2 bg-white border border-stone-200 rounded-lg inline-block"></div>
+                </div>
+                {{-- Code-barres --}}
+                <div class="overflow-x-auto">
+                    <svg id="barcode" class="mx-auto max-w-full"></svg>
+                </div>
+            </div>
             <div class="bg-white rounded-xl shadow-sm border border-stone-100 p-4 sm:p-6">
                 <h2 class="font-semibold text-stone-800 mb-4">Titulaire</h2>
                 <dl class="space-y-3 text-sm">
@@ -364,3 +380,31 @@
     @endif
 
 </x-employee-layout>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+<script>
+(function () {
+    const cardNumber = '{{ $loyaltyCard->card_number }}';
+
+    // QR Code
+    new QRCode(document.getElementById('qrcode'), {
+        text: cardNumber,
+        width: 140,
+        height: 140,
+        colorDark: '#44403c',  // stone-700
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.M,
+    });
+
+    // Code-barres Code128
+    JsBarcode('#barcode', cardNumber, {
+        format: 'CODE128',
+        lineColor: '#44403c',
+        width: 2,
+        height: 60,
+        displayValue: false,
+        margin: 4,
+    });
+})();
+</script>
