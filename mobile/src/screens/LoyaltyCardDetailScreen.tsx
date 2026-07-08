@@ -25,6 +25,7 @@ const sourceLabel = (src: LoyaltyPointAdjustment['source']) => {
     case 'manual': return 'Ajustement manuel';
     case 'order_debit': return 'Utilisation sur commande';
     case 'order_credit': return 'Gain sur commande';
+    case 'refund': return 'Remboursement';
     default: return src;
   }
 };

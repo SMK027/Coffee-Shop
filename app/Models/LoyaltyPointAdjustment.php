@@ -13,6 +13,7 @@ class LoyaltyPointAdjustment extends Model
     const SOURCE_MANUAL       = 'manual';
     const SOURCE_ORDER_DEBIT  = 'order_debit';
     const SOURCE_ORDER_CREDIT = 'order_credit';
+    const SOURCE_REFUND       = 'refund';
 
     protected $fillable = [
         'loyalty_card_id', 'order_id', 'user_id', 'type', 'source', 'points', 'balance_after', 'reason',

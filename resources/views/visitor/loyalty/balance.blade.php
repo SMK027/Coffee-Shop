@@ -46,6 +46,8 @@
                                                 <span class="px-1.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">R&eacute;duction</span>
                                             @elseif($source === 'order_credit')
                                                 <span class="px-1.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">Points gagn&eacute;s</span>
+                                            @elseif($source === 'refund')
+                                                <span class="px-1.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">Remboursement</span>
                                             @else
                                                 <span class="px-1.5 py-0.5 rounded-full text-xs font-medium bg-stone-100 text-stone-600">Ajustement</span>
                                             @endif

@@ -133,7 +133,7 @@ export interface LoyaltyCardOrderSummary {
 export interface LoyaltyPointAdjustment {
   id: number;
   type: 'credit' | 'debit';
-  source: 'manual' | 'order_debit' | 'order_credit';
+  source: 'manual' | 'order_debit' | 'order_credit' | 'refund';
   points: number;
   balance_after: number;
   reason: string | null;

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Employee;
 
 use App\Http\Controllers\Controller;
+use App\Models\LoyaltyPointAdjustment;
 use App\Models\Order;
 use App\Models\OrderItem;
 use Illuminate\Http\Request;
@@ -95,9 +96,19 @@ class RefundController extends Controller
             if ($order->loyalty_card_id && $order->points_awarded > 0) {
                 $pointsToDebit = $order->points_awarded - $order->points_refunded;
                 if ($pointsToDebit > 0) {
-                    // Solde négatif autorisé
                     $order->loyaltyCard()->decrement('points', $pointsToDebit);
                     $order->increment('points_refunded', $pointsToDebit);
+                    $balanceAfter = $order->loyaltyCard()->value('points');
+                    LoyaltyPointAdjustment::create([
+                        'loyalty_card_id' => $order->loyalty_card_id,
+                        'order_id'        => $order->id,
+                        'user_id'         => auth()->id(),
+                        'type'            => LoyaltyPointAdjustment::TYPE_DEBIT,
+                        'source'          => LoyaltyPointAdjustment::SOURCE_REFUND,
+                        'points'          => $pointsToDebit,
+                        'balance_after'   => $balanceAfter,
+                        'reason'          => 'Remboursement total — commande #' . str_pad($order->id, 4, '0', STR_PAD_LEFT),
+                    ]);
                 }
             }
         });
@@ -157,16 +168,19 @@ class RefundController extends Controller
             }
 
             if ($totalPointsToDebit > 0) {
-                // On ne débite que les points effectivement crédités et pas encore remboursés
-                $availableToDebit = max(0, $order->points_awarded - $order->points_refunded);
-                $debit            = min($totalPointsToDebit, $availableToDebit);
-
-                // Si le client a déjà dépensé ses points, on autorise le solde négatif
-                // en débitant quand même la totalité
-                $actualDebit = $totalPointsToDebit;
-
-                $order->loyaltyCard()->decrement('points', $actualDebit);
-                $order->increment('points_refunded', $actualDebit);
+                $order->loyaltyCard()->decrement('points', $totalPointsToDebit);
+                $order->increment('points_refunded', $totalPointsToDebit);
+                $balanceAfter = $order->loyaltyCard()->value('points');
+                LoyaltyPointAdjustment::create([
+                    'loyalty_card_id' => $order->loyalty_card_id,
+                    'order_id'        => $order->id,
+                    'user_id'         => auth()->id(),
+                    'type'            => LoyaltyPointAdjustment::TYPE_DEBIT,
+                    'source'          => LoyaltyPointAdjustment::SOURCE_REFUND,
+                    'points'          => $totalPointsToDebit,
+                    'balance_after'   => $balanceAfter,
+                    'reason'          => 'Remboursement partiel — commande #' . str_pad($order->id, 4, '0', STR_PAD_LEFT),
+                ]);
             }
         });
     }
