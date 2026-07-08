@@ -151,56 +151,53 @@
 
     </div>
 
-    @push('scripts')
-    @php
-        $itemDefsJson = json_encode($refundableItems->map(fn($i) => [
-            'id'     => $i->id,
-            'maxQty' => $i->refundable_qty,
-            'price'  => (float) $i->unit_price,
-            'points' => $i->drink?->loyalty_points ?? 0,
-        ])->values());
-    @endphp
-    <script>
-    function refundForm() {
-        const itemDefs = {!! $itemDefsJson !!};
-
-        // État par item dans un seul objet plat — pas de scope imbriqué
-        const itemsState = {};
-        itemDefs.forEach(def => {
-            itemsState[def.id] = { checked: false, qty: def.maxQty };
-        });
-
-        return {
-            items: itemsState,
-
-            get selectedItems() {
-                return itemDefs
-                    .filter(def => this.items[def.id].checked)
-                    .map(def => ({ id: def.id, qty: this.items[def.id].qty }));
-            },
-
-            get totalAmount() {
-                return itemDefs
-                    .filter(def => this.items[def.id].checked)
-                    .reduce((sum, def) => sum + def.price * this.items[def.id].qty, 0);
-            },
-
-            get pointsToDebit() {
-                return itemDefs
-                    .filter(def => this.items[def.id].checked)
-                    .reduce((sum, def) => sum + def.points * this.items[def.id].qty, 0);
-            },
-
-            selectAll() {
-                itemDefs.forEach(def => { this.items[def.id].checked = true; });
-            },
-
-            deselectAll() {
-                itemDefs.forEach(def => { this.items[def.id].checked = false; });
-            },
-        };
-    }
-    </script>
-    @endpush
-
 </x-employee-layout>
+
+@php
+    $itemDefsJson = json_encode($refundableItems->map(fn($i) => [
+        'id'     => $i->id,
+        'maxQty' => $i->refundable_qty,
+        'price'  => (float) $i->unit_price,
+        'points' => $i->drink?->loyalty_points ?? 0,
+    ])->values());
+@endphp
+<script>
+function refundForm() {
+    const itemDefs = {!! $itemDefsJson !!};
+
+    const itemsState = {};
+    itemDefs.forEach(def => {
+        itemsState[def.id] = { checked: false, qty: def.maxQty };
+    });
+
+    return {
+        items: itemsState,
+
+        get selectedItems() {
+            return itemDefs
+                .filter(def => this.items[def.id].checked)
+                .map(def => ({ id: def.id, qty: this.items[def.id].qty }));
+        },
+
+        get totalAmount() {
+            return itemDefs
+                .filter(def => this.items[def.id].checked)
+                .reduce((sum, def) => sum + def.price * this.items[def.id].qty, 0);
+        },
+
+        get pointsToDebit() {
+            return itemDefs
+                .filter(def => this.items[def.id].checked)
+                .reduce((sum, def) => sum + def.points * this.items[def.id].qty, 0);
+        },
+
+        selectAll() {
+            itemDefs.forEach(def => { this.items[def.id].checked = true; });
+        },
+
+        deselectAll() {
+            itemDefs.forEach(def => { this.items[def.id].checked = false; });
+        },
+    };
+}
+</script>
