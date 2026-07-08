@@ -20,9 +20,9 @@ class StatsController extends Controller
         // Revenus par jour
         $dailyRevenue = Order::where('status', 'completed')
             ->where('completed_at', '>=', $from)
-            ->selectRaw('DATE(completed_at) as date, SUM(total_amount) as total, COUNT(*) as count')
-            ->groupBy('date')
-            ->orderBy('date')
+            ->selectRaw('DATE(completed_at) as date, SUM(total_amount) as total, COUNT(*) as cnt')
+            ->groupBy(DB::raw('DATE(completed_at)'))
+            ->orderBy(DB::raw('DATE(completed_at)'))
             ->get();
 
         // Top boissons

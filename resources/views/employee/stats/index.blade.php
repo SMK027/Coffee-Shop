@@ -40,7 +40,7 @@
             @if($dailyRevenue->isEmpty())
                 <p class="text-sm text-stone-500 text-center py-8">Aucune donnée disponible.</p>
             @else
-                @php $maxRevenue = $dailyRevenue->max('total') ?: 1; @endphp
+                @php $maxRevenue = max(1, (float) $dailyRevenue->max('total')); @endphp
                 <div class="space-y-2">
                     @foreach($dailyRevenue as $day)
                     <div class="flex items-center gap-3">
@@ -62,7 +62,7 @@
             @if($topDrinks->isEmpty())
                 <p class="text-sm text-stone-500 text-center py-8">Aucune donnée disponible.</p>
             @else
-                @php $maxQty = $topDrinks->max('total_qty') ?: 1; @endphp
+                @php $maxQty = max(1, (int) $topDrinks->max('total_qty')); @endphp
                 <div class="space-y-3">
                     @foreach($topDrinks as $i => $drink)
                     <div class="flex items-center gap-3">
