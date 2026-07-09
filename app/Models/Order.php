@@ -127,12 +127,14 @@ class Order extends Model
             $this->loyaltyCard()->increment('points', $points);
         }
 
+        $pointsAwarded = max(0, $points);
+
         $this->forceFill([
             'points_credited' => true,
-            'points_awarded'  => $points,
+            'points_awarded'  => $pointsAwarded,
         ])->save();
 
-        if ($points > 0) {
+        if ($pointsAwarded > 0) {
             $balanceAfter = $this->loyaltyCard()->value('points');
             \App\Models\LoyaltyPointAdjustment::create([
                 'loyalty_card_id' => $this->loyalty_card_id,
@@ -140,7 +142,7 @@ class Order extends Model
                 'user_id'         => null,
                 'type'            => \App\Models\LoyaltyPointAdjustment::TYPE_CREDIT,
                 'source'          => \App\Models\LoyaltyPointAdjustment::SOURCE_ORDER_CREDIT,
-                'points'          => $points,
+                'points'          => $pointsAwarded,
                 'balance_after'   => $balanceAfter,
                 'reason'          => "Points gagnés — commande #{$this->id}",
             ]);
