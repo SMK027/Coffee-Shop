@@ -331,6 +331,10 @@ class OrderController extends Controller
             $order->update(['completed_at' => now()]);
         }
 
+        if ($order->fresh()->orderStatus?->triggers_loyalty_credit) {
+            $order->refresh()->creditLoyaltyPoints();
+        }
+
         return response()->json([
             'message' => 'Statut mis à jour.',
             'order'   => $this->formatOrder($order->fresh()->load('items.drink', 'loyaltyCard', 'loyaltyDiscounts'), true),
