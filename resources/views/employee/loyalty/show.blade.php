@@ -38,7 +38,7 @@
                     <div>
                         <dt class="text-stone-500">Avantages salariés</dt>
                         <dd>
-                            @if($loyaltyCard->hasEmployeeBenefits())
+                            @if($loyaltyCard->hasEmployeeBenefits() && $loyaltyCard->user)
                                 <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
                                     Actifs · {{ $loyaltyCard->user->name }}
                                 </span>

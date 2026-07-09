@@ -58,7 +58,15 @@ class LoyaltyCard extends Model
      */
     public function hasEmployeeBenefits(): bool
     {
-        return $this->user_id !== null;
+        if ($this->user_id === null) {
+            return false;
+        }
+
+        if ($this->relationLoaded('user')) {
+            return $this->user !== null;
+        }
+
+        return $this->user()->exists();
     }
 
     public function getFullNameAttribute(): string
@@ -68,7 +76,7 @@ class LoyaltyCard extends Model
 
     public function getAgeAttribute(): int
     {
-        return $this->birth_date->age;
+        return $this->birth_date ? $this->birth_date->age : 0;
     }
 
     /**
