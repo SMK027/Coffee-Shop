@@ -24,6 +24,7 @@
   },
   "devDependencies": {
     "@types/react": "~18.2.0",
+    "react-native-gradle-plugin": "0.71.18",
     "typescript": "~5.9.2"
   },
   "scripts": {
