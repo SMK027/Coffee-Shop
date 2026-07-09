@@ -14,6 +14,19 @@
                     <p class="text-amber-300 text-xs font-mono mt-1">{{ chunk_split($card->card_number, 4, ' ') }}</p>
                 </div>
 
+                <div class="bg-white rounded-2xl shadow-sm border border-stone-100 p-6 mb-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center text-center">
+                        <div>
+                            <p class="text-xs uppercase tracking-wide text-stone-400 mb-2">QR code de la carte</p>
+                            <div id="qrcode" class="mx-auto inline-block"></div>
+                        </div>
+                        <div>
+                            <p class="text-xs uppercase tracking-wide text-stone-400 mb-2">Code-barres</p>
+                            <svg id="barcode" class="mx-auto max-w-full"></svg>
+                        </div>
+                    </div>
+                </div>
+
                 {{-- Historique des points --}}
                 <div class="bg-white rounded-2xl shadow-sm border border-stone-100 overflow-hidden mb-6">
                     <h2 class="font-semibold text-stone-800 px-5 py-4 border-b border-stone-100">Historique de mes points</h2>
@@ -142,5 +155,30 @@
             @endisset
         </div>
     </section>
+    @if(isset($card))
+        <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+        <script>
+            (function () {
+                const cardNumber = '{{ $card->card_number }}';
 
-</x-visitor-layout>
+                new QRCode(document.getElementById('qrcode'), {
+                    text: cardNumber,
+                    width: 140,
+                    height: 140,
+                    colorDark: '#44403c',
+                    colorLight: '#ffffff',
+                    correctLevel: QRCode.CorrectLevel.M,
+                });
+
+                JsBarcode('#barcode', cardNumber, {
+                    format: 'CODE128',
+                    lineColor: '#44403c',
+                    width: 2,
+                    height: 60,
+                    displayValue: false,
+                    margin: 4,
+                });
+            })();
+        </script>
+    @endif</x-visitor-layout>
