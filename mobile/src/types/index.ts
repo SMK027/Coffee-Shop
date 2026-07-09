@@ -57,6 +57,8 @@ export interface OrderItem {
   unit_price: number;
   subtotal: number;
   custom_label: string | null;
+  is_refund: boolean;
+  refund_item_id: number | null;
 }
 
 export interface Order {
@@ -69,6 +71,8 @@ export interface Order {
   discount_amount: number;
   loyalty_discount_amount: number;
   loyalty_points_spent: number;
+  refunded_amount: number;
+  points_refunded: number;
   notes: string | null;
   created_at: string;
   completed_at: string | null;

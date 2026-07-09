@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Drink;
 use App\Models\LoyaltyCard;
 use App\Models\LoyaltyDiscount;
+use App\Models\LoyaltyPointAdjustment;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderStatus;
@@ -336,6 +337,146 @@ class OrderController extends Controller
         ]);
     }
 
+    public function refund(Request $request, Order $order): JsonResponse
+    {
+        abort_unless(Auth::user()?->isAdmin(), 403);
+        $this->requireSuperAdminOrSupervisor($request);
+
+        $order->load('items.drink', 'loyaltyCard');
+
+        $isTotalRefund = $request->boolean('total_refund');
+
+        if ($isTotalRefund) {
+            $this->applyTotalRefund($order);
+        } else {
+            $request->validate([
+                'items'            => ['required', 'array', 'min:1'],
+                'items.*.item_id'  => ['required', 'integer', 'exists:order_items,id'],
+                'items.*.qty'      => ['required', 'integer', 'min:1'],
+            ]);
+            $this->applyPartialRefund($order, $request->input('items', []));
+        }
+
+        return response()->json([
+            'message' => 'Remboursement enregistré avec succès.',
+            'order'   => $this->formatOrder($order->fresh()->load('items.drink', 'loyaltyCard', 'loyaltyDiscounts'), true),
+        ]);
+    }
+
+    private function applyTotalRefund(Order $order): void
+    {
+        DB::transaction(function () use ($order) {
+            $alreadyRefunded = (float) $order->refunded_amount;
+            $remaining       = round((float) $order->total_amount - $alreadyRefunded, 2);
+
+            if ($remaining <= 0) {
+                return;
+            }
+
+            OrderItem::create([
+                'order_id'     => $order->id,
+                'drink_id'     => null,
+                'custom_label' => 'Remboursement total',
+                'custom_price' => null,
+                'unit_price'   => -$remaining,
+                'quantity'     => 1,
+                'is_refund'    => true,
+            ]);
+
+            $order->increment('refunded_amount', $remaining);
+
+            if ($order->loyalty_card_id && $order->points_awarded > 0) {
+                $pointsToDebit = $order->points_awarded - $order->points_refunded;
+                if ($pointsToDebit > 0) {
+                    $card       = $order->loyaltyCard()->lockForUpdate()->first();
+                    $newBalance = $card->points - $pointsToDebit;
+                    $card->update(['points' => $newBalance]);
+                    $order->increment('points_refunded', $pointsToDebit);
+
+                    LoyaltyPointAdjustment::create([
+                        'loyalty_card_id' => $order->loyalty_card_id,
+                        'order_id'        => $order->id,
+                        'user_id'         => Auth::id(),
+                        'type'            => LoyaltyPointAdjustment::TYPE_DEBIT,
+                        'source'          => LoyaltyPointAdjustment::SOURCE_REFUND,
+                        'points'          => $pointsToDebit,
+                        'balance_after'   => $newBalance,
+                        'reason'          => 'Remboursement total — commande #' . str_pad($order->id, 4, '0', STR_PAD_LEFT),
+                    ]);
+                }
+            }
+        });
+    }
+
+    private function applyPartialRefund(Order $order, array $items): void
+    {
+        DB::transaction(function () use ($order, $items) {
+            $totalRefundAmount = 0;
+            $totalPointsToDebit = 0;
+
+            foreach ($items as $itemData) {
+                $originalItem = $order->items->firstWhere('id', (int) $itemData['item_id']);
+                if (! $originalItem || $originalItem->is_refund) {
+                    continue;
+                }
+
+                $alreadyRefundedQty = $order->items
+                    ->where('is_refund', true)
+                    ->where('refund_item_id', $originalItem->id)
+                    ->sum('quantity');
+
+                $maxQty     = $originalItem->quantity - abs((int) $alreadyRefundedQty);
+                $requestQty = min((int) $itemData['qty'], $maxQty);
+
+                if ($requestQty <= 0) {
+                    continue;
+                }
+
+                $unitPrice    = (float) $originalItem->unit_price;
+                $refundAmount = round($unitPrice * $requestQty, 2);
+
+                OrderItem::create([
+                    'order_id'       => $order->id,
+                    'drink_id'       => null,
+                    'custom_label'   => 'Remboursement – ' . $originalItem->display_name,
+                    'custom_price'   => null,
+                    'unit_price'     => -$unitPrice,
+                    'quantity'       => $requestQty,
+                    'is_refund'      => true,
+                    'refund_item_id' => $originalItem->id,
+                ]);
+
+                $totalRefundAmount += $refundAmount;
+
+                if ($order->loyalty_card_id && $originalItem->drink && $originalItem->drink->loyalty_points > 0) {
+                    $totalPointsToDebit += $originalItem->drink->loyalty_points * $requestQty;
+                }
+            }
+
+            if ($totalRefundAmount > 0) {
+                $order->increment('refunded_amount', $totalRefundAmount);
+            }
+
+            if ($totalPointsToDebit > 0) {
+                $card       = $order->loyaltyCard()->lockForUpdate()->first();
+                $newBalance = $card->points - $totalPointsToDebit;
+                $card->update(['points' => $newBalance]);
+                $order->increment('points_refunded', $totalPointsToDebit);
+
+                LoyaltyPointAdjustment::create([
+                    'loyalty_card_id' => $order->loyalty_card_id,
+                    'order_id'        => $order->id,
+                    'user_id'         => Auth::id(),
+                    'type'            => LoyaltyPointAdjustment::TYPE_DEBIT,
+                    'source'          => LoyaltyPointAdjustment::SOURCE_REFUND,
+                    'points'          => $totalPointsToDebit,
+                    'balance_after'   => $newBalance,
+                    'reason'          => 'Remboursement partiel — commande #' . str_pad($order->id, 4, '0', STR_PAD_LEFT),
+                ]);
+            }
+        });
+    }
+
     /**
      * Liste les statuts disponibles.
      */
@@ -368,6 +509,8 @@ class OrderController extends Controller
             'created_at'              => $order->created_at?->toIso8601String(),
             'completed_at'            => $order->completed_at?->toIso8601String(),
             'handled_by'              => $order->handler?->name,
+            'refunded_amount'         => (float) $order->refunded_amount,
+            'points_refunded'         => (int) $order->points_refunded,
         ];
 
         if ($detailed) {
@@ -379,6 +522,8 @@ class OrderController extends Controller
                 'unit_price'   => (float) $item->unit_price,
                 'subtotal'     => (float) $item->subtotal,
                 'custom_label' => $item->custom_label,
+                'is_refund'    => (bool) $item->is_refund,
+                'refund_item_id' => $item->refund_item_id,
             ]);
             $data['loyalty_card'] = $order->loyaltyCard ? [
                 'card_number' => $order->loyaltyCard->card_number,

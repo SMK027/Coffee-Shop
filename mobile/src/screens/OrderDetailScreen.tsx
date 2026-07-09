@@ -21,6 +21,7 @@ export default function OrderDetailScreen() {
   const { orderId } = route.params;
   const { user } = useAuth();
   const isSuperAdmin = user?.global_role === 'superadmin';
+  const isAdmin = user?.global_role === 'admin' || isSuperAdmin;
 
   const [order, setOrder] = useState<Order | null>(null);
   const [statuses, setStatuses] = useState<OrderStatus[]>([]);
@@ -31,6 +32,12 @@ export default function OrderDetailScreen() {
   const [supervisorNumber, setSupervisorNumber] = useState('');
   const [supervisorPin, setSupervisorPin] = useState('');
   const [supervisorError, setSupervisorError] = useState<string | null>(null);
+  const [refundModalVisible, setRefundModalVisible] = useState(false);
+  const [refundMode, setRefundMode] = useState<'partial' | 'total'>('partial');
+  const [refundSelection, setRefundSelection] = useState<Record<number, number>>({});
+  const [refundError, setRefundError] = useState<string | null>(null);
+  const [refundSupervisorNumber, setRefundSupervisorNumber] = useState('');
+  const [refundSupervisorPin, setRefundSupervisorPin] = useState('');
 
   useEffect(() => {
     Promise.all([
@@ -38,6 +45,9 @@ export default function OrderDetailScreen() {
       api.get('/orders/statuses').then(({ data }) => setStatuses(data.statuses)),
     ]).finally(() => setLoading(false));
   }, [orderId]);
+
+  const currentStatus = statuses.find((s) => s.key === order?.status);
+  const requiresSupervisor = currentStatus?.is_terminal && !isSuperAdmin;
 
   const updateStatus = async (key: string, supervisor?: { number: string; pin: string }) => {
     setUpdating(true);
@@ -80,6 +90,56 @@ export default function OrderDetailScreen() {
     updateStatus(key);
   };
 
+  const orderItems = order?.items ?? [];
+  const refundableOriginalItems = orderItems.filter((item) => !item.is_refund);
+  const refundableItems = refundableOriginalItems.map((original) => {
+    const alreadyRefundedQty = orderItems
+      .filter((item) => item.is_refund && item.refund_item_id === original.id)
+      .reduce((sum, item) => sum + Math.abs(item.quantity), 0);
+
+    return {
+      ...original,
+      refundable_qty: original.quantity - alreadyRefundedQty,
+    };
+  }).filter((item) => item.refundable_qty > 0);
+
+  const totalRefundableAmount = Math.max(0, (order?.total_amount ?? 0) - (order?.refunded_amount ?? 0));
+
+  const refundPayload = () => {
+    const payload: Record<string, unknown> = { total_refund: refundMode === 'total' };
+
+    if (refundMode === 'partial') {
+      payload.items = refundableItems
+        .filter((item) => refundSelection[item.id] > 0)
+        .map((item) => ({ item_id: item.id, qty: refundSelection[item.id] }));
+    }
+
+    if (!isSuperAdmin) {
+      payload.supervisor_number = refundSupervisorNumber;
+      payload.supervisor_pin = refundSupervisorPin;
+    }
+
+    return payload;
+  };
+
+  const confirmRefund = async () => {
+    setUpdating(true);
+    setRefundError(null);
+
+    try {
+      const { data } = await api.post(`/orders/${orderId}/refund`, refundPayload());
+      setOrder(data.order);
+      setRefundModalVisible(false);
+      setRefundSelection({});
+      setRefundSupervisorNumber('');
+      setRefundSupervisorPin('');
+    } catch (error: any) {
+      setRefundError(error?.response?.data?.message || 'Impossible de procéder au remboursement.');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   if (loading || !order) {
     return (
       <View style={styles.center}>
@@ -88,8 +148,6 @@ export default function OrderDetailScreen() {
     );
   }
 
-  const currentStatus = statuses.find((s) => s.key === order.status);
-  const requiresSupervisor = currentStatus?.is_terminal && !isSuperAdmin;
   const availableTransitions = statuses.filter((s) => s.is_active && s.key !== order.status);
 
   const subtotal =
@@ -199,6 +257,133 @@ export default function OrderDetailScreen() {
         </>
       )}
 
+      {isAdmin && totalRefundableAmount > 0 && (
+        <View style={styles.sectionButtonRow}>
+          <TouchableOpacity
+            style={styles.refundBtn}
+            onPress={() => {
+              setRefundMode('partial');
+              setRefundModalVisible(true);
+              setRefundError(null);
+            }}
+            disabled={updating}
+          >
+            <Text style={styles.refundBtnText}>Remboursement</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      <Modal visible={refundModalVisible} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Remboursement</Text>
+            <View style={styles.modalModeRow}>
+              <TouchableOpacity
+                style={[styles.modeButton, refundMode === 'partial' && styles.modeButtonActive]}
+                onPress={() => setRefundMode('partial')}
+              >
+                <Text style={[styles.modeButtonText, refundMode === 'partial' && styles.modeButtonTextActive]}>Partiel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modeButton, refundMode === 'total' && styles.modeButtonActive]}
+                onPress={() => setRefundMode('total')}
+              >
+                <Text style={[styles.modeButtonText, refundMode === 'total' && styles.modeButtonTextActive]}>Total</Text>
+              </TouchableOpacity>
+            </View>
+
+            {refundMode === 'total' ? (
+              <View style={styles.refundSummaryCard}>
+                <Text style={styles.refundSummaryLabel}>Montant à rembourser</Text>
+                <Text style={styles.refundSummaryValue}>{totalRefundableAmount.toFixed(2)} €</Text>
+              </View>
+            ) : (
+              <ScrollView style={styles.refundItemsList}>
+                {refundableItems.length === 0 ? (
+                  <Text style={styles.noRefundItems}>Aucun article remboursable.</Text>
+                ) : (
+                  refundableItems.map((item) => (
+                    <View key={item.id} style={styles.refundItemRow}>
+                      <View style={styles.refundItemInfo}>
+                        <Text style={styles.refundItemLabel}>{item.drink_name || item.custom_label}</Text>
+                        <Text style={styles.refundItemMeta}>Quantité remboursable : {item.refundable_qty}</Text>
+                      </View>
+                      <View style={styles.refundQtyControls}>
+                        <TouchableOpacity
+                          style={styles.qtyBtn}
+                          onPress={() => setRefundSelection((prev) => ({ ...prev, [item.id]: Math.max(0, (prev[item.id] ?? 0) - 1) }))}
+                          disabled={(refundSelection[item.id] ?? 0) <= 0}
+                        >
+                          <Text style={styles.qtyBtnText}>−</Text>
+                        </TouchableOpacity>
+                        <Text style={styles.qtyValue}>{refundSelection[item.id] ?? 0}</Text>
+                        <TouchableOpacity
+                          style={styles.qtyBtn}
+                          onPress={() => setRefundSelection((prev) => ({ ...prev, [item.id]: Math.min(item.refundable_qty, (prev[item.id] ?? 0) + 1) }))}
+                          disabled={(refundSelection[item.id] ?? 0) >= item.refundable_qty}
+                        >
+                          <Text style={styles.qtyBtnText}>+</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ))
+                )}
+              </ScrollView>
+            )}
+
+            {!isSuperAdmin && (
+              <>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Numéro du superviseur"
+                  placeholderTextColor="#9ca3af"
+                  value={refundSupervisorNumber}
+                  onChangeText={setRefundSupervisorNumber}
+                  autoCapitalize="none"
+                  keyboardType="default"
+                />
+                <TextInput
+                  style={styles.input}
+                  placeholder="PIN du superviseur"
+                  placeholderTextColor="#9ca3af"
+                  value={refundSupervisorPin}
+                  onChangeText={setRefundSupervisorPin}
+                  secureTextEntry
+                  keyboardType="numeric"
+                />
+              </>
+            )}
+            {refundError ? <Text style={styles.errorText}>{refundError}</Text> : null}
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalCancelButton]}
+                onPress={() => {
+                  setRefundModalVisible(false);
+                  setRefundSelection({});
+                  setRefundSupervisorNumber('');
+                  setRefundSupervisorPin('');
+                  setRefundError(null);
+                }}
+                disabled={updating}
+              >
+                <Text style={styles.modalCancelText}>Annuler</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalConfirmButton]}
+                onPress={confirmRefund}
+                disabled={updating || (refundMode === 'partial' && Object.values(refundSelection).every((qty) => qty <= 0))}
+              >
+                {updating ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.modalConfirmText}>Valider</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <Modal visible={supervisorModalVisible} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
@@ -284,10 +469,31 @@ const styles = StyleSheet.create({
   transitionsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   transitionBtn: { backgroundColor: '#92400e', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8 },
   transitionBtnText: { color: '#fff', fontWeight: '600', fontSize: 14 },
+  sectionButtonRow: { marginTop: 16 },
+  refundBtn: { backgroundColor: '#dc2626', paddingHorizontal: 16, paddingVertical: 12, borderRadius: 10, alignItems: 'center' },
+  refundBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
   modalOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(15, 23, 42, 0.45)', padding: 24 },
   modalContent: { width: '100%', backgroundColor: '#fff', borderRadius: 16, padding: 20, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 18, elevation: 10 },
   modalTitle: { fontSize: 18, fontWeight: '700', color: '#111827', marginBottom: 6 },
   modalDescription: { fontSize: 14, color: '#6b7280', marginBottom: 16 },
+  modalModeRow: { flexDirection: 'row', gap: 12, marginBottom: 16 },
+  modeButton: { flex: 1, borderRadius: 12, backgroundColor: '#f3f4f6', paddingVertical: 10, alignItems: 'center' },
+  modeButtonActive: { backgroundColor: '#92400e' },
+  modeButtonText: { color: '#374151', fontWeight: '700' },
+  modeButtonTextActive: { color: '#fff' },
+  refundSummaryCard: { backgroundColor: '#f8fafc', borderRadius: 14, padding: 16, marginBottom: 16 },
+  refundSummaryLabel: { fontSize: 14, color: '#6b7280', marginBottom: 4 },
+  refundSummaryValue: { fontSize: 20, fontWeight: '700', color: '#111827' },
+  refundItemsList: { maxHeight: 260, marginBottom: 16 },
+  noRefundItems: { color: '#6b7280', textAlign: 'center', paddingVertical: 20 },
+  refundItemRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#e5e7eb' },
+  refundItemInfo: { flex: 1, marginRight: 12 },
+  refundItemLabel: { fontSize: 14, fontWeight: '700', color: '#111827' },
+  refundItemMeta: { fontSize: 12, color: '#6b7280', marginTop: 2 },
+  refundQtyControls: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  qtyBtn: { width: 32, height: 32, borderRadius: 8, backgroundColor: '#f3f4f6', justifyContent: 'center', alignItems: 'center' },
+  qtyBtnText: { fontSize: 18, color: '#374151', fontWeight: '700' },
+  qtyValue: { fontSize: 14, fontWeight: '700', color: '#111827', minWidth: 24, textAlign: 'center' },
   input: { backgroundColor: '#f8fafc', borderRadius: 12, borderWidth: 1, borderColor: '#e5e7eb', paddingHorizontal: 14, paddingVertical: 12, marginBottom: 12, color: '#111827' },
   errorText: { color: '#b91c1c', fontSize: 13, marginBottom: 12 },
   modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10 },

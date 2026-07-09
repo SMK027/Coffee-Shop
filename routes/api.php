@@ -37,6 +37,7 @@ Route::middleware('auth:api')->group(function () {
     Route::post('/orders',         [OrderController::class, 'store']);
     Route::get('/orders/{order}',  [OrderController::class, 'show']);
     Route::patch('/orders/{order}/status', [OrderController::class, 'updateStatus']);
+    Route::post('/orders/{order}/refund', [OrderController::class, 'refund']);
 
     // Cartes de fidélité
     Route::get('/loyalty-cards',             [LoyaltyCardController::class, 'index']);
