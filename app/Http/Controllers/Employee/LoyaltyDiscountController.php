@@ -19,11 +19,18 @@ class LoyaltyDiscountController extends Controller
 
     public function create()
     {
+        abort_unless(auth()->user()->isAdmin(), 403);
+
         return view('employee.loyalty-discounts.create');
     }
 
     public function store(Request $request)
     {
+        abort_unless(auth()->user()->isAdmin(), 403);
+        if (! auth()->user()->isSuperAdmin()) {
+            $this->requireSuperAdminOrSupervisor($request, 'Action réservée aux super administrateurs ou à un superviseur valide.');
+        }
+
         $data = $this->validatePayload($request);
         LoyaltyDiscount::create($data);
 
@@ -33,11 +40,18 @@ class LoyaltyDiscountController extends Controller
 
     public function edit(LoyaltyDiscount $loyaltyDiscount)
     {
+        abort_unless(auth()->user()->isAdmin(), 403);
+
         return view('employee.loyalty-discounts.edit', compact('loyaltyDiscount'));
     }
 
     public function update(Request $request, LoyaltyDiscount $loyaltyDiscount)
     {
+        abort_unless(auth()->user()->isAdmin(), 403);
+        if (! auth()->user()->isSuperAdmin()) {
+            $this->requireSuperAdminOrSupervisor($request, 'Action réservée aux super administrateurs ou à un superviseur valide.');
+        }
+
         $data = $this->validatePayload($request);
         $loyaltyDiscount->update($data);
 
@@ -87,8 +101,13 @@ class LoyaltyDiscountController extends Controller
         return $validated;
     }
 
-    public function destroy(LoyaltyDiscount $loyaltyDiscount)
+    public function destroy(Request $request, LoyaltyDiscount $loyaltyDiscount)
     {
+        abort_unless(auth()->user()->isAdmin(), 403);
+        if (! auth()->user()->isSuperAdmin()) {
+            $this->requireSuperAdminOrSupervisor($request, 'Action réservée aux super administrateurs ou à un superviseur valide.');
+        }
+
         // Bloquer la suppression si la réduction est liée à des commandes.
         if ($loyaltyDiscount->orders()->exists()) {
             return redirect()->route('employee.loyalty-discounts.index')

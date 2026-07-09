@@ -173,12 +173,11 @@
             </div>
             @endif
 
-            @if(auth()->user()->isSuperAdmin())
+            @if(auth()->user()->isAdmin())
             <div id="points-adjustment" class="bg-white rounded-xl shadow-sm border border-stone-100 p-4 sm:p-6">
                 <h2 class="font-semibold text-stone-800 mb-2">Ajuster les points</h2>
                 <p class="text-sm text-stone-500 mb-4">
-                    Créditez ou débitez manuellement le solde de points de cette carte.
-                    Chaque opération est enregistrée dans l'historique ci-dessous.
+                    Créditez ou débitez manuellement le solde de points de cette carte. Chaque opération est enregistrée dans l'historique ci-dessous.
                 </p>
                 <form action="{{ route('employee.loyalty.points.adjust', $loyaltyCard) }}" method="POST" class="space-y-4">
                     @csrf
@@ -208,6 +207,10 @@
                                class="w-full border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
                         @error('reason')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
                     </div>
+
+                    @if(!auth()->user()->isSuperAdmin())
+                        @include('employee.shared.supervisor-auth-fields')
+                    @endif
 
                     <button type="submit" class="w-full bg-amber-700 hover:bg-amber-600 text-white px-4 py-2.5 rounded-lg font-medium text-sm transition-colors">
                         Appliquer l'ajustement

@@ -109,6 +109,10 @@
         </div>
     </div>
 
+    @if(auth()->user()->isAdmin() && !auth()->user()->isSuperAdmin())
+        @include('employee.shared.supervisor-auth-fields')
+    @endif
+
     <div class="flex gap-3">
         <button type="submit" class="bg-amber-700 hover:bg-amber-600 text-white px-6 py-2.5 rounded-lg font-medium text-sm transition-colors">
             Enregistrer

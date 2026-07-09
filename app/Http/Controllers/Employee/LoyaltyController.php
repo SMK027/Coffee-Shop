@@ -124,7 +124,11 @@ class LoyaltyController extends Controller
      */
     public function adjustPoints(Request $request, LoyaltyCard $loyaltyCard)
     {
-        abort_unless(auth()->user()->isSuperAdmin(), 403);
+        abort_unless(auth()->user()->isAdmin(), 403);
+
+        if (! auth()->user()->isSuperAdmin()) {
+            $this->requireSuperAdminOrSupervisor($request, 'Action réservée aux super administrateurs ou à un superviseur valide.');
+        }
 
         $validated = $request->validate([
             'type'   => ['required', Rule::in([LoyaltyPointAdjustment::TYPE_CREDIT, LoyaltyPointAdjustment::TYPE_DEBIT])],
@@ -146,6 +150,7 @@ class LoyaltyController extends Controller
                 'loyalty_card_id' => $loyaltyCard->id,
                 'user_id'         => auth()->id(),
                 'type'            => $validated['type'],
+                'source'          => LoyaltyPointAdjustment::SOURCE_MANUAL,
                 'points'          => $validated['points'],
                 'balance_after'   => $newBalance,
                 'reason'          => $validated['reason'] ?? null,

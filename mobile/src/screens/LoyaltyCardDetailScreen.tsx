@@ -7,11 +7,15 @@ import {
   ActivityIndicator,
   RefreshControl,
   TouchableOpacity,
+  Modal,
+  TextInput,
+  Alert,
 } from 'react-native';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import QRCode from 'react-native-qrcode-svg';
-import Barcode from 'react-native-barcode-builder';
+import Barcode from 'react-native-barcode-svg';
 import api from '../api/client';
+import { useAuth } from '../context/AuthContext';
 import { LoyaltyCardDetail, LoyaltyCardOrderSummary, LoyaltyPointAdjustment } from '../types';
 
 type ParamList = { LoyaltyCardDetail: { cardId: number; fullName?: string } };
@@ -41,6 +45,17 @@ export default function LoyaltyCardDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [tab, setTab] = useState<'orders' | 'points'>('orders');
+  const [adjustModalVisible, setAdjustModalVisible] = useState(false);
+  const [adjustType, setAdjustType] = useState<'credit' | 'debit'>('credit');
+  const [adjustPoints, setAdjustPoints] = useState('');
+  const [adjustReason, setAdjustReason] = useState('');
+  const [supervisorNumber, setSupervisorNumber] = useState('');
+  const [supervisorPin, setSupervisorPin] = useState('');
+  const [adjustError, setAdjustError] = useState<string | null>(null);
+  const [adjustSubmitting, setAdjustSubmitting] = useState(false);
+  const { user } = useAuth();
+  const isSuperAdmin = user?.global_role === 'superadmin';
+  const isAdmin = user?.global_role === 'admin' || isSuperAdmin;
 
   const load = useCallback(async () => {
     const { data: json } = await api.get<LoyaltyCardDetail>(`/loyalty-cards/${cardId}`);
@@ -62,6 +77,52 @@ export default function LoyaltyCardDetailScreen() {
     setRefreshing(true);
     await load();
     setRefreshing(false);
+  };
+
+  const resetAdjustmentForm = () => {
+    setAdjustType('credit');
+    setAdjustPoints('');
+    setAdjustReason('');
+    setSupervisorNumber('');
+    setSupervisorPin('');
+    setAdjustError(null);
+  };
+
+  const submitAdjustment = async () => {
+    const points = parseInt(adjustPoints, 10);
+    if (!points || points < 1) {
+      setAdjustError('Entrez un nombre de points valide.');
+      return;
+    }
+
+    if (!isSuperAdmin && (!supervisorNumber.trim() || !supervisorPin.trim())) {
+      setAdjustError('Le numéro et le PIN du superviseur sont requis.');
+      return;
+    }
+
+    setAdjustSubmitting(true);
+    setAdjustError(null);
+
+    try {
+      await api.post(`/loyalty-cards/${cardId}/adjust`, {
+        type: adjustType,
+        points,
+        reason: adjustReason.trim() || undefined,
+        ...(isSuperAdmin ? {} : {
+          supervisor_number: supervisorNumber,
+          supervisor_pin: supervisorPin,
+        }),
+      });
+
+      await load();
+      setAdjustModalVisible(false);
+      resetAdjustmentForm();
+      Alert.alert('Succès', 'Ajustement de points appliqué.');
+    } catch (error: any) {
+      setAdjustError(error?.response?.data?.message || 'Impossible d’appliquer l’ajustement.');
+    } finally {
+      setAdjustSubmitting(false);
+    }
   };
 
   if (loading || !data) {
@@ -118,6 +179,15 @@ export default function LoyaltyCardDetailScreen() {
         <Text style={styles.statLabel}>Commande{totals.orders_count > 1 ? 's' : ''} au total</Text>
       </View>
 
+      {isAdmin && (
+        <TouchableOpacity
+          style={styles.adjustButton}
+          onPress={() => setAdjustModalVisible(true)}
+        >
+          <Text style={styles.adjustButtonText}>Ajuster les points</Text>
+        </TouchableOpacity>
+      )}
+
       {/* Onglets */}
       <View style={styles.tabs}>
         <TouchableOpacity
@@ -148,7 +218,14 @@ export default function LoyaltyCardDetailScreen() {
         <View style={styles.codeBox}>
           <Text style={styles.codeLabel}>Code-barres</Text>
           <View style={styles.codePreview}>
-            <Barcode value={card.card_number} format="CODE128" width={2} height={80} text={card.card_number} textColor="#1f2937" />
+            <Barcode
+              value={card.card_number}
+              format="CODE128"
+              singleBarWidth={2}
+              height={80}
+              lineColor="#1f2937"
+              backgroundColor="transparent"
+            />
             <Text style={styles.barcodeText}>{card.card_number}</Text>
           </View>
         </View>
@@ -167,6 +244,96 @@ export default function LoyaltyCardDetailScreen() {
           adjustments.map((a) => <AdjustmentRow key={a.id} adj={a} />)
         )
       )}
+
+      <Modal
+        visible={adjustModalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setAdjustModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Ajuster les points</Text>
+            <View style={styles.modalRow}>
+              <TouchableOpacity
+                style={[styles.modalOption, adjustType === 'credit' && styles.modalOptionActive]}
+                onPress={() => setAdjustType('credit')}
+              >
+                <Text style={[styles.modalOptionText, adjustType === 'credit' && styles.modalOptionTextActive]}>Créditer</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalOption, adjustType === 'debit' && styles.modalOptionActive]}
+                onPress={() => setAdjustType('debit')}
+              >
+                <Text style={[styles.modalOptionText, adjustType === 'debit' && styles.modalOptionTextActive]}>Débiter</Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.modalLabel}>Nombre de points</Text>
+            <TextInput
+              style={styles.modalInput}
+              keyboardType="numeric"
+              value={adjustPoints}
+              onChangeText={setAdjustPoints}
+              placeholder="Ex. 100"
+            />
+
+            <Text style={styles.modalLabel}>Motif (optionnel)</Text>
+            <TextInput
+              style={styles.modalInput}
+              value={adjustReason}
+              onChangeText={setAdjustReason}
+              placeholder="Raison de l’ajustement"
+            />
+
+            {!isSuperAdmin && (
+              <>
+                <Text style={styles.modalSectionTitle}>Validation superviseur</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  value={supervisorNumber}
+                  onChangeText={setSupervisorNumber}
+                  placeholder="Numéro du superviseur"
+                />
+                <TextInput
+                  style={styles.modalInput}
+                  value={supervisorPin}
+                  secureTextEntry
+                  keyboardType="numeric"
+                  onChangeText={setSupervisorPin}
+                  placeholder="PIN du superviseur"
+                />
+              </>
+            )}
+
+            {adjustError && <Text style={styles.modalError}>{adjustError}</Text>}
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonSecondary]}
+                onPress={() => {
+                  setAdjustModalVisible(false);
+                  resetAdjustmentForm();
+                }}
+                disabled={adjustSubmitting}
+              >
+                <Text style={styles.modalButtonText}>Annuler</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonPrimary]}
+                onPress={submitAdjustment}
+                disabled={adjustSubmitting}
+              >
+                {adjustSubmitting ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={[styles.modalButtonText, styles.modalButtonTextPrimary]}>Appliquer</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -244,6 +411,26 @@ const styles = StyleSheet.create({
   statCardWide: { backgroundColor: '#fff', borderRadius: 12, padding: 12, alignItems: 'center', marginBottom: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 },
   statValue: { fontSize: 22, fontWeight: '700', color: '#d97706' },
   statLabel: { fontSize: 12, color: '#6b7280', marginTop: 2, textAlign: 'center' },
+  adjustButton: { backgroundColor: '#92400e', borderRadius: 12, paddingVertical: 12, alignItems: 'center', marginBottom: 12 },
+  adjustButtonText: { color: '#fff', fontWeight: '700', fontSize: 15 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.55)', justifyContent: 'center', padding: 20 },
+  modalContent: { backgroundColor: '#fff', borderRadius: 18, padding: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.12, shadowRadius: 16, elevation: 12 },
+  modalTitle: { fontSize: 18, fontWeight: '700', color: '#1f2937', marginBottom: 16 },
+  modalRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
+  modalOption: { flex: 1, paddingVertical: 12, borderRadius: 12, backgroundColor: '#f3f4f6', alignItems: 'center' },
+  modalOptionActive: { backgroundColor: '#92400e' },
+  modalOptionText: { fontSize: 13, fontWeight: '600', color: '#475569' },
+  modalOptionTextActive: { color: '#fff' },
+  modalLabel: { fontSize: 13, color: '#475569', marginBottom: 6 },
+  modalSectionTitle: { fontSize: 14, fontWeight: '700', color: '#1f2937', marginTop: 16, marginBottom: 8 },
+  modalInput: { backgroundColor: '#f8fafc', borderRadius: 12, paddingVertical: 10, paddingHorizontal: 12, borderWidth: 1, borderColor: '#e2e8f0', marginBottom: 12, color: '#111827' },
+  modalError: { color: '#b91c1c', fontSize: 13, marginBottom: 12 },
+  modalActions: { flexDirection: 'row', justifyContent: 'space-between', gap: 10, marginTop: 8 },
+  modalButton: { flex: 1, borderRadius: 12, paddingVertical: 12, alignItems: 'center', justifyContent: 'center' },
+  modalButtonPrimary: { backgroundColor: '#92400e' },
+  modalButtonSecondary: { backgroundColor: '#f3f4f6' },
+  modalButtonText: { fontSize: 14, fontWeight: '700' },
+  modalButtonTextPrimary: { color: '#fff' },
 
   tabs: { flexDirection: 'row', backgroundColor: '#fff', borderRadius: 12, padding: 4, marginBottom: 12 },
   tab: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 8 },

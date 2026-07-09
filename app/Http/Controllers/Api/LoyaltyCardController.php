@@ -8,6 +8,7 @@ use App\Models\LoyaltyPointAdjustment;
 use App\Models\Order;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Hash;
 
 class LoyaltyCardController extends Controller
@@ -154,6 +155,48 @@ class LoyaltyCardController extends Controller
             'orders'      => $orders,
             'adjustments' => $adjustments,
             'totals'      => $totals,
+        ]);
+    }
+
+    public function adjust(Request $request, LoyaltyCard $card): JsonResponse
+    {
+        abort_unless(auth()->user()->isAdmin(), 403);
+
+        if (! auth()->user()->isSuperAdmin()) {
+            $this->requireSuperAdminOrSupervisor($request, 'Action réservée aux super administrateurs ou à un superviseur valide.');
+        }
+
+        $validated = $request->validate([
+            'type'   => ['required', Rule::in([LoyaltyPointAdjustment::TYPE_CREDIT, LoyaltyPointAdjustment::TYPE_DEBIT])],
+            'points' => ['required', 'integer', 'min:1', 'max:100000'],
+            'reason' => ['nullable', 'string', 'max:255'],
+        ], [
+            'points.min' => 'Le nombre de points doit être d’au moins 1.',
+        ]);
+
+        $isCredit = $validated['type'] === LoyaltyPointAdjustment::TYPE_CREDIT;
+        $delta = $isCredit ? $validated['points'] : -$validated['points'];
+
+        $card->getConnection()->transaction(function () use ($card, $delta, $validated) {
+            $newBalance = $card->points + $delta;
+            $card->update(['points' => $newBalance]);
+
+            LoyaltyPointAdjustment::create([
+                'loyalty_card_id' => $card->id,
+                'user_id'         => auth()->id(),
+                'type'            => $validated['type'],
+                'source'          => LoyaltyPointAdjustment::SOURCE_MANUAL,
+                'points'          => $validated['points'],
+                'balance_after'   => $newBalance,
+                'reason'          => $validated['reason'] ?? null,
+            ]);
+        });
+
+        $card->refresh();
+
+        return response()->json([
+            'message' => 'Solde de points mis à jour.',
+            'card' => $this->formatCard($card),
         ]);
     }
 

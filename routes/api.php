@@ -45,6 +45,7 @@ Route::middleware('auth:api')->group(function () {
     Route::post('/loyalty-cards/check',      [LoyaltyCardController::class, 'check']);
     Route::post('/loyalty-cards/verify-pin', [LoyaltyCardController::class, 'verifyPin']);
     Route::get('/loyalty-cards/{card}',      [LoyaltyCardController::class, 'show']);
+    Route::post('/loyalty-cards/{card}/adjust', [LoyaltyCardController::class, 'adjust']);
 
     // Réductions fidélité
     Route::get('/loyalty-discounts', [LoyaltyDiscountController::class, 'index']);
