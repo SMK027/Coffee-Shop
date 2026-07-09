@@ -46,7 +46,7 @@
             <option value="superadmin" {{ old('global_role', $user->global_role ?? '') === 'superadmin' ? 'selected' : '' }}>Super Admin</option>
         </select>
         @error('global_role')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
-        <p class="text-xs text-stone-400 mt-1">Les Super Admins peuvent gérer tous les comptes et accéder à toutes les fonctionnalités.</p>
+        <p class="text-xs text-stone-400 mt-1">Les Super Admins peuvent créer des Admins et des Super Admins. Les Superviseurs sont gérés séparément.</p>
     </div>
     @else
         {{-- Les admins ne peuvent créer que des admins --}}

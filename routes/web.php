@@ -12,6 +12,7 @@ use App\Http\Controllers\Employee\RefundController;
 use App\Http\Controllers\Employee\StatsController;
 use App\Http\Controllers\Employee\HomeImageController;
 use App\Http\Controllers\Employee\ShopSettingsController;
+use App\Http\Controllers\Employee\SupervisorController;
 use App\Http\Controllers\Employee\UserController;
 use App\Http\Controllers\Employee\LoyaltyController as EmployeeLoyaltyController;
 use App\Http\Controllers\Employee\LoyaltyDiscountController;
@@ -144,6 +145,16 @@ Route::prefix('espace-employe')->name('employee.')->middleware(['auth', 'employe
     Route::put('/employes/{user}', [UserController::class, 'update'])->name('users.update');
     Route::delete('/employes/{user}', [UserController::class, 'destroy'])->name('users.destroy');
     Route::post('/employes/{user}/reset-mdp', [UserController::class, 'sendResetLink'])->name('users.reset-link');
+    Route::patch('/employes/{user}/activation', [UserController::class, 'toggleActivation'])->name('users.toggle-activation');
+
+    // Gestion des superviseurs (super admin uniquement)
+    Route::get('/superviseurs', [SupervisorController::class, 'index'])->name('supervisors.index');
+    Route::get('/superviseurs/nouveau', [SupervisorController::class, 'create'])->name('supervisors.create');
+    Route::post('/superviseurs', [SupervisorController::class, 'store'])->name('supervisors.store');
+    Route::get('/superviseurs/{supervisor}/modifier', [SupervisorController::class, 'edit'])->name('supervisors.edit');
+    Route::put('/superviseurs/{supervisor}', [SupervisorController::class, 'update'])->name('supervisors.update');
+    Route::patch('/superviseurs/{supervisor}/activation', [SupervisorController::class, 'toggleActivation'])->name('supervisors.toggle-activation');
+    Route::delete('/superviseurs/{supervisor}', [SupervisorController::class, 'destroy'])->name('supervisors.destroy');
 
     // Profil
     Route::get('/profil', [ProfileController::class, 'edit'])->name('profile.edit');

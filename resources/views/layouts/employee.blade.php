@@ -80,6 +80,19 @@
                         </a>
                     </li>
 
+                    @if(auth()->user()->isSuperAdmin())
+                    <li>
+                        <a href="{{ route('employee.supervisors.index') }}"
+                           class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium
+                                  {{ request()->routeIs('employee.supervisors*') ? 'bg-amber-800 text-white' : 'text-amber-100 hover:bg-amber-800 hover:text-white' }}">
+                            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-3-3v6m-6 3h12a2 2 0 002-2V7a2 2 0 00-2-2H6a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                            </svg>
+                            Superviseurs
+                        </a>
+                    </li>
+                    @endif
+
                     {{-- Statuts de commande : admins uniquement --}}
                     @if(auth()->user()->isAdmin())
                     <li>
@@ -94,8 +107,8 @@
                     </li>
                     @endif
 
-                    {{-- Paramètres boutique : super admin uniquement --}}
-                    @if(auth()->user()->isSuperAdmin())
+                    {{-- Paramètres boutique : super admin et admins avec validation superviseur --}}
+                    @if(auth()->user()->isAdmin())
                     <li>
                         <a href="{{ route('employee.shop-settings.index') }}"
                            class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium

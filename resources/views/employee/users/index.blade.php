@@ -59,7 +59,7 @@
                     </thead>
                     <tbody class="divide-y divide-stone-50">
                         @foreach($users as $user)
-                        <tr class="hover:bg-stone-50 transition-colors {{ $user->id === auth()->id() ? 'bg-amber-50/50' : '' }}">
+                        <tr class="hover:bg-stone-50 transition-colors {{ $user->id === auth()->id() ? 'bg-amber-50/50' : '' }} {{ $user->is_active ? '' : 'opacity-70' }}">
                             <td class="px-5 py-3">
                                 <div class="flex items-center gap-3">
                                     <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0
@@ -79,11 +79,18 @@
                             <td class="px-5 py-3">
                                 @if($user->isSuperAdmin())
                                     <span class="px-2.5 py-1 bg-amber-100 text-amber-800 text-xs font-semibold rounded-full">Super Admin</span>
+                                @elseif($user->isSupervisor())
+                                    <span class="px-2.5 py-1 bg-sky-100 text-sky-800 text-xs font-semibold rounded-full">Superviseur</span>
                                 @else
                                     <span class="px-2.5 py-1 bg-stone-100 text-stone-600 text-xs font-medium rounded-full">Admin</span>
                                 @endif
                             </td>
-                            <td class="px-5 py-3 text-stone-400 text-xs">{{ $user->created_at->format('d/m/Y') }}</td>
+                            <td class="px-5 py-3 text-stone-400 text-xs">
+                                {{ $user->created_at->format('d/m/Y') }}
+                                @unless($user->is_active)
+                                    <span class="block mt-1 text-xs text-red-600">Désactivé</span>
+                                @endunless
+                            </td>
                             <td class="px-5 py-3 text-right">
                                 @include('employee.users._row-actions', ['user' => $user])
                             </td>
@@ -99,7 +106,7 @@
                 <div class="px-4 py-4 {{ $user->id === auth()->id() ? 'bg-amber-50/50' : '' }}">
                     <div class="flex items-center gap-3 mb-3">
                         <div class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0
-                            {{ $user->isSuperAdmin() ? 'bg-amber-200 text-amber-800' : 'bg-stone-200 text-stone-600' }}">
+                            {{ $user->isSuperAdmin() ? 'bg-amber-200 text-amber-800' : ($user->isSupervisor() ? 'bg-sky-200 text-sky-800' : 'bg-stone-200 text-stone-600') }}">
                             {{ strtoupper(substr($user->name, 0, 1)) }}
                         </div>
                         <div class="flex-1 min-w-0">
@@ -110,6 +117,8 @@
                                 @endif
                                 @if($user->isSuperAdmin())
                                     <span class="px-2 py-0.5 bg-amber-100 text-amber-800 text-xs font-semibold rounded-full">Super Admin</span>
+                                @elseif($user->isSupervisor())
+                                    <span class="px-2 py-0.5 bg-sky-100 text-sky-800 text-xs font-semibold rounded-full">Superviseur</span>
                                 @else
                                     <span class="px-2 py-0.5 bg-stone-100 text-stone-600 text-xs rounded-full">Admin</span>
                                 @endif
@@ -129,8 +138,9 @@
     <div class="mt-4 p-4 bg-amber-50 rounded-xl border border-amber-100">
         <p class="text-xs text-amber-700">
             <strong>Rôles :</strong>
-            <strong>Super Admin</strong> — accès complet, peut gérer les autres super admins.
+            <strong>Super Admin</strong> — accès complet, peut gérer tous les comptes.
             <strong>Admin</strong> — accès à l'espace salarié complet.
+            <strong>Superviseur</strong> — géré séparément, autorise ponctuellement des actions sensibles.
         </p>
     </div>
 

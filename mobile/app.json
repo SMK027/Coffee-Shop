@@ -11,7 +11,8 @@
       "supportsTablet": true,
       "bundleIdentifier": "fr.leofranz.coffeeshop",
       "infoPlist": {
-        "NSCameraUsageDescription": "La caméra est utilisée pour scanner les QR codes et codes-barres des cartes de fidélité."
+        "NSCameraUsageDescription": "La caméra est utilisée pour scanner les QR codes et codes-barres des cartes de fidélité.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {

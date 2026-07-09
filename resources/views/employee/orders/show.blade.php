@@ -1,7 +1,7 @@
 <x-employee-layout title="Commande #{{ str_pad($order->id, 4, '0', STR_PAD_LEFT) }}" subtitle="{{ $order->display_name }}">
     <x-slot name="headerActions">
         <div class="flex items-center gap-3">
-            @if(auth()->user()->isSuperAdmin())
+            @if(auth()->user()->isAdmin())
             <a href="{{ route('employee.orders.refund', $order) }}"
                class="flex items-center gap-1.5 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 text-sm font-medium px-3 py-1.5 rounded-lg transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>

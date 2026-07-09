@@ -12,7 +12,7 @@ class ShopSettingsController extends Controller
 
     public function index()
     {
-        abort_unless(auth()->user()->isSuperAdmin(), 403);
+        abort_unless(auth()->user()->isAdmin(), 403);
 
         return view('employee.shop-settings.index', [
             'address' => Setting::get(Setting::KEY_SHOP_ADDRESS, Setting::DEFAULTS[Setting::KEY_SHOP_ADDRESS]),
@@ -24,7 +24,8 @@ class ShopSettingsController extends Controller
 
     public function update(Request $request)
     {
-        abort_unless(auth()->user()->isSuperAdmin(), 403);
+        abort_unless(auth()->user()->isAdmin(), 403);
+        $this->requireSuperAdminOrSupervisor($request);
 
         $request->validate([
             'address'      => ['required', 'string', 'max:300'],
@@ -58,7 +59,8 @@ class ShopSettingsController extends Controller
 
     public function addException(Request $request)
     {
-        abort_unless(auth()->user()->isSuperAdmin(), 403);
+        abort_unless(auth()->user()->isAdmin(), 403);
+        $this->requireSuperAdminOrSupervisor($request);
 
         $request->validate([
             'date'  => ['required', 'date_format:Y-m-d'],

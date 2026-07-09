@@ -13,6 +13,14 @@
                 Reset MDP
             </button>
         </form>
+        <form action="{{ route('employee.users.toggle-activation', $user) }}" method="POST"
+              onsubmit="return confirm('{{ $user->is_active ? 'Désactiver' : 'Réactiver' }} le compte de {{ addslashes($user->name) }} ?')">
+            @csrf @method('PATCH')
+            <button type="submit"
+                    class="text-xs font-medium px-2 py-1.5 rounded transition-colors {{ $user->is_active ? 'text-red-500 hover:text-red-700 hover:bg-red-50' : 'text-green-600 hover:text-green-800 hover:bg-green-50' }}">
+                {{ $user->is_active ? 'Désactiver' : 'Réactiver' }}
+            </button>
+        </form>
     @endif
     @if($user->id !== auth()->id())
         <form action="{{ route('employee.users.destroy', $user) }}" method="POST"

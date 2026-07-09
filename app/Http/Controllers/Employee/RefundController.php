@@ -16,7 +16,7 @@ class RefundController extends Controller
      */
     public function create(Order $order)
     {
-        abort_unless(auth()->user()->isSuperAdmin(), 403);
+        abort_unless(auth()->user()->isAdmin(), 403);
 
         $order->load('items.drink', 'loyaltyCard');
 
@@ -46,7 +46,8 @@ class RefundController extends Controller
      */
     public function store(Request $request, Order $order)
     {
-        abort_unless(auth()->user()->isSuperAdmin(), 403);
+        abort_unless(auth()->user()->isAdmin(), 403);
+        $this->requireSuperAdminOrSupervisor($request);
 
         $order->load('items.drink', 'loyaltyCard');
 

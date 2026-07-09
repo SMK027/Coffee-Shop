@@ -13,22 +13,23 @@ class OrderStatusController extends Controller
     {
         abort_unless(auth()->user()->isAdmin(), 403);
 
-        $statuses  = OrderStatus::orderBy('sort_order')->get();
-        $readonly  = !auth()->user()->isSuperAdmin();
+        $statuses = OrderStatus::orderBy('sort_order')->get();
+        $isSuperAdmin = auth()->user()->isSuperAdmin();
 
-        return view('employee.order-statuses.index', compact('statuses', 'readonly'));
+        return view('employee.order-statuses.index', compact('statuses', 'isSuperAdmin'));
     }
 
     public function create()
     {
-        $this->requireSuperAdmin();
+        abort_unless(auth()->user()->isAdmin(), 403);
 
         return view('employee.order-statuses.create');
     }
 
     public function store(Request $request)
     {
-        $this->requireSuperAdmin();
+        abort_unless(auth()->user()->isAdmin(), 403);
+        $this->requireSuperAdminOrSupervisor($request);
 
         $data = $this->validatePayload($request);
         OrderStatus::create($data);
@@ -39,14 +40,15 @@ class OrderStatusController extends Controller
 
     public function edit(OrderStatus $orderStatus)
     {
-        $this->requireSuperAdmin();
+        abort_unless(auth()->user()->isAdmin(), 403);
 
         return view('employee.order-statuses.edit', compact('orderStatus'));
     }
 
     public function update(Request $request, OrderStatus $orderStatus)
     {
-        $this->requireSuperAdmin();
+        abort_unless(auth()->user()->isAdmin(), 403);
+        $this->requireSuperAdminOrSupervisor($request);
 
         $data = $this->validatePayload($request, $orderStatus);
         $orderStatus->update($data);
@@ -55,9 +57,10 @@ class OrderStatusController extends Controller
             ->with('success', 'Statut mis à jour.');
     }
 
-    public function toggleActive(OrderStatus $orderStatus)
+    public function toggleActive(Request $request, OrderStatus $orderStatus)
     {
-        $this->requireSuperAdmin();
+        abort_unless(auth()->user()->isAdmin(), 403);
+        $this->requireSuperAdminOrSupervisor($request);
 
         $orderStatus->update(['is_active' => !$orderStatus->is_active]);
 
@@ -66,9 +69,10 @@ class OrderStatusController extends Controller
         return redirect()->back()->with('success', $msg);
     }
 
-    public function destroy(OrderStatus $orderStatus)
+    public function destroy(Request $request, OrderStatus $orderStatus)
     {
-        $this->requireSuperAdmin();
+        abort_unless(auth()->user()->isAdmin(), 403);
+        $this->requireSuperAdminOrSupervisor($request);
 
         if ($orderStatus->orders()->exists()) {
             return redirect()->back()

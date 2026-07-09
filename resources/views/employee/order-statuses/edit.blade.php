@@ -22,6 +22,10 @@
 
         @include('employee.order-statuses.partials.form')
 
+        @unless(auth()->user()->isSuperAdmin())
+            @include('employee.shared.supervisor-auth-fields')
+        @endunless
+
         <div class="flex gap-3">
             <button type="submit"
                     class="bg-amber-700 hover:bg-amber-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium transition-colors">

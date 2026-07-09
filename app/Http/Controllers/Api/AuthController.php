@@ -30,7 +30,14 @@ class AuthController extends Controller
 
         $user = Auth::guard('api')->user();
 
-        if (!$user->isAdmin()) {
+        if (! $user->isActive()) {
+            Auth::guard('api')->logout();
+            return response()->json([
+                'message' => 'Ce compte a été désactivé.',
+            ], 403);
+        }
+
+        if (! $user->isAdmin()) {
             Auth::guard('api')->logout();
             return response()->json([
                 'message' => 'Accès réservé aux salariés.',

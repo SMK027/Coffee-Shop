@@ -26,6 +26,12 @@
 
     <div class="max-w-2xl space-y-6">
 
+        @unless(auth()->user()->isSuperAdmin())
+        <div class="mb-4 px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
+            Les modifications de la boutique doivent être validées par un superviseur.
+        </div>
+        @endunless
+
         {{-- ── Coordonnées ─────────────────────────────────── --}}
         <form action="{{ route('employee.shop-settings.update') }}" method="POST">
             @csrf
@@ -56,6 +62,9 @@
                         @error('email')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
                     </div>
                 </div>
+                @unless(auth()->user()->isSuperAdmin())
+                    @include('employee.shared.supervisor-auth-fields')
+                @endunless
             </div>
 
             {{-- ── Horaires réguliers ───────────────────────── --}}
@@ -128,6 +137,7 @@
                                 <span class="ml-2 text-xs text-stone-400">(passé)</span>
                             @endif
                         </div>
+                        @if(auth()->user()->isSuperAdmin())
                         <form action="{{ route('employee.shop-settings.exception.remove', $exc['date']) }}" method="POST"
                               onsubmit="return confirm('Supprimer cette exception ?')">
                             @csrf @method('DELETE')
@@ -137,6 +147,7 @@
                                 </svg>
                             </button>
                         </form>
+                        @endif
                     </div>
                     @endforeach
                 </div>
@@ -148,6 +159,9 @@
                   x-data="{ excOpen: '0' }"
                   class="border-t border-stone-100 pt-5 space-y-4">
                 @csrf
+                @unless(auth()->user()->isSuperAdmin())
+                    @include('employee.shared.supervisor-auth-fields')
+                @endunless
                 <p class="text-sm font-medium text-stone-700">Ajouter une exception</p>
 
                 <div class="grid sm:grid-cols-2 gap-4">

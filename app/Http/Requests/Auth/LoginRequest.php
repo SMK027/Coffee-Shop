@@ -54,6 +54,14 @@ class LoginRequest extends FormRequest
             ]);
         }
 
+        if (! Auth::user()->isActive()) {
+            Auth::logout();
+
+            throw ValidationException::withMessages([
+                'email' => 'Ce compte a été désactivé. Contactez un super administrateur.',
+            ]);
+        }
+
         RateLimiter::clear($this->throttleKey());
     }
 

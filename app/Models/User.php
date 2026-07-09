@@ -11,7 +11,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject;
 
-#[Fillable(['username', 'name', 'email', 'password', 'global_role', 'avatar', 'bio'])]
+#[Fillable(['username', 'name', 'email', 'password', 'global_role', 'avatar', 'bio', 'is_active', 'superadmin_id'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements JWTSubject
 {
@@ -23,6 +23,7 @@ class User extends Authenticatable implements JWTSubject
         return [
             'email_verified_at' => 'datetime',
             'password'          => 'hashed',
+            'is_active'         => 'boolean',
         ];
     }
 
@@ -47,6 +48,21 @@ class User extends Authenticatable implements JWTSubject
     public function isSuperAdmin(): bool
     {
         return $this->global_role === 'superadmin';
+    }
+
+    public function isSupervisor(): bool
+    {
+        return $this->global_role === 'supervisor';
+    }
+
+    public function isActive(): bool
+    {
+        return (bool) $this->is_active;
+    }
+
+    public function createdBySuperAdmin()
+    {
+        return $this->belongsTo(self::class, 'superadmin_id');
     }
 
     public function loyaltyCards(): \Illuminate\Database\Eloquent\Relations\HasMany

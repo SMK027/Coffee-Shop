@@ -108,6 +108,10 @@
                     @endif
                 </div>
 
+                @unless(auth()->user()->isSuperAdmin())
+                    @include('employee.shared.supervisor-auth-fields')
+                @endunless
+
                 <div class="flex gap-3">
                     <button type="submit"
                             :disabled="selectedItems.length === 0"
@@ -141,6 +145,9 @@
                   onsubmit="return confirm('Confirmer le remboursement total de {{ number_format($remainingAmount, 2, ',', ' ') }} € ?')">
                 @csrf
                 <input type="hidden" name="total_refund" value="1">
+                @unless(auth()->user()->isSuperAdmin())
+                    @include('employee.shared.supervisor-auth-fields')
+                @endunless
                 <button type="submit"
                         class="bg-red-700 hover:bg-red-600 text-white px-6 py-2.5 rounded-lg font-medium text-sm transition-colors">
                     Remboursement total

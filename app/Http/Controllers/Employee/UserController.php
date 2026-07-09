@@ -16,9 +16,13 @@ class UserController extends Controller
 {
     public function index(Request $request)
     {
+        abort_unless(auth()->user()->isAdmin(), 403);
+
         $search = trim((string) $request->query('q', ''));
 
-        $users = User::whereIn('global_role', ['superadmin', 'admin'])
+        $roles = ['superadmin', 'admin'];
+
+        $users = User::whereIn('global_role', $roles)
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($filter) use ($search) {
                     $filter->where('name', 'like', "%{$search}%")
@@ -36,11 +40,15 @@ class UserController extends Controller
 
     public function create()
     {
+        abort_unless(auth()->user()->isAdmin(), 403);
+
         return view('employee.users.create');
     }
 
     public function store(Request $request)
     {
+        abort_unless(auth()->user()->isAdmin(), 403);
+
         $validated = $request->validate([
             'name'     => ['required', 'string', 'max:100'],
             'username' => ['required', 'string', 'max:50', 'alpha_dash', 'unique:users,username'],
@@ -56,6 +64,8 @@ class UserController extends Controller
 
         // Mot de passe aléatoire — l'utilisateur le définira via le lien envoyé par email
         $validated['password'] = Hash::make(Str::random(32));
+        $validated['is_active'] = true;
+        $validated['superadmin_id'] = null;
 
         $user = User::create($validated);
 
@@ -78,6 +88,8 @@ class UserController extends Controller
 
     public function edit(User $user)
     {
+        abort_unless(auth()->user()->isAdmin(), 403);
+
         // Un admin ne peut pas modifier un superadmin (sauf lui-même si superadmin)
         if ($user->isSuperAdmin() && !auth()->user()->isSuperAdmin()) {
             abort(403);
@@ -88,6 +100,7 @@ class UserController extends Controller
 
     public function update(Request $request, User $user)
     {
+        abort_unless(auth()->user()->isAdmin(), 403);
         if ($user->isSuperAdmin() && !auth()->user()->isSuperAdmin()) {
             abort(403);
         }
@@ -103,6 +116,8 @@ class UserController extends Controller
             )],
         ]);
 
+        $validated['superadmin_id'] = null;
+
         $user->update($validated);
 
         return redirect()->route('employee.users.index')
@@ -111,6 +126,8 @@ class UserController extends Controller
 
     public function destroy(User $user)
     {
+        abort_unless(auth()->user()->isAdmin(), 403);
+
         // Ne peut pas supprimer son propre compte ni un superadmin (sauf superadmin)
         if ($user->id === auth()->id()) {
             return back()->with('error', 'Vous ne pouvez pas supprimer votre propre compte.');
@@ -126,12 +143,31 @@ class UserController extends Controller
             ->with('success', 'Compte supprimé avec succès.');
     }
 
+    public function toggleActivation(User $user)
+    {
+        abort_unless(auth()->user()->isAdmin(), 403);
+
+        if ($user->id === auth()->id()) {
+            return back()->with('error', 'Vous ne pouvez pas désactiver ou réactiver votre propre compte.');
+        }
+
+        if ($user->isSuperAdmin() && !auth()->user()->isSuperAdmin()) {
+            abort(403);
+        }
+
+        $user->update(['is_active' => ! $user->is_active]);
+
+        return back()->with('success', $user->is_active ? 'Compte réactivé avec succès.' : 'Compte désactivé avec succès.');
+    }
+
     /**
      * Génère un token de reset à usage unique (30 min) et envoie le lien par email.
      * Réservé aux super administrateurs.
      */
     public function sendResetLink(User $user)
     {
+        abort_unless(auth()->user()->isAdmin(), 403);
+
         if (!auth()->user()->isSuperAdmin()) {
             abort(403);
         }

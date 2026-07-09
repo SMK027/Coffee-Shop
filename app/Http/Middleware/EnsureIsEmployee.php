@@ -14,6 +14,10 @@ class EnsureIsEmployee
      */
     public function handle(Request $request, Closure $next): Response
     {
+        if (!$request->user()?->isActive()) {
+            abort(403, 'Compte désactivé.');
+        }
+
         if (!$request->user()?->isAdmin()) {
             abort(403, 'Accès réservé aux salariés.');
         }
