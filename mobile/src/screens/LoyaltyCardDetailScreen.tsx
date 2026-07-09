@@ -9,6 +9,8 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
+import QRCode from 'react-native-qrcode-svg';
+import Barcode from 'react-native-barcode-builder';
 import api from '../api/client';
 import { LoyaltyCardDetail, LoyaltyCardOrderSummary, LoyaltyPointAdjustment } from '../types';
 
@@ -136,6 +138,22 @@ export default function LoyaltyCardDetailScreen() {
         </TouchableOpacity>
       </View>
 
+      <View style={styles.cardCodeSection}>
+        <View style={styles.codeBox}>
+          <Text style={styles.codeLabel}>QR code</Text>
+          <View style={styles.codePreview}>
+            <QRCode value={card.card_number} size={140} backgroundColor="transparent" color="#1f2937" />
+          </View>
+        </View>
+        <View style={styles.codeBox}>
+          <Text style={styles.codeLabel}>Code-barres</Text>
+          <View style={styles.codePreview}>
+            <Barcode value={card.card_number} format="CODE128" width={2} height={80} text={card.card_number} textColor="#1f2937" />
+            <Text style={styles.barcodeText}>{card.card_number}</Text>
+          </View>
+        </View>
+      </View>
+
       {tab === 'orders' ? (
         orders.length === 0 ? (
           <Text style={styles.empty}>Aucune commande associée.</Text>
@@ -214,6 +232,12 @@ const styles = StyleSheet.create({
   badgeEmployee: { backgroundColor: '#fef3c7', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
   badgeEmployeeText: { color: '#92400e', fontSize: 12, fontWeight: '600' },
   contact: { fontSize: 14, color: '#6b7280', marginTop: 2 },
+
+  cardCodeSection: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 12, marginBottom: 12 },
+  codeBox: { flex: 1, minWidth: 160, backgroundColor: '#fff', borderRadius: 12, padding: 12, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 },
+  codeLabel: { fontSize: 12, fontWeight: '700', color: '#6b7280', marginBottom: 8 },
+  codePreview: { alignItems: 'center', justifyContent: 'center', padding: 6, backgroundColor: '#f8fafc', borderRadius: 12 },
+  barcodeText: { fontSize: 12, letterSpacing: 2, marginTop: 6, color: '#374151' },
 
   statsRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },
   statCard: { flex: 1, backgroundColor: '#fff', borderRadius: 12, padding: 12, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 },
