@@ -33,8 +33,8 @@
                     <div><dt class="text-stone-500">Nom complet</dt><dd class="font-medium text-stone-800">{{ $loyaltyCard->full_name }}</dd></div>
                     <div><dt class="text-stone-500">Email</dt><dd class="text-stone-800">{{ $loyaltyCard->email }}</dd></div>
                     <div><dt class="text-stone-500">Téléphone</dt><dd class="text-stone-800">{{ $loyaltyCard->phone }}</dd></div>
-                    <div><dt class="text-stone-500">Date de naissance</dt><dd class="text-stone-800">{{ $loyaltyCard->birth_date->format('d/m/Y') }} ({{ $loyaltyCard->age }} ans)</dd></div>
-                    <div><dt class="text-stone-500">Carte créée le</dt><dd class="text-stone-800">{{ $loyaltyCard->created_at->format('d/m/Y') }}</dd></div>
+                    <div><dt class="text-stone-500">Date de naissance</dt><dd class="text-stone-800">{{ $loyaltyCard->birth_date ? $loyaltyCard->birth_date->format('d/m/Y') : 'Non renseignée' }} ({{ $loyaltyCard->age }} ans)</dd></div>
+                    <div><dt class="text-stone-500">Carte créée le</dt><dd class="text-stone-800">{{ $loyaltyCard->created_at ? $loyaltyCard->created_at->format('d/m/Y') : '—' }}</dd></div>
                     <div>
                         <dt class="text-stone-500">Avantages salariés</dt>
                         <dd>
