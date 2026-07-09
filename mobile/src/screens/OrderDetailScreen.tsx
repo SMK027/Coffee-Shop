@@ -7,6 +7,8 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
+  Modal,
+  TextInput,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import api from '../api/client';
@@ -24,6 +26,11 @@ export default function OrderDetailScreen() {
   const [statuses, setStatuses] = useState<OrderStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
+  const [supervisorModalVisible, setSupervisorModalVisible] = useState(false);
+  const [pendingStatus, setPendingStatus] = useState<string | null>(null);
+  const [supervisorNumber, setSupervisorNumber] = useState('');
+  const [supervisorPin, setSupervisorPin] = useState('');
+  const [supervisorError, setSupervisorError] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -32,16 +39,45 @@ export default function OrderDetailScreen() {
     ]).finally(() => setLoading(false));
   }, [orderId]);
 
-  const updateStatus = async (key: string) => {
+  const updateStatus = async (key: string, supervisor?: { number: string; pin: string }) => {
     setUpdating(true);
     try {
-      const { data } = await api.patch(`/orders/${orderId}/status`, { status: key });
+      const payload: Record<string, any> = { status: key };
+      if (supervisor) {
+        payload.supervisor_number = supervisor.number;
+        payload.supervisor_pin = supervisor.pin;
+      }
+
+      const { data } = await api.patch(`/orders/${orderId}/status`, payload);
       setOrder(data.order);
-    } catch {
-      Alert.alert('Erreur', 'Impossible de mettre à jour le statut.');
+      if (supervisorModalVisible) {
+        setSupervisorModalVisible(false);
+        setPendingStatus(null);
+        setSupervisorNumber('');
+        setSupervisorPin('');
+        setSupervisorError(null);
+      }
+    } catch (error: any) {
+      const message = error?.response?.data?.message || 'Impossible de mettre à jour le statut.';
+      if (supervisorModalVisible) {
+        setSupervisorError(message);
+      } else {
+        Alert.alert('Erreur', message);
+      }
     } finally {
       setUpdating(false);
     }
+  };
+
+  const handleStatusPress = (key: string) => {
+    if (requiresSupervisor) {
+      setPendingStatus(key);
+      setSupervisorModalVisible(true);
+      setSupervisorError(null);
+      return;
+    }
+
+    updateStatus(key);
   };
 
   if (loading || !order) {
@@ -53,9 +89,8 @@ export default function OrderDetailScreen() {
   }
 
   const currentStatus = statuses.find((s) => s.key === order.status);
-  const availableTransitions = (currentStatus?.is_terminal && !isSuperAdmin)
-    ? []
-    : statuses.filter((s) => s.is_active && s.key !== order.status);
+  const requiresSupervisor = currentStatus?.is_terminal && !isSuperAdmin;
+  const availableTransitions = statuses.filter((s) => s.is_active && s.key !== order.status);
 
   const subtotal =
     (order.total_amount ?? 0) +
@@ -142,13 +177,15 @@ export default function OrderDetailScreen() {
       {/* Transitions de statut */}
       {availableTransitions.length > 0 && (
         <>
-          <Text style={styles.sectionTitle}>Changer le statut</Text>
+          <Text style={styles.sectionTitle}>
+            Changer le statut{requiresSupervisor ? ' (superviseur requis)' : ''}
+          </Text>
           <View style={styles.transitionsRow}>
             {availableTransitions.map((s) => (
               <TouchableOpacity
                 key={s.key}
                 style={styles.transitionBtn}
-                onPress={() => updateStatus(s.key)}
+                onPress={() => handleStatusPress(s.key)}
                 disabled={updating}
               >
                 {updating ? (
@@ -161,6 +198,62 @@ export default function OrderDetailScreen() {
           </View>
         </>
       )}
+
+      <Modal visible={supervisorModalVisible} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Supervision requise</Text>
+            <Text style={styles.modalDescription}>
+              Cette transition nécessite l’authentification d’un superviseur.
+            </Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Numéro du superviseur"
+              placeholderTextColor="#9ca3af"
+              value={supervisorNumber}
+              onChangeText={setSupervisorNumber}
+              autoCapitalize="none"
+              keyboardType="default"
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="PIN du superviseur"
+              placeholderTextColor="#9ca3af"
+              value={supervisorPin}
+              onChangeText={setSupervisorPin}
+              secureTextEntry
+              keyboardType="numeric"
+            />
+            {supervisorError ? <Text style={styles.errorText}>{supervisorError}</Text> : null}
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalCancelButton]}
+                onPress={() => {
+                  setSupervisorModalVisible(false);
+                  setPendingStatus(null);
+                  setSupervisorNumber('');
+                  setSupervisorPin('');
+                  setSupervisorError(null);
+                }}
+                disabled={updating}
+              >
+                <Text style={styles.modalCancelText}>Annuler</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalConfirmButton]}
+                onPress={() => pendingStatus && updateStatus(pendingStatus, { number: supervisorNumber, pin: supervisorPin })}
+                disabled={updating}
+              >
+                {updating ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.modalConfirmText}>Valider</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -191,4 +284,16 @@ const styles = StyleSheet.create({
   transitionsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   transitionBtn: { backgroundColor: '#92400e', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8 },
   transitionBtnText: { color: '#fff', fontWeight: '600', fontSize: 14 },
+  modalOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(15, 23, 42, 0.45)', padding: 24 },
+  modalContent: { width: '100%', backgroundColor: '#fff', borderRadius: 16, padding: 20, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 18, elevation: 10 },
+  modalTitle: { fontSize: 18, fontWeight: '700', color: '#111827', marginBottom: 6 },
+  modalDescription: { fontSize: 14, color: '#6b7280', marginBottom: 16 },
+  input: { backgroundColor: '#f8fafc', borderRadius: 12, borderWidth: 1, borderColor: '#e5e7eb', paddingHorizontal: 14, paddingVertical: 12, marginBottom: 12, color: '#111827' },
+  errorText: { color: '#b91c1c', fontSize: 13, marginBottom: 12 },
+  modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10 },
+  modalButton: { minWidth: 100, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 10, alignItems: 'center' },
+  modalCancelButton: { backgroundColor: '#f3f4f6' },
+  modalCancelText: { color: '#374151', fontWeight: '700' },
+  modalConfirmButton: { backgroundColor: '#92400e' },
+  modalConfirmText: { color: '#fff', fontWeight: '700' },
 });

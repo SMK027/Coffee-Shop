@@ -9,11 +9,13 @@ use App\Models\LoyaltyDiscount;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderStatus;
+use App\Models\Supervisor;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 
 class OrderController extends Controller
@@ -301,7 +303,25 @@ class OrderController extends Controller
 
         $currentStatus = $order->orderStatus;
         if ($currentStatus?->is_terminal && !Auth::user()?->isSuperAdmin()) {
-            return response()->json(['message' => 'Ce statut est terminal et ne peut pas être modifié.'], 403);
+            $supervisorData = $request->only(['supervisor_number', 'supervisor_pin']);
+            $validatedSupervisor = Validator::make($supervisorData, [
+                'supervisor_number' => ['required', 'string', 'max:50'],
+                'supervisor_pin'    => ['required', 'string', 'regex:/^\d{4,6}$/'],
+            ], [
+                'supervisor_number.required' => 'Le numéro du superviseur est requis.',
+                'supervisor_pin.required'    => 'Le PIN du superviseur est requis.',
+                'supervisor_pin.regex'       => 'Le PIN du superviseur doit contenir entre 4 et 6 chiffres.',
+            ])->validate();
+
+            $supervisor = Supervisor::where('supervisor_number', $validatedSupervisor['supervisor_number'])
+                ->where('is_active', true)
+                ->first();
+
+            if (! $supervisor || ! Hash::check($validatedSupervisor['supervisor_pin'], $supervisor->password)) {
+                throw ValidationException::withMessages([
+                    'supervisor_pin' => ['Numéro de superviseur ou PIN invalide.'],
+                ]);
+            }
         }
 
         $order->update(['status' => $validated['status']]);
