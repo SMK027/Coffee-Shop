@@ -295,16 +295,32 @@ export default function OrderDetailScreen() {
       )}
 
       {/* Paiements enregistrés */}
-      {(order.payments ?? []).length > 0 && (
+      {((order.payments ?? []).length > 0 || (order.refunds ?? []).length > 0) && (
         <>
           <Text style={styles.sectionTitle}>Paiements enregistrés</Text>
           <View style={styles.card}>
-            {order.payments!.map((p) => (
-              <View key={p.id} style={styles.summaryRow}>
+            {(order.payments ?? []).map((p) => (
+              <View key={`p-${p.id}`} style={styles.summaryRow}>
                 <Text style={styles.summaryLabel}>{p.method_name}</Text>
                 <Text style={styles.summaryValue}>{p.amount.toFixed(2)} €</Text>
               </View>
             ))}
+            {(order.refunds ?? []).length > 0 && (
+              <>
+                <View style={styles.refundDivider}>
+                  <Text style={styles.refundDividerText}>Remboursements</Text>
+                </View>
+                {(order.refunds ?? []).map((r) => (
+                  <View key={`r-${r.id}`} style={styles.summaryRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.summaryLabel}>{r.method_name}</Text>
+                      {r.reason ? <Text style={styles.refundReasonText}>{r.reason}</Text> : null}
+                    </View>
+                    <Text style={[styles.summaryValue, { color: '#dc2626' }]}>-{r.amount.toFixed(2)} €</Text>
+                  </View>
+                ))}
+              </>
+            )}
           </View>
         </>
       )}
@@ -559,6 +575,9 @@ const styles = StyleSheet.create({
   refundSummaryValue: { fontSize: 20, fontWeight: '700', color: '#111827' },
   refundItemsList: { maxHeight: 260, marginBottom: 16 },
   noRefundItems: { color: '#6b7280', textAlign: 'center', paddingVertical: 20 },
+  refundDivider: { marginTop: 10, marginBottom: 6, borderTopWidth: 1, borderTopColor: '#fee2e2', paddingTop: 8 },
+  refundDividerText: { fontSize: 11, fontWeight: '700', color: '#dc2626', textTransform: 'uppercase', letterSpacing: 0.5 },
+  refundReasonText: { fontSize: 11, color: '#a8a29e', fontStyle: 'italic', marginTop: 1 },
   refundFieldLabel: { fontSize: 13, fontWeight: '600', color: '#78716c', marginBottom: 6, marginTop: 4 },
   methodChip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1.5, borderColor: '#d6d3d1', backgroundColor: '#fafaf9' },
   methodChipActive: { borderColor: '#92400e', backgroundColor: '#fef3c7' },

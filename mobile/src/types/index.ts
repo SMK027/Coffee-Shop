@@ -24,6 +24,16 @@ export interface OrderPaymentLine {
   payment_method_id: number;
   method_name: string;
   amount: number;
+  is_refund: boolean;
+}
+
+export interface OrderRefundLine {
+  id: number;
+  payment_method_id: number;
+  method_name: string;
+  amount: number;
+  reason: string | null;
+  is_refund: true;
 }
 
 export interface DailyReportBreakdownRow {
@@ -119,6 +129,7 @@ export interface Order {
   handled_by: string | null;
   items?: OrderItem[];
   payments?: OrderPaymentLine[];
+  refunds?: OrderRefundLine[];
   loyalty_card?: { card_number: string; full_name: string; points: number } | null;
   loyalty_discounts?: Array<{
     id: number;

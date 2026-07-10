@@ -382,7 +382,7 @@ class OrderController extends Controller
 
         return response()->json([
             'message' => 'Remboursement enregistré avec succès.',
-            'order'   => $this->formatOrder($order->fresh()->load('items.drink', 'loyaltyCard', 'loyaltyDiscounts', 'payments.paymentMethod'), true),
+            'order'   => $this->formatOrder($order->fresh()->load('items.drink', 'loyaltyCard', 'loyaltyDiscounts', 'payments.paymentMethod', 'refunds.paymentMethod'), true),
         ]);
     }
 
@@ -618,6 +618,15 @@ class OrderController extends Controller
                 'payment_method_id' => $p->payment_method_id,
                 'method_name'       => $p->paymentMethod?->name ?? '—',
                 'amount'            => (float) $p->amount,
+                'is_refund'         => false,
+            ]);
+            $data['refunds'] = ($order->relationLoaded('refunds') ? $order->refunds : collect())->map(fn(\App\Models\OrderRefund $r) => [
+                'id'                => $r->id,
+                'payment_method_id' => $r->payment_method_id,
+                'method_name'       => $r->paymentMethod?->name ?? '—',
+                'amount'            => (float) $r->amount,
+                'reason'            => $r->reason,
+                'is_refund'         => true,
             ]);
         }
 
