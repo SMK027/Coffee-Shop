@@ -3,11 +3,17 @@
         <a href="{{ route('employee.orders.show', $order) }}" class="text-stone-500 hover:text-stone-700 text-sm">← Retour à la commande</a>
     </x-slot>
 
+@php
+    $initialRows = $order->payments->isNotEmpty()
+        ? $order->payments->map(function ($p) {
+            return ['method_id' => $p->payment_method_id, 'amount' => number_format($p->amount, 2, '.', '')];
+          })->values()->toArray()
+        : [['method_id' => '', 'amount' => '']];
+@endphp
+
     <div class="max-w-2xl space-y-6"
          x-data="{
-            rows: @json($order->payments->isNotEmpty()
-                ? $order->payments->map(fn($p) => ['method_id' => $p->payment_method_id, 'amount' => number_format($p->amount, 2, '.', '')])->values()->toArray()
-                : [['method_id' => '', 'amount' => '']]),
+            rows: @json($initialRows),
             totalOrder: {{ (float) $order->total_amount }},
             get totalPaid() { return this.rows.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0); },
             get remaining() { return Math.max(0, this.totalOrder - this.totalPaid).toFixed(2); },
