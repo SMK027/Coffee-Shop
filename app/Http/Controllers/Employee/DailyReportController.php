@@ -37,11 +37,6 @@ class DailyReportController extends Controller
             ->where('report_date', $date)
             ->first();
 
-        if ($existing) {
-            return redirect()->route('employee.daily-reports.show', $existing)
-                ->with('info', 'Un récapitulatif a déjà été généré pour cette journée. Voici le récapitulatif existant.');
-        }
-
         // Calcul des encaissements
         $paymentsRaw = OrderPayment::query()
             ->join('orders', 'order_payments.order_id', '=', 'orders.id')
@@ -76,7 +71,7 @@ class DailyReportController extends Controller
         $refundBreakdown = $refundsRaw->map(fn ($r) => ['method_id' => $r->method_id, 'method_name' => $r->method_name, 'total' => round($r->total, 2)])->toArray();
 
         return view('employee.daily-reports.create', compact(
-            'date', 'totalCollected', 'totalRefunded', 'breakdown', 'refundBreakdown'
+            'date', 'totalCollected', 'totalRefunded', 'breakdown', 'refundBreakdown', 'existing'
         ));
     }
 
@@ -86,15 +81,6 @@ class DailyReportController extends Controller
 
         $request->validate(['date' => ['required', 'date']]);
         $date = $request->input('date');
-
-        // Idempotence : si déjà généré, rediriger
-        $existing = DailyReport::where('generated_by', auth()->id())
-            ->where('report_date', $date)
-            ->first();
-
-        if ($existing) {
-            return redirect()->route('employee.daily-reports.show', $existing);
-        }
 
         // Recalcul des données
         $paymentsRaw = OrderPayment::query()
@@ -122,17 +108,30 @@ class DailyReportController extends Controller
             ->groupBy('payment_methods.id', 'payment_methods.name')
             ->get();
 
-        $report = DailyReport::create([
+        $reportData = [
             'report_date'      => $date,
             'generated_by'     => auth()->id(),
             'total_collected'  => round($paymentsRaw->sum('total'), 2),
             'total_refunded'   => round($refundsRaw->sum('total'), 2),
             'breakdown'        => $paymentsRaw->map(fn ($r) => ['method_id' => $r->method_id, 'method_name' => $r->method_name, 'total' => round($r->total, 2)])->toArray(),
             'refund_breakdown' => $refundsRaw->map(fn ($r) => ['method_id' => $r->method_id, 'method_name' => $r->method_name, 'total' => round($r->total, 2)])->toArray(),
-        ]);
+        ];
+
+        $existing = DailyReport::where('generated_by', auth()->id())
+            ->where('report_date', $date)
+            ->first();
+
+        if ($existing) {
+            $existing->update($reportData);
+            $report = $existing;
+        } else {
+            $report = DailyReport::create($reportData);
+        }
+
+        $message = $existing ? 'Récapitulatif mis à jour avec succès.' : 'Récapitulatif généré avec succès.';
 
         return redirect()->route('employee.daily-reports.show', $report)
-            ->with('success', 'Récapitulatif généré avec succès.');
+            ->with('success', $message);
     }
 
     public function show(DailyReport $dailyReport)
