@@ -2,6 +2,11 @@
     <x-slot name="headerActions">
         <div class="flex items-center gap-3">
             @if(auth()->user()->isAdmin())
+            <a href="{{ route('employee.orders.payment', $order) }}"
+               class="flex items-center gap-1.5 bg-green-50 hover:bg-green-100 border border-green-200 text-green-700 text-sm font-medium px-3 py-1.5 rounded-lg transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+                Paiement
+            </a>
             <a href="{{ route('employee.orders.refund', $order) }}"
                class="flex items-center gap-1.5 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 text-sm font-medium px-3 py-1.5 rounded-lg transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
@@ -84,6 +89,32 @@
 
         {{-- Statut et actions --}}
         <div class="space-y-4 sm:space-y-6">
+
+            {{-- Paiements enregistrés --}}
+            @if($order->payments->isNotEmpty() || $order->refunds->isNotEmpty())
+            <div class="bg-white rounded-xl shadow-sm border border-stone-100 p-4 sm:p-6">
+                <h2 class="font-semibold text-stone-800 mb-4">Paiements</h2>
+                <div class="space-y-1.5 text-sm">
+                    @foreach($order->payments as $payment)
+                    <div class="flex justify-between">
+                        <span class="text-stone-600">{{ $payment->paymentMethod->name }}</span>
+                        <span class="font-medium text-stone-800">{{ number_format($payment->amount, 2, ',', ' ') }} €</span>
+                    </div>
+                    @endforeach
+                    @if($order->refunds->isNotEmpty())
+                        <div class="pt-2 mt-2 border-t border-stone-100 space-y-1.5">
+                            <p class="text-xs font-semibold text-red-700 uppercase tracking-wide">Remboursements</p>
+                            @foreach($order->refunds as $refund)
+                            <div class="flex justify-between">
+                                <span class="text-stone-600">{{ $refund->paymentMethod->name }}</span>
+                                <span class="font-medium text-red-600">-{{ number_format($refund->amount, 2, ',', ' ') }} €</span>
+                            </div>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
+            </div>
+            @endif
             <div class="bg-white rounded-xl shadow-sm border border-stone-100 p-4 sm:p-6">
                 <h2 class="font-semibold text-stone-800 mb-4">Informations</h2>
                 <dl class="space-y-3 text-sm">

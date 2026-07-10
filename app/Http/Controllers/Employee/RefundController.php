@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\LoyaltyPointAdjustment;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\OrderRefund;
+use App\Models\PaymentMethod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -18,7 +20,9 @@ class RefundController extends Controller
     {
         abort_unless(auth()->user()->isAdmin(), 403);
 
-        $order->load('items.drink', 'loyaltyCard');
+        $order->load('items.drink', 'loyaltyCard', 'payments.paymentMethod');
+
+        $paymentMethods = PaymentMethod::active()->orderBy('sort_order')->get();
 
         // Seuls les articles non-remboursement et qui ont encore un solde positif
         $refundableItems = $order->items
@@ -34,7 +38,7 @@ class RefundController extends Controller
             })
             ->values();
 
-        return view('employee.orders.refund', compact('order', 'refundableItems'));
+        return view('employee.orders.refund', compact('order', 'refundableItems', 'paymentMethods'));
     }
 
     /**
@@ -51,18 +55,29 @@ class RefundController extends Controller
 
         $order->load('items.drink', 'loyaltyCard');
 
+        $request->validate([
+            'payment_method_id' => ['required', 'integer', 'exists:payment_methods,id'],
+            'refund_reason'     => ['nullable', 'string', 'max:255'],
+        ]);
+
+        // Vérifier que le moyen de paiement est actif
+        $paymentMethod = PaymentMethod::active()->find($request->input('payment_method_id'));
+        if (! $paymentMethod) {
+            return back()->withErrors(['payment_method_id' => 'Le moyen de paiement sélectionné est inactif ou introuvable.'])->withInput();
+        }
+
         $isTotalRefund = $request->boolean('total_refund');
 
         if ($isTotalRefund) {
-            $this->applyTotalRefund($order);
+            $this->applyTotalRefund($order, $paymentMethod->id, $request->input('refund_reason'));
         } else {
             $request->validate([
-                'items'          => ['required', 'array', 'min:1'],
+                'items'           => ['required', 'array', 'min:1'],
                 'items.*.item_id' => ['required', 'integer', 'exists:order_items,id'],
                 'items.*.qty'     => ['required', 'integer', 'min:1'],
             ]);
 
-            $this->applyPartialRefund($order, $request->input('items', []));
+            $this->applyPartialRefund($order, $request->input('items', []), $paymentMethod->id, $request->input('refund_reason'));
         }
 
         return redirect()
@@ -70,9 +85,9 @@ class RefundController extends Controller
             ->with('success', 'Remboursement enregistré avec succès.');
     }
 
-    private function applyTotalRefund(Order $order): void
+    private function applyTotalRefund(Order $order, int $paymentMethodId, ?string $reason): void
     {
-        DB::transaction(function () use ($order) {
+        DB::transaction(function () use ($order, $paymentMethodId, $reason) {
             // Montant déjà remboursé
             $alreadyRefunded = (float) $order->refunded_amount;
             $remaining       = round((float) $order->total_amount - $alreadyRefunded, 2);
@@ -89,6 +104,14 @@ class RefundController extends Controller
                 'unit_price'   => -$remaining,
                 'quantity'     => 1,
                 'is_refund'    => true,
+            ]);
+
+            OrderRefund::create([
+                'order_id'          => $order->id,
+                'payment_method_id' => $paymentMethodId,
+                'amount'            => $remaining,
+                'reason'            => $reason,
+                'created_by'        => auth()->id(),
             ]);
 
             $order->increment('refunded_amount', $remaining);
@@ -117,9 +140,9 @@ class RefundController extends Controller
         });
     }
 
-    private function applyPartialRefund(Order $order, array $items): void
+    private function applyPartialRefund(Order $order, array $items, int $paymentMethodId, ?string $reason): void
     {
-        DB::transaction(function () use ($order, $items) {
+        DB::transaction(function () use ($order, $items, $paymentMethodId, $reason) {
             $totalRefundAmount = 0;
             $totalPointsToDebit = 0;
 
@@ -167,6 +190,14 @@ class RefundController extends Controller
             }
 
             if ($totalRefundAmount > 0) {
+                OrderRefund::create([
+                    'order_id'          => $order->id,
+                    'payment_method_id' => $paymentMethodId,
+                    'amount'            => round($totalRefundAmount, 2),
+                    'reason'            => $reason,
+                    'created_by'        => auth()->id(),
+                ]);
+
                 $order->increment('refunded_amount', $totalRefundAmount);
             }
 

@@ -51,6 +51,16 @@ class Order extends Model
         return $this->hasMany(OrderItem::class);
     }
 
+    public function payments(): HasMany
+    {
+        return $this->hasMany(OrderPayment::class);
+    }
+
+    public function refunds(): HasMany
+    {
+        return $this->hasMany(OrderRefund::class);
+    }
+
     public function handler(): BelongsTo
     {
         return $this->belongsTo(User::class, 'handled_by');

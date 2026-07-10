@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             DrinkSeeder::class,
             TestimonialSeeder::class,
             SettingSeeder::class,
+            PaymentMethodSeeder::class,
         ]);
     }
 }

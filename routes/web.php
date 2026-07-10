@@ -17,6 +17,9 @@ use App\Http\Controllers\Employee\UserController;
 use App\Http\Controllers\Employee\LoyaltyController as EmployeeLoyaltyController;
 use App\Http\Controllers\Employee\LoyaltyDiscountController;
 use App\Http\Controllers\Employee\OrderStatusController;
+use App\Http\Controllers\Employee\OrderPaymentController;
+use App\Http\Controllers\Employee\PaymentMethodController;
+use App\Http\Controllers\Employee\DailyReportController;
 use App\Http\Controllers\Auth\EmployeePasswordResetController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
@@ -79,6 +82,24 @@ Route::prefix('espace-employe')->name('employee.')->middleware(['auth', 'employe
     // Remboursements (super admin uniquement)
     Route::get('/commandes/{order}/remboursement', [RefundController::class, 'create'])->name('orders.refund');
     Route::post('/commandes/{order}/remboursement', [RefundController::class, 'store'])->name('orders.refund.store');
+
+    // Paiements d'une commande
+    Route::get('/commandes/{order}/paiement', [OrderPaymentController::class, 'create'])->name('orders.payment');
+    Route::post('/commandes/{order}/paiement', [OrderPaymentController::class, 'store'])->name('orders.payment.store');
+
+    // Moyens de paiement (CRUD avec validation superviseur)
+    Route::get('/moyens-de-paiement', [PaymentMethodController::class, 'index'])->name('payment-methods.index');
+    Route::get('/moyens-de-paiement/nouveau', [PaymentMethodController::class, 'create'])->name('payment-methods.create');
+    Route::post('/moyens-de-paiement', [PaymentMethodController::class, 'store'])->name('payment-methods.store');
+    Route::get('/moyens-de-paiement/{paymentMethod}/modifier', [PaymentMethodController::class, 'edit'])->name('payment-methods.edit');
+    Route::put('/moyens-de-paiement/{paymentMethod}', [PaymentMethodController::class, 'update'])->name('payment-methods.update');
+    Route::patch('/moyens-de-paiement/{paymentMethod}/activation', [PaymentMethodController::class, 'toggleActive'])->name('payment-methods.toggle');
+
+    // Récapitulatifs journaliers
+    Route::get('/recapitulatifs', [DailyReportController::class, 'index'])->name('daily-reports.index');
+    Route::get('/recapitulatifs/nouveau', [DailyReportController::class, 'create'])->name('daily-reports.create');
+    Route::post('/recapitulatifs', [DailyReportController::class, 'store'])->name('daily-reports.store');
+    Route::get('/recapitulatifs/{dailyReport}', [DailyReportController::class, 'show'])->name('daily-reports.show');
 
     // Gestion du menu
     Route::get('/boissons', [DrinkController::class, 'index'])->name('drinks.index');

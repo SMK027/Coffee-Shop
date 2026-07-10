@@ -108,6 +108,26 @@
                     @endif
                 </div>
 
+                {{-- Moyen de paiement du remboursement --}}
+                <div class="mt-4">
+                    <label for="payment_method_id" class="block text-sm font-medium text-stone-700 mb-1">Moyen de paiement du remboursement <span class="text-red-500">*</span></label>
+                    <select name="payment_method_id" id="payment_method_id" required
+                            class="w-full border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
+                        <option value="">— Choisir —</option>
+                        @foreach($paymentMethods as $method)
+                            <option value="{{ $method->id }}">{{ $method->name }}</option>
+                        @endforeach
+                    </select>
+                    @error('payment_method_id')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                </div>
+
+                <div class="mt-3">
+                    <label for="refund_reason" class="block text-sm font-medium text-stone-700 mb-1">Motif (optionnel)</label>
+                    <input type="text" name="refund_reason" id="refund_reason" value="{{ old('refund_reason') }}"
+                           maxlength="255"
+                           class="w-full border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
+                </div>
+
                 @unless(auth()->user()->isSuperAdmin())
                     @include('employee.shared.supervisor-auth-fields')
                 @endunless
@@ -145,6 +165,25 @@
                   onsubmit="return confirm('Confirmer le remboursement total de {{ number_format($remainingAmount, 2, ',', ' ') }} € ?')">
                 @csrf
                 <input type="hidden" name="total_refund" value="1">
+
+                <div class="mb-4">
+                    <label for="payment_method_id_total" class="block text-sm font-medium text-red-800 mb-1">Moyen de paiement du remboursement <span class="text-red-500">*</span></label>
+                    <select name="payment_method_id" id="payment_method_id_total" required
+                            class="w-full border border-red-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-red-400 focus:border-red-400 outline-none">
+                        <option value="">— Choisir —</option>
+                        @foreach($paymentMethods as $method)
+                            <option value="{{ $method->id }}">{{ $method->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="mb-4">
+                    <label for="refund_reason_total" class="block text-sm font-medium text-red-800 mb-1">Motif (optionnel)</label>
+                    <input type="text" name="refund_reason" id="refund_reason_total" value="{{ old('refund_reason') }}"
+                           maxlength="255"
+                           class="w-full border border-red-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-red-400 focus:border-red-400 outline-none">
+                </div>
+
                 @unless(auth()->user()->isSuperAdmin())
                     @include('employee.shared.supervisor-auth-fields')
                 @endunless
