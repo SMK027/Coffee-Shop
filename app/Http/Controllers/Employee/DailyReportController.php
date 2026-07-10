@@ -48,6 +48,7 @@ class DailyReportController extends Controller
             ->join('payment_methods', 'order_payments.payment_method_id', '=', 'payment_methods.id')
             ->whereDate('orders.completed_at', $date)
             ->where('orders.status', 'completed')
+            ->where('orders.handled_by', auth()->id())
             ->select(
                 'payment_methods.id as method_id',
                 'payment_methods.name as method_name',
@@ -61,6 +62,7 @@ class DailyReportController extends Controller
             ->join('orders', 'order_refunds.order_id', '=', 'orders.id')
             ->join('payment_methods', 'order_refunds.payment_method_id', '=', 'payment_methods.id')
             ->whereDate('order_refunds.created_at', $date)
+            ->where('orders.handled_by', auth()->id())
             ->select(
                 'payment_methods.id as method_id',
                 'payment_methods.name as method_name',
@@ -93,6 +95,7 @@ class DailyReportController extends Controller
             ->join('payment_methods', 'order_payments.payment_method_id', '=', 'payment_methods.id')
             ->whereDate('orders.completed_at', $date)
             ->where('orders.status', 'completed')
+            ->where('orders.handled_by', auth()->id())
             ->select(
                 'payment_methods.id as method_id',
                 'payment_methods.name as method_name',
@@ -105,6 +108,7 @@ class DailyReportController extends Controller
             ->join('orders', 'order_refunds.order_id', '=', 'orders.id')
             ->join('payment_methods', 'order_refunds.payment_method_id', '=', 'payment_methods.id')
             ->whereDate('order_refunds.created_at', $date)
+            ->where('orders.handled_by', auth()->id())
             ->select(
                 'payment_methods.id as method_id',
                 'payment_methods.name as method_name',
