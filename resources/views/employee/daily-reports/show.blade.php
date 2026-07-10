@@ -1,6 +1,8 @@
 <x-employee-layout title="Récapitulatif — {{ $dailyReport->report_date->translatedFormat('d F Y') }}">
     <x-slot name="headerActions">
-        <a href="{{ route('employee.daily-reports.index') }}" class="text-stone-500 hover:text-stone-700 text-sm">← Mes récapitulatifs</a>
+        <a href="{{ route('employee.daily-reports.index') }}" class="text-stone-500 hover:text-stone-700 text-sm">
+            ← {{ auth()->user()->isSuperAdmin() && $dailyReport->generated_by !== auth()->id() ? 'Tous les récapitulatifs' : 'Mes récapitulatifs' }}
+        </a>
     </x-slot>
 
     <div class="max-w-2xl space-y-6">

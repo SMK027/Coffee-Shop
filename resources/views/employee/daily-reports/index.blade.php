@@ -21,6 +21,9 @@
                     <thead class="bg-stone-50 border-b border-stone-100">
                         <tr>
                             <th class="px-5 py-3 text-left font-medium text-stone-600">Date</th>
+                            @if($isSuperAdmin)
+                                <th class="px-5 py-3 text-left font-medium text-stone-600">Généré par</th>
+                            @endif
                             <th class="px-5 py-3 text-right font-medium text-stone-600">Encaissé</th>
                             <th class="px-5 py-3 text-right font-medium text-stone-600">Remboursé</th>
                             <th class="px-5 py-3 text-right font-medium text-stone-600">Net</th>
@@ -33,6 +36,9 @@
                             <td class="px-5 py-3 font-medium text-stone-800">
                                 {{ $report->report_date->translatedFormat('d F Y') }}
                             </td>
+                            @if($isSuperAdmin)
+                                <td class="px-5 py-3 text-stone-600">{{ $report->generator->name }}</td>
+                            @endif
                             <td class="px-5 py-3 text-right text-green-700 font-medium">
                                 {{ number_format($report->total_collected, 2, ',', ' ') }} €
                             </td>
@@ -59,7 +65,12 @@
                 @foreach($reports as $report)
                 <div class="px-4 py-4">
                     <div class="flex items-start justify-between mb-2">
-                        <span class="font-medium text-stone-800">{{ $report->report_date->translatedFormat('d F Y') }}</span>
+                        <div>
+                            <span class="font-medium text-stone-800">{{ $report->report_date->translatedFormat('d F Y') }}</span>
+                            @if($isSuperAdmin)
+                                <p class="text-xs text-stone-400 mt-0.5">{{ $report->generator->name }}</p>
+                            @endif
+                        </div>
                         <a href="{{ route('employee.daily-reports.show', $report) }}"
                            class="text-amber-700 text-xs font-medium">Détail</a>
                     </div>

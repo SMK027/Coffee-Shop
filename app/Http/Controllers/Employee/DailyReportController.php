@@ -18,12 +18,17 @@ class DailyReportController extends Controller
     {
         abort_unless(auth()->user()->isAdmin(), 403);
 
-        $reports = DailyReport::where('generated_by', auth()->id())
-            ->with('generator')
-            ->orderByDesc('report_date')
-            ->paginate(20);
+        $isSuperAdmin = auth()->user()->isSuperAdmin();
 
-        return view('employee.daily-reports.index', compact('reports'));
+        $query = DailyReport::with('generator')->orderByDesc('report_date');
+
+        if (! $isSuperAdmin) {
+            $query->where('generated_by', auth()->id());
+        }
+
+        $reports = $query->paginate(20);
+
+        return view('employee.daily-reports.index', compact('reports', 'isSuperAdmin'));
     }
 
     public function create(Request $request)
@@ -137,7 +142,12 @@ class DailyReportController extends Controller
     public function show(DailyReport $dailyReport)
     {
         abort_unless(auth()->user()->isAdmin(), 403);
-        abort_unless($dailyReport->generated_by === auth()->id(), 403);
+
+        // Seul le générateur ou un super admin peut consulter un rapport
+        abort_unless(
+            $dailyReport->generated_by === auth()->id() || auth()->user()->isSuperAdmin(),
+            403
+        );
 
         return view('employee.daily-reports.show', compact('dailyReport'));
     }
