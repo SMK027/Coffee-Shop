@@ -11,15 +11,20 @@
         : [['method_id' => '', 'amount' => '']];
 @endphp
 
-    <div class="max-w-2xl space-y-6"
-         x-data="{
-            rows: @json($initialRows),
+<script>
+    function orderPaymentForm() {
+        return {
+            rows: {!! json_encode($initialRows) !!},
             totalOrder: {{ (float) $order->total_amount }},
-            get totalPaid() { return this.rows.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0); },
+            get totalPaid() { return this.rows.reduce(function(s, r) { return s + (parseFloat(r.amount) || 0); }, 0); },
             get remaining() { return Math.max(0, this.totalOrder - this.totalPaid).toFixed(2); },
             addRow() { this.rows.push({ method_id: '', amount: '' }); },
             removeRow(i) { if (this.rows.length > 1) this.rows.splice(i, 1); }
-         }">
+        };
+    }
+</script>
+
+    <div class="max-w-2xl space-y-6" x-data="orderPaymentForm()">
 
         {{-- Récap commande --}}
         <div class="bg-white rounded-xl shadow-sm border border-stone-100 p-5">
