@@ -14,6 +14,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { Order, OrderStatus } from '../types';
+import { PaymentMethod } from '../types';
 
 export default function OrderDetailScreen() {
   const route = useRoute<any>();
@@ -38,11 +39,15 @@ export default function OrderDetailScreen() {
   const [refundError, setRefundError] = useState<string | null>(null);
   const [refundSupervisorNumber, setRefundSupervisorNumber] = useState('');
   const [refundSupervisorPin, setRefundSupervisorPin] = useState('');
+  const [refundPaymentMethodId, setRefundPaymentMethodId] = useState<string>('');
+  const [refundReason, setRefundReason] = useState('');
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
 
   useEffect(() => {
     Promise.all([
       api.get(`/orders/${orderId}`).then(({ data }) => setOrder(data.order)),
       api.get('/orders/statuses').then(({ data }) => setStatuses(data.statuses)),
+      api.get('/payment-methods').then(({ data }) => setPaymentMethods(data.payment_methods)),
     ]).finally(() => setLoading(false));
   }, [orderId]);
 
@@ -106,7 +111,11 @@ export default function OrderDetailScreen() {
   const totalRefundableAmount = Math.max(0, (order?.total_amount ?? 0) - (order?.refunded_amount ?? 0));
 
   const refundPayload = () => {
-    const payload: Record<string, unknown> = { total_refund: refundMode === 'total' };
+    const payload: Record<string, unknown> = {
+      total_refund: refundMode === 'total',
+      payment_method_id: parseInt(refundPaymentMethodId, 10),
+      refund_reason: refundReason || undefined,
+    };
 
     if (refundMode === 'partial') {
       payload.items = refundableItems
@@ -123,6 +132,10 @@ export default function OrderDetailScreen() {
   };
 
   const confirmRefund = async () => {
+    if (!refundPaymentMethodId) {
+      setRefundError('Veuillez sélectionner un moyen de paiement pour le remboursement.');
+      return;
+    }
     setUpdating(true);
     setRefundError(null);
 
@@ -133,6 +146,8 @@ export default function OrderDetailScreen() {
       setRefundSelection({});
       setRefundSupervisorNumber('');
       setRefundSupervisorPin('');
+      setRefundPaymentMethodId('');
+      setRefundReason('');
     } catch (error: any) {
       setRefundError(error?.response?.data?.message || 'Impossible de procéder au remboursement.');
     } finally {
@@ -374,6 +389,39 @@ export default function OrderDetailScreen() {
                 />
               </>
             )}
+            {/* Moyen de paiement du remboursement */}
+            <Text style={styles.refundFieldLabel}>Moyen de paiement *</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
+              <View style={{ flexDirection: 'row', gap: 8, paddingBottom: 4 }}>
+                {paymentMethods.map((m) => (
+                  <TouchableOpacity
+                    key={m.id}
+                    style={[
+                      styles.methodChip,
+                      refundPaymentMethodId === String(m.id) && styles.methodChipActive,
+                    ]}
+                    onPress={() => setRefundPaymentMethodId(String(m.id))}
+                  >
+                    <Text style={[
+                      styles.methodChipText,
+                      refundPaymentMethodId === String(m.id) && styles.methodChipTextActive,
+                    ]}>
+                      {m.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </ScrollView>
+
+            {/* Motif optionnel */}
+            <TextInput
+              style={styles.input}
+              placeholder="Motif du remboursement (optionnel)"
+              placeholderTextColor="#9ca3af"
+              value={refundReason}
+              onChangeText={setRefundReason}
+            />
+
             {refundError ? <Text style={styles.errorText}>{refundError}</Text> : null}
             <View style={styles.modalActions}>
               <TouchableOpacity
@@ -383,6 +431,8 @@ export default function OrderDetailScreen() {
                   setRefundSelection({});
                   setRefundSupervisorNumber('');
                   setRefundSupervisorPin('');
+                  setRefundPaymentMethodId('');
+                  setRefundReason('');
                   setRefundError(null);
                 }}
                 disabled={updating}
@@ -509,6 +559,11 @@ const styles = StyleSheet.create({
   refundSummaryValue: { fontSize: 20, fontWeight: '700', color: '#111827' },
   refundItemsList: { maxHeight: 260, marginBottom: 16 },
   noRefundItems: { color: '#6b7280', textAlign: 'center', paddingVertical: 20 },
+  refundFieldLabel: { fontSize: 13, fontWeight: '600', color: '#78716c', marginBottom: 6, marginTop: 4 },
+  methodChip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1.5, borderColor: '#d6d3d1', backgroundColor: '#fafaf9' },
+  methodChipActive: { borderColor: '#92400e', backgroundColor: '#fef3c7' },
+  methodChipText: { fontSize: 13, color: '#57534e' },
+  methodChipTextActive: { color: '#92400e', fontWeight: '700' },
   refundItemRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#e5e7eb' },
   refundItemInfo: { flex: 1, marginRight: 12 },
   refundItemLabel: { fontSize: 14, fontWeight: '700', color: '#111827' },
