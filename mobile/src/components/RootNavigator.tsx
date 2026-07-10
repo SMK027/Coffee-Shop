@@ -8,14 +8,18 @@ import LoginScreen from '../screens/LoginScreen';
 import MenuScreen from '../screens/MenuScreen';
 import OrdersScreen from '../screens/OrdersScreen';
 import OrderDetailScreen from '../screens/OrderDetailScreen';
+import OrderPaymentScreen from '../screens/OrderPaymentScreen';
 import CreateOrderScreen from '../screens/CreateOrderScreen';
 import LoyaltyCardsScreen from '../screens/LoyaltyCardsScreen';
 import LoyaltyCardDetailScreen from '../screens/LoyaltyCardDetailScreen';
+import DailyReportsScreen from '../screens/DailyReportsScreen';
+import DailyReportDetailScreen from '../screens/DailyReportDetailScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 
 const Tab = createBottomTabNavigator();
 const OrderStack = createNativeStackNavigator();
 const LoyaltyStack = createNativeStackNavigator();
+const ReportsStack = createNativeStackNavigator();
 
 function OrdersStack() {
   return (
@@ -29,6 +33,7 @@ function OrdersStack() {
       <OrderStack.Screen name="OrdersList" component={OrdersScreen} options={{ title: 'Commandes' }} />
       <OrderStack.Screen name="OrderDetail" component={OrderDetailScreen} options={{ title: 'Détail' }} />
       <OrderStack.Screen name="CreateOrder" component={CreateOrderScreen} options={{ title: 'Nouvelle commande' }} />
+      <OrderStack.Screen name="OrderPayment" component={OrderPaymentScreen} options={{ title: 'Enregistrer le paiement' }} />
     </OrderStack.Navigator>
   );
 }
@@ -48,6 +53,21 @@ function LoyaltyStackNavigator() {
   );
 }
 
+function ReportsStackNavigator() {
+  return (
+    <ReportsStack.Navigator
+      screenOptions={{
+        headerStyle: { backgroundColor: '#78350f' },
+        headerTintColor: '#fff',
+        headerTitleStyle: { fontWeight: '700' },
+      }}
+    >
+      <ReportsStack.Screen name="DailyReportsList" component={DailyReportsScreen} options={{ title: 'Récapitulatifs' }} />
+      <ReportsStack.Screen name="DailyReportDetail" component={DailyReportDetailScreen} options={{ title: 'Détail du récapitulatif' }} />
+    </ReportsStack.Navigator>
+  );
+}
+
 function LogoutButton({ onPress }: { onPress: () => void }) {
   return (
     <TouchableOpacity onPress={onPress} style={{ marginRight: 14 }}>
@@ -58,6 +78,7 @@ function LogoutButton({ onPress }: { onPress: () => void }) {
 
 function AppTabs() {
   const { logout, user } = useAuth();
+  const isAdmin = user?.global_role === 'admin' || user?.global_role === 'superadmin';
 
   return (
     <Tab.Navigator
@@ -75,6 +96,7 @@ function AppTabs() {
             Orders: '📋',
             Menu: '☕',
             LoyaltyCards: '🎁',
+            Reports: '📊',
             Profile: '👤',
           };
           return <Text style={{ fontSize: focused ? 22 : 18 }}>{icons[route.name] ?? '•'}</Text>;
@@ -84,6 +106,9 @@ function AppTabs() {
       <Tab.Screen name="Orders" component={OrdersStack} options={{ title: 'Commandes', headerShown: false }} />
       <Tab.Screen name="Menu" component={MenuScreen} options={{ title: 'Menu' }} />
       <Tab.Screen name="LoyaltyCards" component={LoyaltyStackNavigator} options={{ title: 'Fidélité', headerShown: false }} />
+      {isAdmin && (
+        <Tab.Screen name="Reports" component={ReportsStackNavigator} options={{ title: 'Rapports', headerShown: false }} />
+      )}
       <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: 'Profil' }} />
     </Tab.Navigator>
   );

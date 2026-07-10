@@ -9,7 +9,9 @@ use App\Models\LoyaltyDiscount;
 use App\Models\LoyaltyPointAdjustment;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\OrderPayment;
 use App\Models\OrderStatus;
+use App\Models\PaymentMethod;
 use App\Models\Supervisor;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -66,7 +68,7 @@ class OrderController extends Controller
      */
     public function show(Order $order): JsonResponse
     {
-        $order->load('items.drink', 'handler', 'loyaltyCard', 'loyaltyDiscounts');
+        $order->load('items.drink', 'handler', 'loyaltyCard', 'loyaltyDiscounts', 'payments.paymentMethod', 'refunds.paymentMethod');
         return response()->json(['order' => $this->formatOrder($order, true)]);
     }
 
@@ -482,6 +484,44 @@ class OrderController extends Controller
     }
 
     /**
+     * Enregistre les lignes de paiement pour une commande.
+     */
+    public function storePayments(Request $request, Order $order): JsonResponse
+    {
+        abort_unless(Auth::user()?->isAdmin(), 403);
+
+        $request->validate([
+            'payments'                        => ['required', 'array', 'min:1'],
+            'payments.*.payment_method_id'    => ['required', 'integer', 'exists:payment_methods,id'],
+            'payments.*.amount'               => ['required', 'numeric', 'min:0.01'],
+        ]);
+
+        $methodIds = collect($request->input('payments'))->pluck('payment_method_id')->unique();
+        $activeCount = PaymentMethod::active()->whereIn('id', $methodIds)->count();
+        if ($activeCount !== $methodIds->count()) {
+            throw ValidationException::withMessages(['payments' => 'Un ou plusieurs moyens de paiement sont inactifs.']);
+        }
+
+        DB::transaction(function () use ($request, $order) {
+            $order->payments()->delete();
+            foreach ($request->input('payments') as $row) {
+                OrderPayment::create([
+                    'order_id'          => $order->id,
+                    'payment_method_id' => $row['payment_method_id'],
+                    'amount'            => round((float) $row['amount'], 2),
+                ]);
+            }
+        });
+
+        $order->load('items.drink', 'loyaltyCard', 'loyaltyDiscounts', 'payments.paymentMethod');
+
+        return response()->json([
+            'message' => 'Paiements enregistrés.',
+            'order'   => $this->formatOrder($order, true),
+        ]);
+    }
+
+    /**
      * Liste les statuts disponibles.
      */
     public function statuses(): JsonResponse
@@ -539,6 +579,12 @@ class OrderController extends Controller
                 'name'            => $d->name,
                 'points_spent'    => (int) $d->pivot->points_spent,
                 'discount_amount' => (float) $d->pivot->discount_amount,
+            ]);
+            $data['payments'] = ($order->relationLoaded('payments') ? $order->payments : collect())->map(fn(OrderPayment $p) => [
+                'id'                => $p->id,
+                'payment_method_id' => $p->payment_method_id,
+                'method_name'       => $p->paymentMethod?->name ?? '—',
+                'amount'            => (float) $p->amount,
             ]);
         }
 

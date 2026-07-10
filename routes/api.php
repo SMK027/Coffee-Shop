@@ -1,10 +1,12 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\DailyReportController;
 use App\Http\Controllers\Api\DrinkController;
 use App\Http\Controllers\Api\LoyaltyCardController;
 use App\Http\Controllers\Api\LoyaltyDiscountController;
 use App\Http\Controllers\Api\OrderController;
+use App\Http\Controllers\Api\PaymentMethodController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -36,8 +38,18 @@ Route::middleware('auth:api')->group(function () {
     Route::get('/orders',          [OrderController::class, 'index']);
     Route::post('/orders',         [OrderController::class, 'store']);
     Route::get('/orders/{order}',  [OrderController::class, 'show']);
-    Route::patch('/orders/{order}/status', [OrderController::class, 'updateStatus']);
-    Route::post('/orders/{order}/refund', [OrderController::class, 'refund']);
+    Route::patch('/orders/{order}/status',   [OrderController::class, 'updateStatus']);
+    Route::post('/orders/{order}/refund',    [OrderController::class, 'refund']);
+    Route::post('/orders/{order}/payments',  [OrderController::class, 'storePayments']);
+
+    // Moyens de paiement
+    Route::get('/payment-methods', [PaymentMethodController::class, 'index']);
+
+    // Récapitulatifs journaliers
+    Route::get('/daily-reports',           [DailyReportController::class, 'index']);
+    Route::get('/daily-reports/preview',   [DailyReportController::class, 'preview']);
+    Route::post('/daily-reports',          [DailyReportController::class, 'store']);
+    Route::get('/daily-reports/{dailyReport}', [DailyReportController::class, 'show']);
 
     // Cartes de fidélité
     Route::get('/loyalty-cards',             [LoyaltyCardController::class, 'index']);

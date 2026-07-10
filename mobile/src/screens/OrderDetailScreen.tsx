@@ -260,6 +260,12 @@ export default function OrderDetailScreen() {
       {isAdmin && totalRefundableAmount > 0 && (
         <View style={styles.sectionButtonRow}>
           <TouchableOpacity
+            style={styles.paymentBtn}
+            onPress={() => navigation.navigate('OrderPayment', { orderId: order.id })}
+          >
+            <Text style={styles.paymentBtnText}>💳  Enregistrer le paiement</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
             style={styles.refundBtn}
             onPress={() => {
               setRefundMode('partial');
@@ -271,6 +277,21 @@ export default function OrderDetailScreen() {
             <Text style={styles.refundBtnText}>Remboursement</Text>
           </TouchableOpacity>
         </View>
+      )}
+
+      {/* Paiements enregistrés */}
+      {(order.payments ?? []).length > 0 && (
+        <>
+          <Text style={styles.sectionTitle}>Paiements enregistrés</Text>
+          <View style={styles.card}>
+            {order.payments!.map((p) => (
+              <View key={p.id} style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>{p.method_name}</Text>
+                <Text style={styles.summaryValue}>{p.amount.toFixed(2)} €</Text>
+              </View>
+            ))}
+          </View>
+        </>
       )}
 
       <Modal visible={refundModalVisible} animationType="slide" transparent>
@@ -469,7 +490,9 @@ const styles = StyleSheet.create({
   transitionsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   transitionBtn: { backgroundColor: '#92400e', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8 },
   transitionBtnText: { color: '#fff', fontWeight: '600', fontSize: 14 },
-  sectionButtonRow: { marginTop: 16 },
+  sectionButtonRow: { marginTop: 16, gap: 10 },
+  paymentBtn: { backgroundColor: '#16a34a', paddingHorizontal: 16, paddingVertical: 12, borderRadius: 10, alignItems: 'center', marginBottom: 8 },
+  paymentBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
   refundBtn: { backgroundColor: '#dc2626', paddingHorizontal: 16, paddingVertical: 12, borderRadius: 10, alignItems: 'center' },
   refundBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
   modalOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(15, 23, 42, 0.45)', padding: 24 },

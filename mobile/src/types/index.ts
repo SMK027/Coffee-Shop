@@ -13,6 +13,46 @@ export interface AuthResponse {
   user: User;
 }
 
+export interface PaymentMethod {
+  id: number;
+  name: string;
+  slug: string;
+}
+
+export interface OrderPaymentLine {
+  id: number;
+  payment_method_id: number;
+  method_name: string;
+  amount: number;
+}
+
+export interface DailyReportBreakdownRow {
+  method_id: number;
+  method_name: string;
+  total: number;
+}
+
+export interface DailyReport {
+  id: number;
+  report_date: string;
+  total_collected: number;
+  total_refunded: number;
+  net: number;
+  breakdown: DailyReportBreakdownRow[];
+  refund_breakdown: DailyReportBreakdownRow[];
+  generated_at: string | null;
+  updated_at: string | null;
+}
+
+export interface DailyReportPreview {
+  date: string;
+  total_collected: number;
+  total_refunded: number;
+  breakdown: DailyReportBreakdownRow[];
+  refund_breakdown: DailyReportBreakdownRow[];
+  existing: DailyReport | null;
+}
+
 export interface Drink {
   id: number;
   name: string;
@@ -78,6 +118,7 @@ export interface Order {
   completed_at: string | null;
   handled_by: string | null;
   items?: OrderItem[];
+  payments?: OrderPaymentLine[];
   loyalty_card?: { card_number: string; full_name: string; points: number } | null;
   loyalty_discounts?: Array<{
     id: number;
