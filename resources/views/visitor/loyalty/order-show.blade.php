@@ -43,14 +43,21 @@
                 @else
                     <ul class="divide-y divide-stone-50">
                         @foreach($order->items as $item)
-                            <li class="px-5 py-3 flex items-center justify-between">
+                            <li class="px-5 py-3 flex items-center justify-between {{ $item->is_refund ? 'bg-red-50' : '' }}">
                                 <div>
-                                    <p class="font-medium text-stone-800 text-sm">{{ $item->drink->name ?? 'Boisson supprimée' }}</p>
-                                    <p class="text-xs text-stone-500">{{ number_format($item->unit_price, 2, ',', ' ') }} € l'unité</p>
+                                    <p class="font-medium text-sm {{ $item->is_refund ? 'text-red-700' : 'text-stone-800' }}">
+                                        {{ $item->display_name }}
+                                        @if($item->is_refund)
+                                            <span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-red-100 text-red-600">Remboursement</span>
+                                        @elseif(!$item->drink_id)
+                                            <span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-stone-100 text-stone-500">Article libre</span>
+                                        @endif
+                                    </p>
+                                    <p class="text-xs {{ $item->is_refund ? 'text-red-500' : 'text-stone-500' }}">{{ number_format($item->unit_price, 2, ',', ' ') }} € l'unité</p>
                                 </div>
                                 <div class="text-right">
-                                    <p class="text-sm font-medium text-stone-800">x{{ $item->quantity }}</p>
-                                    <p class="text-xs text-stone-500">{{ number_format($item->subtotal, 2, ',', ' ') }} €</p>
+                                    <p class="text-sm font-medium {{ $item->is_refund ? 'text-red-700' : 'text-stone-800' }}">x{{ $item->quantity }}</p>
+                                    <p class="text-xs {{ $item->is_refund ? 'text-red-500' : 'text-stone-500' }}">{{ number_format($item->subtotal, 2, ',', ' ') }} €</p>
                                 </div>
                             </li>
                         @endforeach
