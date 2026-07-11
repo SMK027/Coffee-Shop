@@ -150,6 +150,7 @@ Route::prefix('espace-employe')->name('employee.')->middleware(['auth', 'employe
     Route::patch('/fidelite/{loyaltyCard}/avantages-salaries', [EmployeeLoyaltyController::class, 'updateEmployeeBenefits'])->name('loyalty.benefits.update');
     Route::patch('/fidelite/{loyaltyCard}/titulaire', [EmployeeLoyaltyController::class, 'updateHolder'])->name('loyalty.holder.update');
     Route::post('/fidelite/{loyaltyCard}/ajuster-points', [EmployeeLoyaltyController::class, 'adjustPoints'])->name('loyalty.points.adjust');
+    Route::delete('/fidelite/{loyaltyCard}', [EmployeeLoyaltyController::class, 'destroy'])->name('loyalty.destroy');
     Route::get('/fidelite/reductions', [LoyaltyDiscountController::class, 'index'])->name('loyalty-discounts.index');
     Route::get('/fidelite/reductions/nouvelle', [LoyaltyDiscountController::class, 'create'])->name('loyalty-discounts.create');
     Route::post('/fidelite/reductions', [LoyaltyDiscountController::class, 'store'])->name('loyalty-discounts.store');

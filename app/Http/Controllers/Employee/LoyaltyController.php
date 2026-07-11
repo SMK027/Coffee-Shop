@@ -266,4 +266,30 @@ class LoyaltyController extends Controller
 
         return back()->with('success', "Un lien de réinitialisation du code PIN a été envoyé à {$loyaltyCard->email}. Il expire dans 30 minutes.");
     }
+
+    /**
+     * Supprime définitivement une carte de fidélité.
+     * Super admin direct, ou admin avec validation superviseur.
+     * Un motif obligatoire est demandé.
+     */
+    public function destroy(Request $request, LoyaltyCard $loyaltyCard)
+    {
+        abort_unless(auth()->user()->isAdmin(), 403);
+        $this->requireSuperAdminOrSupervisor($request, 'La suppression d\'une carte nécessite la validation d\'un superviseur.');
+
+        $request->validate([
+            'reason' => ['required', 'string', 'max:500'],
+        ], [
+            'reason.required' => 'Un motif de suppression est obligatoire.',
+        ]);
+
+        $cardNumber = $loyaltyCard->card_number;
+        $holderName = $loyaltyCard->full_name;
+
+        $loyaltyCard->delete();
+
+        return redirect()
+            ->route('employee.loyalty.index')
+            ->with('success', "Carte n° {$cardNumber} ({$holderName}) supprimée définitivement.");
+    }
 }

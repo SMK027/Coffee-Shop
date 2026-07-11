@@ -1,6 +1,17 @@
 <x-employee-layout title="Carte {{ chunk_split($loyaltyCard->card_number, 4, ' ') }}" subtitle="{{ $loyaltyCard->full_name }}">
     <x-slot name="headerActions">
-        <a href="{{ route('employee.loyalty.index') }}" class="text-stone-500 hover:text-stone-700 text-sm">← Retour</a>
+        <div class="flex items-center gap-3">
+            @if(auth()->user()->isAdmin())
+            <button type="button"
+                    x-data=""
+                    @click="$dispatch('open-delete-card-modal')"
+                    class="flex items-center gap-1.5 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 text-sm font-medium px-3 py-1.5 rounded-lg transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                Supprimer la carte
+            </button>
+            @endif
+            <a href="{{ route('employee.loyalty.index') }}" class="text-stone-500 hover:text-stone-700 text-sm">← Retour</a>
+        </div>
     </x-slot>
 
     <div class="grid lg:grid-cols-3 gap-4 sm:gap-6">
@@ -380,6 +391,56 @@
         });
     })();
     </script>
+    @endif
+
+    {{-- Modal suppression de carte --}}
+    @if(auth()->user()->isAdmin())
+    <div x-data="{ open: false }"
+         @open-delete-card-modal.window="open = true"
+         x-show="open" x-cloak
+         class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6" @click.outside="open = false">
+            <h2 class="text-lg font-bold text-red-700 mb-1">Supprimer la carte de fidélité</h2>
+            <p class="text-sm text-stone-600 mb-4">
+                Carte <span class="font-mono font-semibold">{{ chunk_split($loyaltyCard->card_number, 4, ' ') }}</span>
+                &mdash; {{ $loyaltyCard->full_name }}
+            </p>
+
+            <div class="bg-red-50 border border-red-200 rounded-lg p-3 mb-4 text-xs text-red-700">
+                Cette opération est <strong>irréversible</strong>. Toutes les données liées à cette carte seront supprimées définitivement.
+            </div>
+
+            <form action="{{ route('employee.loyalty.destroy', $loyaltyCard) }}" method="POST" class="space-y-4">
+                @csrf
+                @method('DELETE')
+
+                <div>
+                    <label for="delete_reason" class="block text-sm font-medium text-stone-700 mb-1">
+                        Motif de suppression <span class="text-red-500">*</span>
+                    </label>
+                    <textarea name="reason" id="delete_reason" rows="3" required maxlength="500"
+                              placeholder="Ex : solde négatif persistant, demande du client..."
+                              class="w-full border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-red-400 focus:border-red-400 outline-none resize-none"></textarea>
+                    @error('reason')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                </div>
+
+                @unless(auth()->user()->isSuperAdmin())
+                    @include('employee.shared.supervisor-auth-fields')
+                @endunless
+
+                <div class="flex gap-3 pt-1">
+                    <button type="submit"
+                            class="flex-1 bg-red-600 hover:bg-red-500 text-white py-2.5 rounded-lg text-sm font-medium transition-colors">
+                        Confirmer la suppression
+                    </button>
+                    <button type="button" @click="open = false"
+                            class="flex-1 bg-stone-100 hover:bg-stone-200 text-stone-700 py-2.5 rounded-lg text-sm font-medium transition-colors">
+                        Annuler
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
     @endif
 
 </x-employee-layout>
