@@ -64,6 +64,44 @@
                     </ul>
                 @endif
             </div>
+
+            {{-- Paiements et remboursements --}}
+            @if($order->payments->isNotEmpty() || $order->refunds->isNotEmpty())
+            <div class="bg-white rounded-2xl shadow-sm border border-stone-100 overflow-hidden mt-5">
+                <h2 class="font-semibold text-stone-800 px-5 py-4 border-b border-stone-100">Règlement</h2>
+                <div class="px-5 py-4 space-y-2 text-sm">
+
+                    @if($order->payments->isNotEmpty())
+                        <p class="text-xs font-semibold text-stone-400 uppercase tracking-wide mb-1">Paiements</p>
+                        @foreach($order->payments as $payment)
+                            <div class="flex justify-between">
+                                <span class="text-stone-600">{{ $payment->paymentMethod->name }}</span>
+                                <span class="font-medium text-stone-800">{{ number_format($payment->amount, 2, ',', ' ') }} €</span>
+                            </div>
+                        @endforeach
+                    @endif
+
+                    @if($order->refunds->isNotEmpty())
+                        <div class="pt-3 mt-1 border-t border-stone-100">
+                            <p class="text-xs font-semibold text-stone-400 uppercase tracking-wide mb-1">Remboursements</p>
+                            @foreach($order->refunds as $refund)
+                                <div class="flex justify-between">
+                                    <div>
+                                        <span class="text-stone-600">{{ $refund->paymentMethod->name }}</span>
+                                        @if($refund->reason)
+                                            <p class="text-xs text-stone-400 italic">{{ $refund->reason }}</p>
+                                        @endif
+                                    </div>
+                                    <span class="font-medium text-red-600">-{{ number_format($refund->amount, 2, ',', ' ') }} €</span>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+
+                </div>
+            </div>
+            @endif
+
         </div>
     </section>
 

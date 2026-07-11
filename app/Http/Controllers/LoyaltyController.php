@@ -119,7 +119,7 @@ class LoyaltyController extends Controller
                 ->with('error', 'Cette commande n\'est pas accessible avec la carte actuellement consultée.');
         }
 
-        $order->load(['items.drink']);
+        $order->load(['items.drink', 'payments.paymentMethod', 'refunds.paymentMethod']);
 
         return view('visitor.loyalty.order-show', compact('order'));
     }
