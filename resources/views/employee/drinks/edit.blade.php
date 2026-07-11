@@ -4,9 +4,21 @@
     </x-slot>
 
     <div class="max-w-xl">
-        <form action="{{ route('employee.drinks.update', $drink) }}" method="POST" enctype="multipart/form-data" class="space-y-5">
+        <form action="{{ route('employee.drinks.update', $drink) }}" method="POST" enctype="multipart/form-data" class="space-y-5"
+              x-data="{ originalPrice: '{{ $drink->price }}', currentPrice: '{{ old('price', $drink->price) }}' }">
             @csrf @method('PUT')
             @include('employee.drinks._form', ['drink' => $drink])
+
+            @unless(auth()->user()->isSuperAdmin())
+            <div x-show="parseFloat(currentPrice) !== parseFloat(originalPrice)" x-cloak class="space-y-3">
+                <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
+                    <p class="font-semibold mb-1">Validation superviseur requise</p>
+                    <p class="text-xs text-amber-700">Le prix a été modifié. Un superviseur doit autoriser ce changement.</p>
+                </div>
+                @include('employee.shared.supervisor-auth-fields')
+            </div>
+            @endunless
+
             <div class="flex gap-3 pt-2">
                 <button type="submit" class="bg-amber-700 hover:bg-amber-600 text-white px-6 py-2.5 rounded-lg font-medium text-sm transition-colors">
                     Enregistrer les modifications
