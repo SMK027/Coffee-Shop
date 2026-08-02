@@ -209,6 +209,10 @@
         const isEmployee       = @json((bool) $customer['is_employee_order']);
         const EMPLOYEE_RATE    = 0.15;
         const voucherCheckUrl  = @json(route('employee.vouchers.check'));
+        const voucherCtx       = @json([
+            'loyalty_card_id' => $customer['loyalty_card_id'],
+            'customer_name'   => $customer['card_full_name'] ?? $customer['customer_name'] ?? null,
+        ]);
         let itemCount = 1;
 
         /* ── Calcul du total ──────────────────────────────────── */
@@ -318,7 +322,10 @@
                 checkBtn.disabled = true;
                 checkBtn.textContent = '…';
                 try {
-                    const res  = await fetch(voucherCheckUrl + '?code=' + encodeURIComponent(code));
+                    const params = new URLSearchParams({ code });
+                    if (voucherCtx.loyalty_card_id) params.set('loyalty_card_id', voucherCtx.loyalty_card_id);
+                    if (voucherCtx.customer_name)   params.set('customer_name', voucherCtx.customer_name);
+                    const res  = await fetch(voucherCheckUrl + '?' + params.toString());
                     const data = await res.json();
                     feedback.classList.remove('hidden');
                     if (data.valid) {

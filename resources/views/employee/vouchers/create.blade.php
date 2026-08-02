@@ -67,6 +67,72 @@
                         </p>
                     @endif
                 </div>
+
+                {{-- Restriction d'utilisation --}}
+                <div x-data="{
+                    restrictType: '{{ old('restriction_type', 'none') }}',
+                    cardName: '{{ old('restriction_type') === 'card' ? '' : '' }}',
+                    cardChecking: false,
+                    cardError: '',
+                    async checkCard() {
+                        const num = document.getElementById('restricted_card_number').value.replace(/\s/g,'');
+                        if (!num) return;
+                        this.cardChecking = true; this.cardName = ''; this.cardError = '';
+                        try {
+                            const r = await fetch(@json(route('employee.orders.loyalty-check')) + '?card_number=' + encodeURIComponent(num));
+                            const d = await r.json();
+                            if (d.found) { this.cardName = d.card.full_name; }
+                            else { this.cardError = d.message || 'Carte introuvable.'; }
+                        } catch { this.cardError = 'Erreur réseau.'; }
+                        finally { this.cardChecking = false; }
+                    }
+                }">
+                    <p class="block text-sm font-medium text-stone-700 mb-2">Restriction d'utilisation</p>
+
+                    <div class="grid grid-cols-3 gap-2 mb-3">
+                        @foreach(['none' => 'Aucune', 'card' => 'Carte fidélité', 'name' => 'Nom du client'] as $val => $lbl)
+                        <label class="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-medium cursor-pointer transition-colors"
+                               :class="restrictType === '{{ $val }}' ? 'border-amber-600 bg-amber-50 text-amber-700' : 'border-stone-200 bg-white text-stone-600 hover:bg-stone-50'">
+                            <input type="radio" name="restriction_type" value="{{ $val }}" x-model="restrictType" class="sr-only">
+                            {{ $lbl }}
+                        </label>
+                        @endforeach
+                    </div>
+                    @error('restriction_type')<p class="text-red-500 text-xs mb-2">{{ $message }}</p>@enderror
+
+                    {{-- Restriction par carte --}}
+                    <div x-show="restrictType === 'card'" x-cloak class="space-y-2">
+                        <label for="restricted_card_number" class="block text-sm text-stone-600">Numéro de carte fidélité</label>
+                        <div class="flex gap-2">
+                            <input type="text" name="restricted_card_number" id="restricted_card_number"
+                                   value="{{ old('restricted_card_number') }}"
+                                   maxlength="20"
+                                   placeholder="0000 0000 0000 0000"
+                                   @input="cardName = ''; cardError = ''"
+                                   class="flex-1 border {{ $errors->has('restricted_card_number') ? 'border-red-400 bg-red-50' : 'border-stone-300' }} rounded-lg px-4 py-2 text-sm font-mono tracking-wider focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
+                            <button type="button" @click="checkCard()"
+                                    :disabled="cardChecking"
+                                    class="flex-shrink-0 bg-stone-100 hover:bg-stone-200 disabled:opacity-50 text-stone-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                                <span x-text="cardChecking ? '…' : 'Vérifier'"></span>
+                            </button>
+                        </div>
+                        @error('restricted_card_number')<p class="text-red-500 text-xs">{{ $message }}</p>@enderror
+                        <p x-show="cardName" x-text="'✓ Titulaire : ' + cardName" class="text-xs text-green-700"></p>
+                        <p x-show="cardError" x-text="cardError" class="text-xs text-red-600"></p>
+                    </div>
+
+                    {{-- Restriction par nom --}}
+                    <div x-show="restrictType === 'name'" x-cloak>
+                        <label for="restricted_name" class="block text-sm text-stone-600 mb-1">Nom complet du client</label>
+                        <input type="text" id="restricted_name" name="restricted_name"
+                               value="{{ old('restricted_name') }}"
+                               maxlength="150"
+                               placeholder="Prénom Nom"
+                               class="w-full border {{ $errors->has('restricted_name') ? 'border-red-400 bg-red-50' : 'border-stone-300' }} rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
+                        <p class="text-xs text-stone-400 mt-1">La comparaison sera insensible à la casse.</p>
+                        @error('restricted_name')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                    </div>
+                </div>
             </div>
 
             {{-- Validation superviseur (admins seulement) --}}

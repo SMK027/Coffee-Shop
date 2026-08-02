@@ -11,6 +11,7 @@ class Voucher extends Model
     protected $fillable = [
         'code', 'amount', 'issued_by', 'issued_by_name',
         'issued_at', 'expires_at', 'is_used', 'used_at',
+        'restricted_card_id', 'restricted_name',
     ];
 
     protected $casts = [
@@ -24,6 +25,11 @@ class Voucher extends Model
     public function issuedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'issued_by');
+    }
+
+    public function restrictedCard(): BelongsTo
+    {
+        return $this->belongsTo(LoyaltyCard::class, 'restricted_card_id');
     }
 
     public function usedInOrder(): HasOne
@@ -40,6 +46,26 @@ class Voucher extends Model
     public function isExpired(): bool
     {
         return $this->expires_at->isPast();
+    }
+
+    /**
+     * Vérifie que le bon peut être utilisé par ce client.
+     * Si une restriction est définie, la commande doit correspondre.
+     */
+    public function isValidFor(?int $loyaltyCardId, ?string $customerName): bool
+    {
+        if ($this->restricted_card_id !== null) {
+            return $loyaltyCardId !== null && $loyaltyCardId === (int) $this->restricted_card_id;
+        }
+
+        if ($this->restricted_name !== null) {
+            if (empty($customerName)) {
+                return false;
+            }
+            return mb_strtolower(trim($customerName)) === mb_strtolower(trim($this->restricted_name));
+        }
+
+        return true; // Aucune restriction
     }
 
     public function scopeValid($query)

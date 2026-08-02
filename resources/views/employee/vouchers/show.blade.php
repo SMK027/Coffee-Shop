@@ -89,6 +89,24 @@
                     <span class="text-stone-500">Émis par</span>
                     <span class="font-medium text-stone-800">{{ $voucher->issued_by_name }}</span>
                 </div>
+                @if($voucher->restricted_card_id !== null || $voucher->restricted_name !== null)
+                <div class="flex justify-between items-start">
+                    <span class="text-stone-500 flex-shrink-0">Réservé à</span>
+                    <span class="font-medium text-stone-800 text-right ml-4">
+                        @if($voucher->restricted_card_id !== null)
+                            @if($voucher->restrictedCard)
+                                {{ $voucher->restrictedCard->full_name }}
+                                <span class="block font-mono text-xs text-stone-400">{{ chunk_split($voucher->restrictedCard->card_number, 4, ' ') }}</span>
+                            @else
+                                <span class="text-stone-400 italic">Carte #{{ $voucher->restricted_card_id }}</span>
+                            @endif
+                        @else
+                            {{ $voucher->restricted_name }}
+                            <span class="block text-xs text-stone-400">(par nom)</span>
+                        @endif
+                    </span>
+                </div>
+                @endif
                 <div class="flex justify-between">
                     <span class="text-stone-500">Statut</span>
                     <span class="font-semibold

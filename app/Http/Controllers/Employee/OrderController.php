@@ -430,6 +430,18 @@ class OrderController extends Controller
                     'voucher_code' => "Ce bon d'achat est invalide, expiré ou déjà utilisé.",
                 ]);
             }
+
+            // Vérification de la restriction client
+            $effectiveName = $loyaltyCard
+                ? $loyaltyCard->full_name
+                : ($customer['customer_name'] ?? null);
+
+            if (! $voucher->isValidFor($loyaltyCard?->id, $effectiveName)) {
+                return back()->withInput()->withErrors([
+                    'voucher_code' => "Ce bon d'achat est réservé à un autre client.",
+                ]);
+            }
+
             $voucherDiscount = round(min((float) $voucher->amount, $afterEmployee), 2);
         }
         $total = round(max(0.0, $afterEmployee - $voucherDiscount), 2);

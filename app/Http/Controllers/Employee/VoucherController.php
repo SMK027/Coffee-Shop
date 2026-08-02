@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Employee;
 
 use App\Http\Controllers\Controller;
+use App\Models\LoyaltyCard;
 use App\Models\Supervisor;
 use App\Models\Voucher;
 use Illuminate\Http\JsonResponse;
@@ -40,7 +41,7 @@ class VoucherController extends Controller
     {
         abort_unless(auth()->user()->isAdmin(), 403);
 
-        $voucher->load('usedInOrder');
+        $voucher->load('usedInOrder', 'restrictedCard');
 
         return view('employee.vouchers.show', compact('voucher'));
     }
@@ -57,9 +58,38 @@ class VoucherController extends Controller
         abort_unless(auth()->user()->isAdmin(), 403);
 
         $validated = $request->validate([
-            'amount'        => ['required', 'numeric', 'min:0.01', 'max:9999.99'],
-            'validity_days' => ['required', 'integer', 'min:3', 'max:31'],
+            'amount'           => ['required', 'numeric', 'min:0.01', 'max:9999.99'],
+            'validity_days'    => ['required', 'integer', 'min:3', 'max:31'],
+            'restriction_type' => ['required', 'in:none,card,name'],
         ]);
+
+        // Résolution de la restriction
+        $restrictedCardId = null;
+        $restrictedName   = null;
+
+        if ($validated['restriction_type'] === 'card') {
+            $cardNumber = str_replace(' ', '', trim((string) $request->input('restricted_card_number', '')));
+            if (empty($cardNumber)) {
+                return back()->withInput()->withErrors([
+                    'restricted_card_number' => 'Le numéro de carte est requis.',
+                ]);
+            }
+            $card = LoyaltyCard::where('card_number', $cardNumber)->first();
+            if (! $card) {
+                return back()->withInput()->withErrors([
+                    'restricted_card_number' => 'Aucune carte de fidélité ne correspond à ce numéro.',
+                ]);
+            }
+            $restrictedCardId = $card->id;
+        } elseif ($validated['restriction_type'] === 'name') {
+            $name = trim((string) $request->input('restricted_name', ''));
+            if (empty($name)) {
+                return back()->withInput()->withErrors([
+                    'restricted_name' => 'Le nom complet est requis.',
+                ]);
+            }
+            $restrictedName = $name;
+        }
 
         // Résolution du super administrateur associé au bon
         if (auth()->user()->isSuperAdmin()) {
@@ -87,12 +117,14 @@ class VoucherController extends Controller
         }
 
         $voucher = Voucher::create([
-            'code'           => Voucher::generateCode(),
-            'amount'         => round((float) $validated['amount'], 2),
-            'issued_by'      => $superadminId,
-            'issued_by_name' => $superadminName,
-            'issued_at'      => now(),
-            'expires_at'     => now()->addDays((int) $validated['validity_days']),
+            'code'               => Voucher::generateCode(),
+            'amount'             => round((float) $validated['amount'], 2),
+            'issued_by'          => $superadminId,
+            'issued_by_name'     => $superadminName,
+            'issued_at'          => now(),
+            'expires_at'         => now()->addDays((int) $validated['validity_days']),
+            'restricted_card_id' => $restrictedCardId,
+            'restricted_name'    => $restrictedName,
         ]);
 
         return redirect()
@@ -103,6 +135,7 @@ class VoucherController extends Controller
 
     /**
      * Vérifie un code bon d'achat (endpoint AJAX pour la création de commande).
+     * Paramètres optionnels : loyalty_card_id, customer_name (pour valider la restriction).
      */
     public function check(Request $request): JsonResponse
     {
@@ -115,23 +148,39 @@ class VoucherController extends Controller
         $voucher = Voucher::where('code', $code)->first();
 
         if (! $voucher) {
-            return response()->json(['valid' => false, 'message' => 'Ce code ne correspond à aucun bon d\'achat.']);
+            return response()->json(['valid' => false, 'message' => "Ce code ne correspond à aucun bon d'achat."]);
         }
 
         if ($voucher->is_used) {
-            return response()->json(['valid' => false, 'message' => 'Ce bon d\'achat a déjà été utilisé.']);
+            return response()->json(['valid' => false, 'message' => "Ce bon d'achat a déjà été utilisé."]);
         }
 
         if ($voucher->isExpired()) {
-            return response()->json(['valid' => false, 'message' => 'Ce bon d\'achat est expiré.']);
+            return response()->json(['valid' => false, 'message' => "Ce bon d'achat est expiré."]);
+        }
+
+        // Vérification de la restriction si le contexte client est fourni
+        if ($voucher->restricted_card_id !== null || $voucher->restricted_name !== null) {
+            $loyaltyCardId = $request->filled('loyalty_card_id')
+                ? (int) $request->query('loyalty_card_id')
+                : null;
+            $customerName = trim((string) $request->query('customer_name', '')) ?: null;
+
+            if (! $voucher->isValidFor($loyaltyCardId, $customerName)) {
+                return response()->json([
+                    'valid'   => false,
+                    'message' => "Ce bon d'achat est réservé à un autre client.",
+                ]);
+            }
         }
 
         return response()->json([
-            'valid'   => true,
-            'code'    => $voucher->code,
-            'amount'  => (float) $voucher->amount,
-            'expires' => $voucher->expires_at->format('d/m/Y'),
-            'message' => 'Bon d\'achat valide',
+            'valid'       => true,
+            'code'        => $voucher->code,
+            'amount'      => (float) $voucher->amount,
+            'expires'     => $voucher->expires_at->format('d/m/Y'),
+            'restricted'  => $voucher->restricted_card_id !== null || $voucher->restricted_name !== null,
+            'message'     => "Bon d'achat valide",
         ]);
     }
 }
