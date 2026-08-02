@@ -69,24 +69,7 @@
                 </div>
 
                 {{-- Restriction d'utilisation --}}
-                <div x-data="{
-                    restrictType: '{{ old('restriction_type', 'none') }}',
-                    cardName: '{{ old('restriction_type') === 'card' ? '' : '' }}',
-                    cardChecking: false,
-                    cardError: '',
-                    async checkCard() {
-                        const num = document.getElementById('restricted_card_number').value.replace(/\s/g,'');
-                        if (!num) return;
-                        this.cardChecking = true; this.cardName = ''; this.cardError = '';
-                        try {
-                            const r = await fetch(@json(route('employee.orders.loyalty-check')) + '?card_number=' + encodeURIComponent(num));
-                            const d = await r.json();
-                            if (d.found) { this.cardName = d.card.full_name; }
-                            else { this.cardError = d.message || 'Carte introuvable.'; }
-                        } catch { this.cardError = 'Erreur réseau.'; }
-                        finally { this.cardChecking = false; }
-                    }
-                }">
+                <div x-data="voucherRestriction()">
                     <p class="block text-sm font-medium text-stone-700 mb-2">Restriction d'utilisation</p>
 
                     <div class="grid grid-cols-3 gap-2 mb-3">
@@ -173,4 +156,34 @@
         updateExpiry(slider.value);
     }
 })();
+
+function voucherRestriction() {
+    const checkUrl = '{{ route('employee.orders.loyalty-check') }}';
+    return {
+        restrictType: '{{ old('restriction_type', 'none') }}',
+        cardName: '',
+        cardChecking: false,
+        cardError: '',
+        async checkCard() {
+            const num = document.getElementById('restricted_card_number').value.replace(/\s/g, '');
+            if (!num) return;
+            this.cardChecking = true;
+            this.cardName = '';
+            this.cardError = '';
+            try {
+                const r = await fetch(checkUrl + '?card_number=' + encodeURIComponent(num));
+                const d = await r.json();
+                if (d.found) {
+                    this.cardName = d.card.full_name;
+                } else {
+                    this.cardError = d.message || 'Carte introuvable.';
+                }
+            } catch {
+                this.cardError = 'Erreur réseau.';
+            } finally {
+                this.cardChecking = false;
+            }
+        },
+    };
+}
 </script>

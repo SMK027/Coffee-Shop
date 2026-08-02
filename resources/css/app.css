@@ -2,6 +2,9 @@
 @import 'tailwindcss/components';
 @import 'tailwindcss/utilities';
 
+/* Alpine.js : cache les éléments x-cloak jusqu'à l'initialisation */
+[x-cloak] { display: none !important; }
+
 @layer base {
     html {
         scroll-behavior: smooth;
