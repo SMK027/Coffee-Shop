@@ -20,6 +20,7 @@ use App\Http\Controllers\Employee\OrderStatusController;
 use App\Http\Controllers\Employee\OrderPaymentController;
 use App\Http\Controllers\Employee\PaymentMethodController;
 use App\Http\Controllers\Employee\DailyReportController;
+use App\Http\Controllers\Employee\RefundOrderController;
 use App\Http\Controllers\Auth\EmployeePasswordResetController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
@@ -82,6 +83,13 @@ Route::prefix('espace-employe')->name('employee.')->middleware(['auth', 'employe
     // Remboursements (super admin uniquement)
     Route::get('/commandes/{order}/remboursement', [RefundController::class, 'create'])->name('orders.refund');
     Route::post('/commandes/{order}/remboursement', [RefundController::class, 'store'])->name('orders.refund.store');
+
+    // Section dédiée aux remboursements (admins uniquement, action superviseur requise)
+    Route::prefix('remboursements')->name('refunds.')->group(function () {
+        Route::get('/', [RefundOrderController::class, 'index'])->name('index');
+        Route::get('/creer', [RefundOrderController::class, 'create'])->name('create');
+        Route::post('/{order}', [RefundOrderController::class, 'store'])->name('store');
+    });
 
     // Paiements d'une commande
     Route::get('/commandes/{order}/paiement', [OrderPaymentController::class, 'create'])->name('orders.payment');

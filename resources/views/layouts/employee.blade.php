@@ -68,6 +68,20 @@
                         </li>
                     @endforeach
 
+                    {{-- Remboursements : admins uniquement --}}
+                    @if(auth()->user()->isAdmin())
+                    <li>
+                        <a href="{{ route('employee.refunds.index') }}"
+                           class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium
+                                  {{ request()->routeIs('employee.refunds*') ? 'bg-amber-800 text-white' : 'text-amber-100 hover:bg-amber-800 hover:text-white' }}">
+                            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
+                            </svg>
+                            Remboursements
+                        </a>
+                    </li>
+                    @endif
+
                     {{-- Gestion des salariés : admin uniquement --}}
                     <li>
                         <a href="{{ route('employee.users.index') }}"
