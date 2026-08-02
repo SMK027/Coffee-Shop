@@ -45,10 +45,19 @@
                     @endforeach
                 </div>
                 <div class="mt-4 pt-4 border-t border-stone-100 space-y-1.5">
-                    @if($order->discount_amount > 0 || $order->loyalty_discount_amount > 0)
+                    @php
+                        $hasDiscounts = $order->discount_amount > 0
+                            || $order->loyalty_discount_amount > 0
+                            || $order->voucher_discount_amount > 0;
+                        $grossTotal = $order->total_amount
+                            + $order->discount_amount
+                            + $order->loyalty_discount_amount
+                            + $order->voucher_discount_amount;
+                    @endphp
+                    @if($hasDiscounts)
                     <div class="flex justify-between text-sm text-stone-500">
                         <span>Sous-total</span>
-                        <span>{{ number_format($order->total_amount + $order->discount_amount + $order->loyalty_discount_amount, 2, ',', ' ') }} €</span>
+                        <span>{{ number_format($grossTotal, 2, ',', ' ') }} €</span>
                     </div>
                     @if($order->loyalty_discount_amount > 0)
                     <div class="flex justify-between text-sm text-blue-700">
@@ -60,6 +69,17 @@
                     <div class="flex justify-between text-sm text-green-700">
                         <span>Réduction salarié (-15%)</span>
                         <span>-{{ number_format($order->discount_amount, 2, ',', ' ') }} €</span>
+                    </div>
+                    @endif
+                    @if($order->voucher_discount_amount > 0)
+                    <div class="flex justify-between text-sm text-purple-700">
+                        <span>
+                            Bon d'achat
+                            @if($order->voucher)
+                                <span class="font-mono text-xs ml-1">({{ $order->voucher->code }})</span>
+                            @endif
+                        </span>
+                        <span>-{{ number_format($order->voucher_discount_amount, 2, ',', ' ') }} €</span>
                     </div>
                     @endif
                     @endif

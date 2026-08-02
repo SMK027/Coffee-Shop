@@ -19,7 +19,7 @@ class OrderPaymentController extends Controller
         abort_unless(auth()->user()->isAdmin(), 403);
 
         $paymentMethods = PaymentMethod::active()->orderBy('sort_order')->get();
-        $order->load('payments.paymentMethod');
+        $order->load('payments.paymentMethod', 'voucher');
 
         $alreadyPaid = $order->payments->sum('amount');
         $remaining   = round(max(0, (float) $order->total_amount - $alreadyPaid), 2);

@@ -9,6 +9,9 @@
             return ['method_id' => $p->payment_method_id, 'amount' => number_format($p->amount, 2, '.', '')];
           })->values()->toArray()
         : [['method_id' => '', 'amount' => '']];
+
+    $voucherDiscount = (float) $order->voucher_discount_amount;
+    $grossTotal = round($order->total_amount + $order->discount_amount + $order->loyalty_discount_amount + $voucherDiscount, 2);
 @endphp
 
 <script>
@@ -29,12 +32,29 @@
         {{-- Récap commande --}}
         <div class="bg-white rounded-xl shadow-sm border border-stone-100 p-5">
             <h2 class="font-semibold text-stone-800 mb-1">Commande #{{ str_pad($order->id, 4, '0', STR_PAD_LEFT) }}</h2>
-            <p class="text-sm text-stone-600">
-                {{ $order->display_name }} —
-                <span class="font-semibold text-stone-800">{{ number_format($order->total_amount, 2, ',', ' ') }} €</span>
-            </p>
+            <div class="mt-2 space-y-1 text-sm">
+                @if($voucherDiscount > 0)
+                <div class="flex justify-between text-stone-500">
+                    <span>Sous-total articles</span>
+                    <span>{{ number_format($grossTotal, 2, ',', ' ') }} €</span>
+                </div>
+                <div class="flex justify-between text-purple-700">
+                    <span>
+                        Bon d'achat
+                        @if($order->voucher)
+                            <span class="font-mono text-xs ml-1">({{ $order->voucher->code }})</span>
+                        @endif
+                    </span>
+                    <span>-{{ number_format($voucherDiscount, 2, ',', ' ') }} €</span>
+                </div>
+                @endif
+                <div class="flex justify-between {{ $voucherDiscount > 0 ? 'font-semibold text-stone-800 border-t border-stone-100 pt-1' : 'text-stone-600' }}">
+                    <span>{{ $voucherDiscount > 0 ? 'À régler en caisse' : $order->display_name }}</span>
+                    <span class="{{ $voucherDiscount > 0 ? 'text-stone-800' : 'font-semibold text-stone-800' }}">{{ number_format($order->total_amount, 2, ',', ' ') }} €</span>
+                </div>
+            </div>
             @if($alreadyPaid > 0)
-                <p class="text-xs text-amber-700 mt-1">
+                <p class="text-xs text-amber-700 mt-2">
                     Déjà enregistré : {{ number_format($alreadyPaid, 2, ',', ' ') }} €
                     — Reste à régler : {{ number_format($remaining, 2, ',', ' ') }} €
                 </p>
@@ -87,8 +107,18 @@
 
                 {{-- Totaux --}}
                 <div class="pt-4 border-t border-stone-100 space-y-1.5 text-sm">
+                    @if($voucherDiscount > 0)
+                    <div class="flex justify-between text-stone-500">
+                        <span>Sous-total</span>
+                        <span>{{ number_format($grossTotal, 2, ',', ' ') }} €</span>
+                    </div>
+                    <div class="flex justify-between text-purple-700">
+                        <span>Bon d'achat</span>
+                        <span>-{{ number_format($voucherDiscount, 2, ',', ' ') }} €</span>
+                    </div>
+                    @endif
                     <div class="flex justify-between text-stone-600">
-                        <span>Total commande</span>
+                        <span>{{ $voucherDiscount > 0 ? 'À régler en caisse' : 'Total commande' }}</span>
                         <span>{{ number_format($order->total_amount, 2, ',', ' ') }} €</span>
                     </div>
                     <div class="flex justify-between font-semibold text-stone-800">

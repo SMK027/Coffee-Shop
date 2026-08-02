@@ -51,7 +51,7 @@ class OrderController extends Controller
 
     public function show(Order $order)
     {
-        $order->load('items.drink', 'handler', 'loyaltyCard', 'loyaltyDiscounts', 'payments.paymentMethod', 'refunds.paymentMethod');
+        $order->load('items.drink', 'handler', 'loyaltyCard', 'loyaltyDiscounts', 'payments.paymentMethod', 'refunds.paymentMethod', 'voucher');
 
         $allStatuses  = OrderStatus::orderBy('sort_order')->get();
         $statusLabels = $allStatuses->pluck('label', 'key')->all();
