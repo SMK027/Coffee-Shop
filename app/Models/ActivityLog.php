@@ -41,5 +41,4 @@ class ActivityLog extends Model
             'settings' => ['badge' => 'bg-stone-100 text-stone-600',   'dot' => 'bg-stone-400',   'label' => 'Paramètres'],
             'other'    => ['badge' => 'bg-gray-100 text-gray-600',     'dot' => 'bg-gray-400',    'label' => 'Autre'],
         ];
-    }
-}
+    }}

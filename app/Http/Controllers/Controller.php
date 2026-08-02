@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Supervisor;
+use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -37,6 +38,13 @@ abstract class Controller
         $valid = $supervisor && Hash::check($validated['supervisor_pin'], $supervisor->password);
 
         if (! $valid) {
+            ActivityLogger::log(
+                'auth.supervisor_failed',
+                'Échec de validation superviseur — numéro : ' . $validated['supervisor_number'],
+                null, null,
+                ['supervisor_number' => $validated['supervisor_number']]
+            );
+
             if ($request->expectsJson()) {
                 abort(403, $message);
             }
@@ -45,5 +53,12 @@ abstract class Controller
                 'supervisor_pin' => $message,
             ]);
         }
+
+        ActivityLogger::log(
+            'auth.supervisor',
+            'Validation superviseur #' . $supervisor->supervisor_number . ' — action : ' . $request->route()?->getName(),
+            null, null,
+            ['supervisor_number' => $supervisor->supervisor_number, 'route' => $request->route()?->getName()]
+        );
     }
 }
