@@ -6,18 +6,19 @@ use App\Models\Supervisor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 
 abstract class Controller
 {
-    protected function requireSuperAdminOrSupervisor(Request $request, string $message = 'Accès réservé aux super administrateurs.'): void
+    protected function requireSuperAdminOrSupervisor(Request $request, string $message = 'Numéro de superviseur ou PIN incorrect.'): void
     {
         if (auth()->user()->isSuperAdmin()) {
             return;
         }
 
         $payload = [
-            'supervisor_number' => $request->input('supervisor_number', $request->input('supervisor_username')),
-            'supervisor_pin'    => $request->input('supervisor_pin', $request->input('supervisor_password')),
+            'supervisor_number' => trim((string) $request->input('supervisor_number', $request->input('supervisor_username', ''))),
+            'supervisor_pin'    => trim((string) $request->input('supervisor_pin',    $request->input('supervisor_password', ''))),
         ];
 
         $validated = Validator::make($payload, [
@@ -33,8 +34,16 @@ abstract class Controller
             ->where('is_active', true)
             ->first();
 
-        if (! $supervisor || ! Hash::check($validated['supervisor_pin'], $supervisor->password)) {
-            abort(403, $message);
+        $valid = $supervisor && Hash::check($validated['supervisor_pin'], $supervisor->password);
+
+        if (! $valid) {
+            if ($request->expectsJson()) {
+                abort(403, $message);
+            }
+
+            throw ValidationException::withMessages([
+                'supervisor_pin' => $message,
+            ]);
         }
     }
 }
