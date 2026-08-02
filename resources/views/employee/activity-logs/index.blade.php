@@ -93,7 +93,12 @@
                                 <span class="font-medium text-stone-600">{{ $log->user_name }}</span>
                                 <span>{{ $log->created_at->format('d/m/Y à H:i:s') }}</span>
                                 @if($log->ip_address)
-                                    <span class="font-mono">{{ $log->ip_address }}</span>
+                                    @php
+                                        $isLocalDocker = str_starts_with($log->ip_address, '172.') || $log->ip_address === '127.0.0.1' || $log->ip_address === '::1';
+                                    @endphp
+                                    <span class="font-mono" title="{{ $log->ip_address }}">
+                                        {{ $isLocalDocker ? 'local (' . $log->ip_address . ')' : $log->ip_address }}
+                                    </span>
                                 @endif
                                 @if($log->subject_type && $log->subject_id)
                                     <span class="capitalize">{{ $log->subject_type }} #{{ $log->subject_id }}</span>

@@ -40,9 +40,9 @@ abstract class Controller
         if (! $valid) {
             ActivityLogger::log(
                 'auth.supervisor_failed',
-                'Échec de validation superviseur — numéro : ' . $validated['supervisor_number'],
+                'Échec de validation superviseur — numéro : ' . $validated['supervisor_number'] . ' — ' . ActivityLogger::routeLabel($request->route()?->getName()),
                 null, null,
-                ['supervisor_number' => $validated['supervisor_number']]
+                ['supervisor_number' => $validated['supervisor_number'], 'action' => ActivityLogger::routeLabel($request->route()?->getName())]
             );
 
             if ($request->expectsJson()) {
@@ -56,9 +56,9 @@ abstract class Controller
 
         ActivityLogger::log(
             'auth.supervisor',
-            'Validation superviseur #' . $supervisor->supervisor_number . ' — action : ' . $request->route()?->getName(),
+            'Validation superviseur #' . $supervisor->supervisor_number . ' — ' . ActivityLogger::routeLabel($request->route()?->getName()),
             null, null,
-            ['supervisor_number' => $supervisor->supervisor_number, 'route' => $request->route()?->getName()]
+            ['supervisor_number' => $supervisor->supervisor_number, 'action' => ActivityLogger::routeLabel($request->route()?->getName())]
         );
     }
 }
