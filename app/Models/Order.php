@@ -14,18 +14,20 @@ class Order extends Model
         'total_amount', 'discount_amount', 'loyalty_points_spent', 'loyalty_discount_amount',
         'refunded_amount', 'handled_by', 'completed_at',
         'points_credited', 'points_awarded', 'points_refunded',
+        'voucher_id', 'voucher_discount_amount',
     ];
 
     protected $casts = [
-        'total_amount'      => 'decimal:2',
-        'discount_amount'   => 'decimal:2',
-        'loyalty_discount_amount' => 'decimal:2',
-        'refunded_amount'         => 'decimal:2',
-        'is_employee_order' => 'boolean',
-        'loyalty_points_spent' => 'integer',
-        'completed_at'      => 'datetime',
-        'points_credited'   => 'boolean',
-        'points_awarded'    => 'integer',
+        'total_amount'             => 'decimal:2',
+        'discount_amount'          => 'decimal:2',
+        'loyalty_discount_amount'  => 'decimal:2',
+        'refunded_amount'          => 'decimal:2',
+        'voucher_discount_amount'  => 'decimal:2',
+        'is_employee_order'        => 'boolean',
+        'loyalty_points_spent'     => 'integer',
+        'completed_at'             => 'datetime',
+        'points_credited'          => 'boolean',
+        'points_awarded'           => 'integer',
     ];
 
     const STATUS_PENDING   = 'pending';
@@ -81,6 +83,11 @@ class Order extends Model
         return $this->belongsToMany(LoyaltyDiscount::class, 'order_loyalty_discounts')
             ->withPivot('points_spent', 'discount_amount')
             ->withTimestamps();
+    }
+
+    public function voucher(): BelongsTo
+    {
+        return $this->belongsTo(Voucher::class);
     }
 
     public function getStatusLabelAttribute(): string

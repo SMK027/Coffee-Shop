@@ -80,6 +80,16 @@
                             Remboursements
                         </a>
                     </li>
+                    <li>
+                        <a href="{{ route('employee.vouchers.index') }}"
+                           class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium
+                                  {{ request()->routeIs('employee.vouchers*') ? 'bg-amber-800 text-white' : 'text-amber-100 hover:bg-amber-800 hover:text-white' }}">
+                            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                            </svg>
+                            Bons d'achat
+                        </a>
+                    </li>
                     @endif
 
                     {{-- Gestion des salariés : admin uniquement --}}

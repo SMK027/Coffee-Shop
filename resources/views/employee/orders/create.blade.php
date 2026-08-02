@@ -136,10 +136,40 @@
                         <span>Réduction salarié (−15 %)</span>
                         <span id="discount-display">0,00 €</span>
                     </div>
+                    <div id="voucher-line" class="hidden justify-between text-purple-700">
+                        <span>Bon d'achat <span id="voucher-code-label" class="font-mono text-xs"></span></span>
+                        <span id="voucher-display">0,00 €</span>
+                    </div>
                     <div class="flex justify-between font-semibold">
                         <span>Total estimé</span>
                         <span id="total-display">0,00 €</span>
                     </div>
+                </div>
+
+                {{-- Bon d'achat / avoir --}}
+                <div class="mt-4 pt-4 border-t border-stone-100">
+                    <label for="voucher_code" class="block text-sm font-medium text-stone-700 mb-1">
+                        Bon d'achat / avoir
+                        <span class="font-normal text-stone-400 ml-1">(optionnel)</span>
+                    </label>
+                    <div class="flex gap-2">
+                        <input type="text" id="voucher_code" name="voucher_code"
+                               value="{{ old('voucher_code') }}"
+                               maxlength="20"
+                               placeholder="XXXX-XXXX-XXXX"
+                               class="flex-1 border {{ $errors->has('voucher_code') ? 'border-red-400 bg-red-50' : 'border-stone-300' }} rounded-lg px-4 py-2 text-sm font-mono uppercase focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none tracking-widest"
+                               autocomplete="off"
+                               oninput="this.value = this.value.toUpperCase()">
+                        <button type="button" id="check-voucher-btn"
+                                class="bg-stone-100 hover:bg-stone-200 text-stone-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex-shrink-0">
+                            Vérifier
+                        </button>
+                    </div>
+                    <div id="voucher-feedback" class="mt-1 text-xs hidden"></div>
+                    @error('voucher_code')
+                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                    @enderror
+                    <input type="hidden" id="voucher-amount-hidden" name="_voucher_amount" value="0">
                 </div>
             </div>
 
@@ -178,6 +208,7 @@
         const sessionDiscounts = @json($discountsData);
         const isEmployee       = @json((bool) $customer['is_employee_order']);
         const EMPLOYEE_RATE    = 0.15;
+        const voucherCheckUrl  = @json(route('employee.vouchers.check'));
         let itemCount = 1;
 
         /* ── Calcul du total ──────────────────────────────────── */
@@ -246,8 +277,71 @@
                 discountLine.classList.add('hidden'); discountLine.classList.remove('flex');
             }
 
+            // 3. Bon d'achat
+            const afterEmployee  = Math.max(0, afterLoyalty - empDiscount);
+            const voucherAmount  = parseFloat(document.getElementById('voucher-amount-hidden')?.value || 0);
+            const voucherApplied = Math.min(voucherAmount, afterEmployee);
+            const voucherLine    = document.getElementById('voucher-line');
+            const voucherDisp    = document.getElementById('voucher-display');
+            const voucherLabel   = document.getElementById('voucher-code-label');
+            if (voucherApplied > 0) {
+                voucherLine.classList.remove('hidden'); voucherLine.classList.add('flex');
+                voucherDisp.textContent = '−' + voucherApplied.toFixed(2).replace('.', ',') + ' €';
+                const codeInput = document.getElementById('voucher_code');
+                if (voucherLabel && codeInput) voucherLabel.textContent = '(' + codeInput.value + ')';
+            } else {
+                voucherLine.classList.add('hidden'); voucherLine.classList.remove('flex');
+            }
+
             document.getElementById('total-display').textContent =
-                Math.max(0, afterLoyalty - empDiscount).toFixed(2).replace('.', ',') + ' €';
+                Math.max(0, afterEmployee - voucherApplied).toFixed(2).replace('.', ',') + ' €';
+        }
+
+        /* ── Vérification bon d'achat ──────────────────────────── */
+        const checkBtn   = document.getElementById('check-voucher-btn');
+        const codeInput  = document.getElementById('voucher_code');
+        const feedback   = document.getElementById('voucher-feedback');
+        const amtHidden  = document.getElementById('voucher-amount-hidden');
+
+        function resetVoucher() {
+            amtHidden.value = '0';
+            feedback.className = 'mt-1 text-xs hidden';
+            feedback.textContent = '';
+            updateTotal();
+        }
+
+        if (checkBtn) {
+            checkBtn.addEventListener('click', async () => {
+                const code = (codeInput.value || '').trim();
+                if (!code) { resetVoucher(); return; }
+
+                checkBtn.disabled = true;
+                checkBtn.textContent = '…';
+                try {
+                    const res  = await fetch(voucherCheckUrl + '?code=' + encodeURIComponent(code));
+                    const data = await res.json();
+                    feedback.classList.remove('hidden');
+                    if (data.valid) {
+                        amtHidden.value = data.amount;
+                        feedback.className = 'mt-1 text-xs text-purple-700';
+                        feedback.textContent = '✓ ' + data.message + ' — ' + data.amount.toFixed(2).replace('.', ',') + ' € · expire le ' + data.expires;
+                    } else {
+                        amtHidden.value = '0';
+                        feedback.className = 'mt-1 text-xs text-red-600';
+                        feedback.textContent = '✗ ' + data.message;
+                    }
+                    updateTotal();
+                } catch {
+                    resetVoucher();
+                } finally {
+                    checkBtn.disabled = false;
+                    checkBtn.textContent = 'Vérifier';
+                }
+            });
+        }
+
+        if (codeInput) {
+            codeInput.addEventListener('input', resetVoucher);
         }
 
         /* ── Dropdown boissons ─────────────────────────────────── */

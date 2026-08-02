@@ -21,6 +21,7 @@ use App\Http\Controllers\Employee\OrderPaymentController;
 use App\Http\Controllers\Employee\PaymentMethodController;
 use App\Http\Controllers\Employee\DailyReportController;
 use App\Http\Controllers\Employee\RefundOrderController;
+use App\Http\Controllers\Employee\VoucherController;
 use App\Http\Controllers\Auth\EmployeePasswordResetController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
@@ -89,6 +90,14 @@ Route::prefix('espace-employe')->name('employee.')->middleware(['auth', 'employe
         Route::get('/', [RefundOrderController::class, 'index'])->name('index');
         Route::get('/creer', [RefundOrderController::class, 'create'])->name('create');
         Route::post('/{order}', [RefundOrderController::class, 'store'])->name('store');
+    });
+
+    // Bons d'achat / avoirs (admins uniquement)
+    Route::prefix('bons-dachat')->name('vouchers.')->group(function () {
+        Route::get('/',         [VoucherController::class, 'index'])->name('index');
+        Route::get('/nouveau',  [VoucherController::class, 'create'])->name('create');
+        Route::post('/',        [VoucherController::class, 'store'])->name('store');
+        Route::get('/verifier', [VoucherController::class, 'check'])->name('check');
     });
 
     // Paiements d'une commande

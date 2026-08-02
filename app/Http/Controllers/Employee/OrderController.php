@@ -8,6 +8,7 @@ use App\Models\OrderStatus;
 use App\Models\Drink;
 use App\Models\LoyaltyCard;
 use App\Models\LoyaltyDiscount;
+use App\Models\Voucher;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
@@ -299,6 +300,7 @@ class OrderController extends Controller
             'items.*.custom_label'   => ['nullable', 'string', 'max:150'],
             'items.*.custom_price'   => ['nullable', 'numeric', 'min:0.01', 'max:999.99'],
             'items.*.quantity'       => ['required', 'integer', 'min:1', 'max:20'],
+            'voucher_code'           => ['nullable', 'string', 'max:20'],
         ]);
 
         // Reconstruction depuis la session
@@ -415,12 +417,28 @@ class OrderController extends Controller
 
         // 2. Réduction salarié appliquée sur le solde après réductions fidélité.
         $employeeDiscount = $isEmployeeOrder ? round($subtotalAfterLoyalty * Order::EMPLOYEE_DISCOUNT_RATE, 2) : 0;
-        $total            = round(max(0.0, $subtotalAfterLoyalty - $employeeDiscount), 2);
+        $afterEmployee    = round(max(0.0, $subtotalAfterLoyalty - $employeeDiscount), 2);
+
+        // 3. Bon d'achat / avoir
+        $voucher         = null;
+        $voucherDiscount = 0;
+        $voucherCode     = strtoupper(str_replace(' ', '', trim((string) ($validated['voucher_code'] ?? ''))));
+        if ($voucherCode !== '') {
+            $voucher = Voucher::where('code', $voucherCode)->first();
+            if (! $voucher || ! $voucher->isValid()) {
+                return back()->withInput()->withErrors([
+                    'voucher_code' => "Ce bon d'achat est invalide, expiré ou déjà utilisé.",
+                ]);
+            }
+            $voucherDiscount = round(min((float) $voucher->amount, $afterEmployee), 2);
+        }
+        $total = round(max(0.0, $afterEmployee - $voucherDiscount), 2);
 
         $order = DB::transaction(function () use (
             $validated, $customer, $loyaltyCard, $isEmployeeOrder, $total,
             $employeeDiscount, $loyaltyDiscounts, $discountRows,
-            $totalLoyaltyPoints, $totalLoyaltyAmount, $orderItems
+            $totalLoyaltyPoints, $totalLoyaltyAmount, $orderItems,
+            $voucher, $voucherDiscount
         ) {
             $lockedCard = null;
             if ($loyaltyCard) {
@@ -471,17 +489,30 @@ class OrderController extends Controller
                 $lockedCard->decrement('points', $totalPointsNeeded);
             }
 
+            // Vérifie et verrouille le bon d'achat si présent
+            if ($voucher) {
+                $lockedVoucher = Voucher::whereKey($voucher->id)->lockForUpdate()->first();
+                if (! $lockedVoucher || ! $lockedVoucher->isValid()) {
+                    throw ValidationException::withMessages([
+                        'voucher_code' => "Ce bon d'achat n'est plus disponible.",
+                    ]);
+                }
+                $lockedVoucher->update(['is_used' => true, 'used_at' => now()]);
+            }
+
             $order = Order::create([
-                'customer_name'           => $lockedCard ? $lockedCard->full_name : ($customer['customer_name'] ?? null),
-                'loyalty_card_id'         => $lockedCard?->id,
-                'is_employee_order'       => $isEmployeeOrder,
-                'notes'                   => $customer['notes'] ?? null,
-                'total_amount'            => $total,
-                'discount_amount'         => $employeeDiscount,
-                'loyalty_points_spent'    => $totalPointsNeeded,
-                'loyalty_discount_amount' => $totalLoyaltyAmount,
-                'status'                  => Order::STATUS_PENDING,
-                'handled_by'              => auth()->id(),
+                'customer_name'            => $lockedCard ? $lockedCard->full_name : ($customer['customer_name'] ?? null),
+                'loyalty_card_id'          => $lockedCard?->id,
+                'is_employee_order'        => $isEmployeeOrder,
+                'notes'                    => $customer['notes'] ?? null,
+                'total_amount'             => $total,
+                'discount_amount'          => $employeeDiscount,
+                'loyalty_points_spent'     => $totalPointsNeeded,
+                'loyalty_discount_amount'  => $totalLoyaltyAmount,
+                'voucher_id'               => $voucher?->id,
+                'voucher_discount_amount'  => $voucherDiscount,
+                'status'                   => Order::STATUS_PENDING,
+                'handled_by'               => auth()->id(),
             ]);
 
             $order->items()->createMany($orderItems);
