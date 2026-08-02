@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Employee;
 
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
+use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
 
 class ShopSettingsController extends Controller
@@ -53,6 +54,8 @@ class ShopSettingsController extends Controller
         }
         $current['regular'] = $regular;
         Setting::set(Setting::KEY_SHOP_HOURS, json_encode($current));
+
+        ActivityLogger::log('settings.updated', 'Paramètres boutique mis à jour', null, null, ['adresse' => $request->input('address'), 'email' => $request->input('email')]);
 
         return back()->with('success', 'Paramètres mis à jour.');
     }

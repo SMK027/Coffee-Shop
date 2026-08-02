@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\LoyaltyCard;
 use App\Models\Supervisor;
 use App\Models\Voucher;
+use App\Services\ActivityLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -126,6 +127,18 @@ class VoucherController extends Controller
             'restricted_card_id' => $restrictedCardId,
             'restricted_name'    => $restrictedName,
         ]);
+
+        ActivityLogger::log(
+            'voucher.created',
+            "Bon d'achat {$voucher->code} créé — {$superadminName} ({$voucher->amount} €, expire le {$voucher->expires_at->format('d/m/Y')})",
+            'voucher', $voucher->id,
+            array_filter([
+                'code'        => $voucher->code,
+                'montant'     => (float) $voucher->amount,
+                'expiration'  => $voucher->expires_at->format('d/m/Y'),
+                'restriction' => $restrictedCardId ? "carte #{$restrictedCardId}" : ($restrictedName ?: null),
+            ])
+        );
 
         return redirect()
             ->route('employee.vouchers.index')

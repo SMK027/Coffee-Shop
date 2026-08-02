@@ -8,6 +8,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderRefund;
 use App\Models\PaymentMethod;
+use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -79,6 +80,13 @@ class RefundController extends Controller
 
             $this->applyPartialRefund($order, $request->input('items', []), $paymentMethod->id, $request->input('refund_reason'));
         }
+
+        ActivityLogger::log(
+            'refund.applied',
+            'Remboursement ' . ($isTotalRefund ? 'total' : 'partiel') . ' — commande #' . str_pad($order->id, 4, '0', STR_PAD_LEFT),
+            'order', $order->id,
+            array_filter(['type' => $isTotalRefund ? 'total' : 'partiel', 'mode_paiement' => $paymentMethod->name, 'motif' => $request->input('refund_reason')])
+        );
 
         return redirect()
             ->route('employee.orders.show', $order)

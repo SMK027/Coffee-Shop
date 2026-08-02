@@ -9,6 +9,7 @@ use App\Models\Drink;
 use App\Models\LoyaltyCard;
 use App\Models\LoyaltyDiscount;
 use App\Models\Voucher;
+use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
@@ -560,6 +561,18 @@ class OrderController extends Controller
 
         session()->forget('order_draft_customer');
 
+        ActivityLogger::log(
+            'order.created',
+            'Commande #' . str_pad($order->id, 4, '0', STR_PAD_LEFT) . ' créée — ' . ($order->customer_name ?? 'Anonyme'),
+            'order', $order->id,
+            array_filter([
+                'client'  => $order->customer_name,
+                'total'   => (float) $order->total_amount,
+                'articles'=> $order->items()->count(),
+                'bon'     => $voucherCode ?: null,
+            ])
+        );
+
         return redirect()->route('employee.orders.show', $order)
             ->with('success', 'Commande créée avec succès.');
     }
@@ -585,6 +598,13 @@ class OrderController extends Controller
         if ($newStatus?->triggers_loyalty_credit) {
             $order->refresh()->creditLoyaltyPoints();
         }
+
+        ActivityLogger::log(
+            'order.status_changed',
+            'Statut commande #' . str_pad($order->id, 4, '0', STR_PAD_LEFT) . ' → ' . ($newStatus?->label ?? $validated['status']),
+            'order', $order->id,
+            ['nouveau_statut' => $validated['status'], 'libellé' => $newStatus?->label]
+        );
 
         return redirect()->back()->with('success', 'Statut de la commande mis à jour.');
     }

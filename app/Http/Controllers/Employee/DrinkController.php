@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Employee;
 use App\Http\Controllers\Controller;
 use App\Models\Drink;
 use App\Models\DrinkCategory;
+use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -74,6 +75,8 @@ class DrinkController extends Controller
 
         Drink::create($validated);
 
+        ActivityLogger::log('drink.created', "Boisson créée : {$validated['name']} ({$validated['price']} €)");
+
         return redirect()->route('employee.drinks.index')
             ->with('success', 'Boisson ajoutée avec succès.');
     }
@@ -116,6 +119,8 @@ class DrinkController extends Controller
 
         $drink->update($validated);
 
+        ActivityLogger::log('drink.updated', "Boisson mise à jour : {$drink->name}", 'drink', $drink->id);
+
         return redirect()->route('employee.drinks.index')
             ->with('success', 'Boisson mise à jour avec succès.');
     }
@@ -125,7 +130,10 @@ class DrinkController extends Controller
         if ($drink->image) {
             \Storage::disk('public')->delete($drink->image);
         }
+        $drinkName = $drink->name;
         $drink->delete();
+
+        ActivityLogger::log('drink.deleted', "Boisson supprimée : {$drinkName}");
 
         return redirect()->route('employee.drinks.index')
             ->with('success', 'Boisson supprimée avec succès.');

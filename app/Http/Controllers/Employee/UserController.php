@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Mail\EmployeePasswordResetMail;
 use App\Models\EmployeePasswordReset;
 use App\Models\User;
+use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
@@ -82,6 +83,8 @@ class UserController extends Controller
 
         Mail::to($user->email)->send(new EmployeePasswordResetMail($user, $resetUrl, isNewAccount: true));
 
+        ActivityLogger::log('user.created', "Salarié créé : {$user->name} ({$user->global_role})", 'user', $user->id, ['role' => $user->global_role, 'email' => $user->email]);
+
         return redirect()->route('employee.users.index')
             ->with('success', "Compte créé. Un email d'invitation a été envoyé à {$user->email}.");
     }
@@ -120,6 +123,8 @@ class UserController extends Controller
 
         $user->update($validated);
 
+        ActivityLogger::log('user.updated', "Salarié mis à jour : {$user->name}", 'user', $user->id, ['role' => $user->global_role]);
+
         return redirect()->route('employee.users.index')
             ->with('success', 'Compte mis à jour avec succès.');
     }
@@ -139,6 +144,8 @@ class UserController extends Controller
 
         $user->delete();
 
+        ActivityLogger::log('user.deleted', "Salarié supprimé : {$user->name} ({$user->email})", 'user', $user->id);
+
         return redirect()->route('employee.users.index')
             ->with('success', 'Compte supprimé avec succès.');
     }
@@ -156,6 +163,12 @@ class UserController extends Controller
         }
 
         $user->update(['is_active' => ! $user->is_active]);
+
+        ActivityLogger::log(
+            'user.activation_toggled',
+            ($user->is_active ? 'Compte réactivé' : 'Compte désactivé') . " : {$user->name}",
+            'user', $user->id, ['actif' => $user->is_active]
+        );
 
         return back()->with('success', $user->is_active ? 'Compte réactivé avec succès.' : 'Compte désactivé avec succès.');
     }

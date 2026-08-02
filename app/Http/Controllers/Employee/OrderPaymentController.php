@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\OrderPayment;
 use App\Models\PaymentMethod;
+use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -60,6 +61,14 @@ class OrderPaymentController extends Controller
                 ]);
             }
         });
+
+        $total = collect($request->input('payments'))->sum(fn($r) => (float) $r['amount']);
+        ActivityLogger::log(
+            'payment.recorded',
+            'Paiement enregistré — commande #' . str_pad($order->id, 4, '0', STR_PAD_LEFT) . ' (' . number_format($total, 2, ',', ' ') . ' €)',
+            'order', $order->id,
+            ['total' => round($total, 2), 'lignes' => count($request->input('payments'))]
+        );
 
         return redirect()->route('employee.orders.show', $order)
             ->with('success', 'Paiements enregistrés avec succès.');
