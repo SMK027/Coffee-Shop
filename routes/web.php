@@ -94,10 +94,11 @@ Route::prefix('espace-employe')->name('employee.')->middleware(['auth', 'employe
 
     // Bons d'achat / avoirs (admins uniquement)
     Route::prefix('bons-dachat')->name('vouchers.')->group(function () {
-        Route::get('/',         [VoucherController::class, 'index'])->name('index');
-        Route::get('/nouveau',  [VoucherController::class, 'create'])->name('create');
-        Route::post('/',        [VoucherController::class, 'store'])->name('store');
-        Route::get('/verifier', [VoucherController::class, 'check'])->name('check');
+        Route::get('/',          [VoucherController::class, 'index'])->name('index');
+        Route::get('/nouveau',   [VoucherController::class, 'create'])->name('create');
+        Route::post('/',         [VoucherController::class, 'store'])->name('store');
+        Route::get('/verifier',  [VoucherController::class, 'check'])->name('check');
+        Route::get('/{voucher}', [VoucherController::class, 'show'])->name('show');
     });
 
     // Paiements d'une commande

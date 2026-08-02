@@ -36,6 +36,15 @@ class VoucherController extends Controller
         return view('employee.vouchers.index', compact('vouchers', 'search', 'filter'));
     }
 
+    public function show(Voucher $voucher)
+    {
+        abort_unless(auth()->user()->isAdmin(), 403);
+
+        $voucher->load('usedInOrder');
+
+        return view('employee.vouchers.show', compact('voucher'));
+    }
+
     public function create()
     {
         abort_unless(auth()->user()->isAdmin(), 403);

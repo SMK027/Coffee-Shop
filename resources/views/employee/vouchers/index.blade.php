@@ -77,6 +77,7 @@
                             <th class="px-5 py-3 text-left font-medium text-stone-600">Émission</th>
                             <th class="px-5 py-3 text-left font-medium text-stone-600">Expiration</th>
                             <th class="px-5 py-3 text-left font-medium text-stone-600">Statut</th>
+                            <th class="px-5 py-3 text-right font-medium text-stone-600">Action</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-stone-50">
@@ -110,6 +111,12 @@
                                     <span class="px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">Valide</span>
                                 @endif
                             </td>
+                            <td class="px-5 py-3 text-right">
+                                <a href="{{ route('employee.vouchers.show', $voucher) }}"
+                                   class="text-amber-700 hover:text-amber-900 text-xs font-medium transition-colors">
+                                    Détails →
+                                </a>
+                            </td>
                         </tr>
                         @endforeach
                     </tbody>
@@ -127,8 +134,11 @@
                 <div class="px-4 py-3 {{ !$isValid ? 'opacity-60' : '' }}">
                     <div class="flex items-start justify-between gap-3">
                         <div class="min-w-0">
-                            <p class="font-mono font-bold text-stone-800 tracking-wider text-sm">{{ $voucher->code }}</p>
-                            <p class="text-amber-700 font-semibold text-sm mt-0.5">{{ number_format($voucher->amount, 2, ',', ' ') }} €</p>
+                            <a href="{{ route('employee.vouchers.show', $voucher) }}"
+                               class="font-mono font-bold text-amber-700 tracking-wider text-sm hover:underline">
+                                {{ $voucher->code }}
+                            </a>
+                            <p class="text-stone-700 font-semibold text-sm mt-0.5">{{ number_format($voucher->amount, 2, ',', ' ') }} €</p>
                             <p class="text-xs text-stone-500 mt-0.5">{{ $voucher->issued_by_name }} · exp. {{ $voucher->expires_at->format('d/m/Y') }}</p>
                         </div>
                         <div class="flex-shrink-0 mt-0.5">
