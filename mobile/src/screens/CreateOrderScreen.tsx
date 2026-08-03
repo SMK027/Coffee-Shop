@@ -333,8 +333,8 @@ export default function CreateOrderScreen() {
       setCustomError('Le tarif doit être compris entre 0,01 € et 999,99 €.');
       return;
     }
-    if (!Number.isFinite(qty) || qty < 1 || qty > 20) {
-      setCustomError('La quantité doit être comprise entre 1 et 20.');
+    if (!Number.isFinite(qty) || qty < 1 || qty > 250) {
+      setCustomError('La quantité doit être comprise entre 1 et 250.');
       return;
     }
 

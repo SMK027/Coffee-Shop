@@ -106,7 +106,7 @@ class OrderController extends Controller
             'items.*.drink_id'       => ['nullable', 'integer', 'exists:drinks,id'],
             'items.*.custom_label'   => ['nullable', 'string', 'max:150'],
             'items.*.custom_price'   => ['nullable', 'numeric', 'min:0.01', 'max:999.99'],
-            'items.*.quantity'       => ['required', 'integer', 'min:1', 'max:20'],
+            'items.*.quantity'       => ['required', 'integer', 'min:1', 'max:250'],
         ]);
 
         $isEmployeeOrder = (bool) ($validated['is_employee_order'] ?? false);
