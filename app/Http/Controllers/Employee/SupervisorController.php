@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Employee;
 
 use App\Http\Controllers\Controller;
 use App\Models\Supervisor;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
@@ -33,7 +34,11 @@ class SupervisorController extends Controller
     {
         abort_unless(auth()->user()->isSuperAdmin(), 403);
 
-        return view('employee.supervisors.create');
+        $superadmins = User::where('global_role', 'superadmin')
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        return view('employee.supervisors.create', compact('superadmins'));
     }
 
     public function store(Request $request)
@@ -43,15 +48,23 @@ class SupervisorController extends Controller
         $validated = $request->validate([
             'supervisor_number' => ['required', 'string', 'max:50', 'alpha_dash', 'unique:supervisors,supervisor_number'],
             'supervisor_pin'    => ['required', 'string', 'regex:/^\d{4,6}$/'],
+            'superadmin_id'     => ['required', 'integer', 'exists:users,id'],
         ], [
             'supervisor_number.alpha_dash' => 'Le numéro de superviseur ne peut contenir que des lettres, chiffres, tirets et underscores.',
             'supervisor_pin.regex'         => 'Le PIN doit contenir entre 4 et 6 chiffres.',
+            'superadmin_id.required'       => 'Le compte propriétaire est requis.',
+            'superadmin_id.exists'         => 'Ce compte est invalide.',
         ]);
+
+        // Vérifier que le compte désigné est bien un super-administrateur
+        $owner = User::where('id', $validated['superadmin_id'])
+            ->where('global_role', 'superadmin')
+            ->firstOrFail();
 
         Supervisor::create([
             'supervisor_number' => $validated['supervisor_number'],
             'password'          => Hash::make($validated['supervisor_pin']),
-            'superadmin_id'     => auth()->id(),
+            'superadmin_id'     => $owner->id,
         ]);
 
         return redirect()->route('employee.supervisors.index')
