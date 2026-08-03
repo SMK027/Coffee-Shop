@@ -221,10 +221,21 @@ export default function OrderDetailScreen() {
           <Text style={styles.summaryValue}>{subtotal.toFixed(2)} €</Text>
         </View>
         {order.loyalty_discount_amount > 0 && (
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Réductions fidélité</Text>
-            <Text style={styles.summaryDiscount}>−{order.loyalty_discount_amount.toFixed(2)} €</Text>
-          </View>
+          <>
+            {order.loyalty_discounts && order.loyalty_discounts.length > 0 ? (
+              order.loyalty_discounts.map((d) => (
+                <View key={d.id} style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel} numberOfLines={1}>🏷 {d.name}</Text>
+                  <Text style={styles.summaryDiscount}>−{d.discount_amount.toFixed(2)} €</Text>
+                </View>
+              ))
+            ) : (
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>Réductions fidélité</Text>
+                <Text style={styles.summaryDiscount}>−{order.loyalty_discount_amount.toFixed(2)} €</Text>
+              </View>
+            )}
+          </>
         )}
         {order.discount_amount > 0 && (
           <View style={styles.summaryRow}>
