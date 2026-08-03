@@ -42,13 +42,43 @@ class ActivityLogger
         'employee.shop-settings.index'         => "Mise à jour des paramètres boutique",
     ];
 
+    /**
+     * Correspondance chemin d'URL API → libellé lisible.
+     * Utilisée quand la route n'a pas de nom (routes API mobiles).
+     * Les `*` dans les patterns correspondent à un segment de chemin.
+     */
+    private static array $apiPathLabels = [
+        'api/orders/*/refund'            => 'Remboursement (application mobile)',
+        'api/orders/*/payments'          => 'Enregistrement de paiement (application mobile)',
+        'api/orders/*/status'            => 'Changement de statut de commande (application mobile)',
+        'api/orders'                     => 'Création de commande (application mobile)',
+        'api/loyalty-cards/*/adjust'     => 'Ajustement de points fidélité (application mobile)',
+        'api/loyalty-cards/*/delete'     => 'Suppression d\'une carte fidélité (application mobile)',
+        'api/daily-reports'              => 'Récapitulatif journalier (application mobile)',
+    ];
+
     /** Traduit un nom de route en libellé lisible. */
-    public static function routeLabel(?string $routeName): string
+    public static function routeLabel(?string $routeName, ?string $path = null): string
     {
-        if ($routeName === null) {
-            return 'Action inconnue';
+        // Route nommée connue dans le mapping web
+        if ($routeName !== null && ! str_starts_with($routeName, 'generated::')) {
+            return self::$routeLabels[$routeName] ?? $routeName;
         }
-        return self::$routeLabels[$routeName] ?? $routeName;
+
+        // Route non nommée (API mobile) → matching par chemin
+        if ($path !== null) {
+            $cleanPath = ltrim($path, '/');
+            foreach (self::$apiPathLabels as $pattern => $label) {
+                $regex = '#^' . str_replace('\*', '[^/]+', preg_quote($pattern, '#')) . '$#';
+                if (preg_match($regex, $cleanPath)) {
+                    return $label;
+                }
+            }
+            // Dernier recours : afficher le chemin lisiblement
+            return 'API mobile : ' . $cleanPath;
+        }
+
+        return 'Action inconnue';
     }
 
     /**
