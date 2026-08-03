@@ -388,6 +388,11 @@ export default function CreateOrderScreen() {
     return { subtotal, loyaltyDiscount, employeeDiscount, voucherDiscount, total, pointsCost };
   }, [cart, loyaltyCard, selectedDiscountIds, discounts, isEmployeeOrder, voucherData]);
 
+  const setCartQty = (uid: string, qty: number) => {
+    const clamped = Math.min(250, Math.max(1, qty));
+    setCart((prev) => prev.map((i) => (i.uid === uid ? { ...i, quantity: clamped } : i)));
+  };
+
   const handleSubmit = async () => {
     if (cart.length === 0) {
       Alert.alert('Panier vide', 'Ajoutez au moins un article.');
@@ -477,7 +482,7 @@ export default function CreateOrderScreen() {
           <Step2Cart
             firstName={firstName} lastName={lastName} loyaltyCard={loyaltyCard} isEmployeeOrder={isEmployeeOrder}
             cart={cart} onOpenDrinkModal={() => setDrinkModalVisible(true)} onOpenCustomModal={openCustomModal}
-            onUpdateQty={updateQuantity} onRemove={removeItem}
+            onUpdateQty={updateQuantity} onSetQty={setCartQty} onRemove={removeItem}
             itemLabel={itemLabel} itemUnitPrice={itemUnitPrice}
             notes={notes} setNotes={setNotes}
             totals={totals}
@@ -891,10 +896,49 @@ function Step1Client(props: {
   );
 }
 
+// ─────────── Saisie de quantité éditable ───────────
+function QtyInput({ uid, quantity, onSetQty }: {
+  uid: string;
+  quantity: number;
+  onSetQty: (uid: string, qty: number) => void;
+}) {
+  const [text, setText] = React.useState(String(quantity));
+
+  // Synchronise quand la quantité change via +/−
+  React.useEffect(() => {
+    setText(String(quantity));
+  }, [quantity]);
+
+  const commit = () => {
+    const n = parseInt(text, 10);
+    if (Number.isFinite(n) && n >= 1) {
+      onSetQty(uid, Math.min(250, n));
+    } else {
+      // Valeur invalide → remet la quantité courante
+      setText(String(quantity));
+    }
+  };
+
+  return (
+    <TextInput
+      style={styles.qtyTextInput}
+      value={text}
+      onChangeText={setText}
+      onBlur={commit}
+      onEndEditing={commit}
+      keyboardType="number-pad"
+      selectTextOnFocus
+      maxLength={3}
+    />
+  );
+}
+
 function Step2Cart(props: {
   firstName: string; lastName: string; loyaltyCard: LoyaltyCard | null; isEmployeeOrder: boolean;
   cart: CartItem[]; onOpenDrinkModal: () => void; onOpenCustomModal: () => void;
-  onUpdateQty: (uid: string, delta: number) => void; onRemove: (uid: string) => void;
+  onUpdateQty: (uid: string, delta: number) => void;
+  onSetQty: (uid: string, qty: number) => void;
+  onRemove: (uid: string) => void;
   itemLabel: (i: CartItem) => string; itemUnitPrice: (i: CartItem) => number;
   notes: string; setNotes: (v: string) => void;
   totals: { subtotal: number; loyaltyDiscount: number; employeeDiscount: number; voucherDiscount: number; total: number; pointsCost: number };
@@ -908,7 +952,7 @@ function Step2Cart(props: {
 }) {
   const {
     firstName, lastName, loyaltyCard, isEmployeeOrder,
-    cart, onOpenDrinkModal, onOpenCustomModal, onUpdateQty, onRemove,
+    cart, onOpenDrinkModal, onOpenCustomModal, onUpdateQty, onSetQty, onRemove,
     itemLabel, itemUnitPrice, notes, setNotes, totals,
     voucherCode, setVoucherCode, voucherData, voucherError,
     checkingVoucher, onCheckVoucher, onClearVoucher, onOpenVoucherScanner,
@@ -968,7 +1012,7 @@ function Step2Cart(props: {
                 <TouchableOpacity style={styles.qtyBtn} onPress={() => onUpdateQty(item.uid, -1)}>
                   <Text style={styles.qtyBtnText}>−</Text>
                 </TouchableOpacity>
-                <Text style={styles.qty}>{item.quantity}</Text>
+                <QtyInput uid={item.uid} quantity={item.quantity} onSetQty={onSetQty} />
                 <TouchableOpacity style={styles.qtyBtn} onPress={() => onUpdateQty(item.uid, 1)}>
                   <Text style={styles.qtyBtnText}>+</Text>
                 </TouchableOpacity>
@@ -1167,6 +1211,7 @@ const styles = StyleSheet.create({
   qtyControls: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   qtyBtn: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#f3f4f6', justifyContent: 'center', alignItems: 'center' },
   qtyBtnText: { fontSize: 18, fontWeight: '700', color: '#374151', lineHeight: 22 },
+  qtyTextInput: { fontSize: 15, fontWeight: '700', color: '#1f2937', minWidth: 40, textAlign: 'center', borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 8, paddingHorizontal: 4, paddingVertical: 2 },
   qty: { fontSize: 16, fontWeight: '700', color: '#1f2937', minWidth: 20, textAlign: 'center' },
   removeBtn: { width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginLeft: 4 },
   removeBtnText: { fontSize: 14, color: '#ef4444', fontWeight: '700' },
