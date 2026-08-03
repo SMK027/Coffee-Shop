@@ -74,6 +74,12 @@
                 </p>
             </div>
 
+            {{-- Code-barres + QR Code --}}
+            <div class="flex items-center gap-4 px-6 py-4 border-b border-dashed border-stone-200 bg-white">
+                <svg id="voucher-barcode" class="flex-1 min-w-0" style="max-height:52px"></svg>
+                <div id="voucher-qr" class="flex-shrink-0 w-[68px] h-[68px]"></div>
+            </div>
+
             {{-- Montant --}}
             <div class="px-8 py-6 text-center border-b border-dashed border-stone-200">
                 <p class="text-xs text-stone-400 uppercase tracking-widest mb-2">Valeur</p>
@@ -186,5 +192,52 @@
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
     }
+    /* Assure que les SVG barcode/QR s'impriment */
+    #voucher-barcode, #voucher-qr svg {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
 }
 </style>
+
+{{-- Bibliothèques de génération de codes --}}
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+
+<script>
+(function () {
+    const code = @json($voucher->code);
+
+    /* ── Code-barres (Code128) ─────────────────────────────── */
+    const barcodeEl = document.getElementById('voucher-barcode');
+    if (barcodeEl && typeof JsBarcode !== 'undefined') {
+        JsBarcode(barcodeEl, code, {
+            format:       'CODE128',
+            displayValue: false,
+            lineColor:    '#1c1917',
+            background:   'transparent',
+            width:        1.8,
+            height:       48,
+            margin:       0,
+        });
+        // Rend responsive sans déformer
+        barcodeEl.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+        barcodeEl.style.width  = '100%';
+        barcodeEl.style.height = 'auto';
+        barcodeEl.style.maxHeight = '52px';
+    }
+
+    /* ── QR Code ───────────────────────────────────────────── */
+    const qrEl = document.getElementById('voucher-qr');
+    if (qrEl && typeof QRCode !== 'undefined') {
+        QRCode.toString(code, {
+            type:   'svg',
+            width:  68,
+            margin: 1,
+            color:  { dark: '#1c1917', light: '#ffffff' },
+        }, function (err, svg) {
+            if (!err) qrEl.innerHTML = svg;
+        });
+    }
+})();
+</script>
