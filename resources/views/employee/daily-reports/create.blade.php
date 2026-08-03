@@ -52,9 +52,9 @@
 
                 {{-- Remboursements --}}
                 <div>
-                    <h3 class="text-sm font-semibold text-stone-700 mb-2">Remboursements</h3>
+                    <h3 class="text-sm font-semibold text-stone-700 mb-2">Remboursements traités</h3>
                     @if(empty($refundBreakdown))
-                        <p class="text-sm text-stone-400 italic">Aucun remboursement ce jour.</p>
+                        <p class="text-sm text-stone-400 italic">Aucun remboursement traité ce jour.</p>
                     @else
                         <div class="space-y-1.5">
                             @foreach($refundBreakdown as $row)
@@ -66,6 +66,32 @@
                             <div class="flex justify-between pt-2 border-t border-stone-100 font-semibold text-red-700">
                                 <span>Total remboursé</span>
                                 <span>{{ number_format($totalRefunded, 2, ',', ' ') }} €</span>
+                            </div>
+                        </div>
+                    @endif
+                </div>
+
+                {{-- Bons d'achat émis --}}
+                <div>
+                    <h3 class="text-sm font-semibold text-stone-700 mb-2">Bons d'achat émis</h3>
+                    @if(empty($vouchersIssuedBreakdown))
+                        <p class="text-sm text-stone-400 italic">Aucun bon d'achat émis ce jour.</p>
+                    @else
+                        <div class="space-y-1.5">
+                            @foreach($vouchersIssuedBreakdown as $v)
+                            <div class="flex justify-between text-sm">
+                                <span class="text-stone-600 font-mono text-xs">{{ $v['code'] }}
+                                    @if($v['restricted_to'])
+                                        <span class="font-sans text-stone-400 ml-1">→ {{ $v['restricted_to'] }}</span>
+                                    @endif
+                                    <span class="text-stone-300 ml-1">exp. {{ $v['expires_at'] }}</span>
+                                </span>
+                                <span class="font-medium text-purple-700">{{ number_format($v['amount'], 2, ',', ' ') }} €</span>
+                            </div>
+                            @endforeach
+                            <div class="flex justify-between pt-2 border-t border-stone-100 font-semibold text-purple-700">
+                                <span>Total émis</span>
+                                <span>{{ number_format($totalVouchersIssued, 2, ',', ' ') }} €</span>
                             </div>
                         </div>
                     @endif

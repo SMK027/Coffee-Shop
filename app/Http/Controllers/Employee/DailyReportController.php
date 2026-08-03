@@ -8,6 +8,7 @@ use App\Models\Order;
 use App\Models\OrderPayment;
 use App\Models\OrderRefund;
 use App\Models\PaymentMethod;
+use App\Models\Voucher;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -57,12 +58,11 @@ class DailyReportController extends Controller
             ->groupBy('payment_methods.id', 'payment_methods.name')
             ->get();
 
-        // Calcul des remboursements
+        // Calcul des remboursements (filtrés par l'auteur du remboursement, pas par l'auteur de la commande)
         $refundsRaw = OrderRefund::query()
-            ->join('orders', 'order_refunds.order_id', '=', 'orders.id')
             ->join('payment_methods', 'order_refunds.payment_method_id', '=', 'payment_methods.id')
             ->whereDate('order_refunds.created_at', $date)
-            ->where('orders.handled_by', auth()->id())
+            ->where('order_refunds.created_by', auth()->id())
             ->select(
                 'payment_methods.id as method_id',
                 'payment_methods.name as method_name',
@@ -71,6 +71,22 @@ class DailyReportController extends Controller
             ->groupBy('payment_methods.id', 'payment_methods.name')
             ->get();
 
+        // Bons d'achat émis ce jour par ce compte
+        $vouchersIssuedRaw = Voucher::where('issued_by', auth()->id())
+            ->whereDate('issued_at', $date)
+            ->with('restrictedCard:id,first_name,last_name')
+            ->get();
+
+        $vouchersIssuedBreakdown = $vouchersIssuedRaw->map(fn($v) => [
+            'code'          => $v->code,
+            'amount'        => (float) $v->amount,
+            'expires_at'    => $v->expires_at->format('d/m/Y'),
+            'restricted_to' => $v->restricted_name ?? ($v->restrictedCard ? $v->restrictedCard->full_name : null),
+            'is_used'       => $v->is_used,
+        ])->toArray();
+
+        $totalVouchersIssued = round($vouchersIssuedRaw->sum('amount'), 2);
+
         $totalCollected = $paymentsRaw->sum('total');
         $totalRefunded  = $refundsRaw->sum('total');
 
@@ -78,7 +94,8 @@ class DailyReportController extends Controller
         $refundBreakdown = $refundsRaw->map(fn ($r) => ['method_id' => $r->method_id, 'method_name' => $r->method_name, 'total' => round($r->total, 2)])->toArray();
 
         return view('employee.daily-reports.create', compact(
-            'date', 'totalCollected', 'totalRefunded', 'breakdown', 'refundBreakdown', 'existing'
+            'date', 'totalCollected', 'totalRefunded', 'breakdown', 'refundBreakdown',
+            'totalVouchersIssued', 'vouchersIssuedBreakdown', 'existing'
         ));
     }
 
@@ -105,10 +122,9 @@ class DailyReportController extends Controller
             ->get();
 
         $refundsRaw = OrderRefund::query()
-            ->join('orders', 'order_refunds.order_id', '=', 'orders.id')
             ->join('payment_methods', 'order_refunds.payment_method_id', '=', 'payment_methods.id')
             ->whereDate('order_refunds.created_at', $date)
-            ->where('orders.handled_by', auth()->id())
+            ->where('order_refunds.created_by', auth()->id())
             ->select(
                 'payment_methods.id as method_id',
                 'payment_methods.name as method_name',
@@ -117,13 +133,26 @@ class DailyReportController extends Controller
             ->groupBy('payment_methods.id', 'payment_methods.name')
             ->get();
 
+        $vouchersIssuedRaw = Voucher::where('issued_by', auth()->id())
+            ->whereDate('issued_at', $date)
+            ->with('restrictedCard:id,first_name,last_name')
+            ->get();
+
         $reportData = [
-            'report_date'      => $date,
-            'generated_by'     => auth()->id(),
-            'total_collected'  => round($paymentsRaw->sum('total'), 2),
-            'total_refunded'   => round($refundsRaw->sum('total'), 2),
+            'report_date'           => $date,
+            'generated_by'          => auth()->id(),
+            'total_collected'       => round($paymentsRaw->sum('total'), 2),
+            'total_refunded'        => round($refundsRaw->sum('total'), 2),
+            'total_vouchers_issued' => round($vouchersIssuedRaw->sum('amount'), 2),
             'breakdown'        => $paymentsRaw->map(fn ($r) => ['method_id' => $r->method_id, 'method_name' => $r->method_name, 'total' => round($r->total, 2)])->toArray(),
             'refund_breakdown' => $refundsRaw->map(fn ($r) => ['method_id' => $r->method_id, 'method_name' => $r->method_name, 'total' => round($r->total, 2)])->toArray(),
+            'vouchers_issued'  => $vouchersIssuedRaw->map(fn($v) => [
+                'code'          => $v->code,
+                'amount'        => (float) $v->amount,
+                'expires_at'    => $v->expires_at->format('d/m/Y'),
+                'restricted_to' => $v->restricted_name ?? ($v->restrictedCard ? $v->restrictedCard->full_name : null),
+                'is_used'       => $v->is_used,
+            ])->toArray(),
         ];
 
         $existing = DailyReport::where('generated_by', auth()->id())

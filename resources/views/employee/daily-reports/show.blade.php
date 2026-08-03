@@ -52,7 +52,7 @@
 
         {{-- Remboursements --}}
         <div class="bg-white rounded-xl shadow-sm border border-stone-100 p-5">
-            <h3 class="font-semibold text-stone-800 mb-4">Remboursements</h3>
+            <h3 class="font-semibold text-stone-800 mb-4">Remboursements traités</h3>
 
             @if(empty($dailyReport->refund_breakdown))
                 <p class="text-sm text-stone-400 italic">Aucun remboursement ce jour.</p>
@@ -67,6 +67,40 @@
                     <div class="flex items-center justify-between pt-3 font-bold text-red-700 text-base">
                         <span>Total remboursé</span>
                         <span>{{ number_format($dailyReport->total_refunded, 2, ',', ' ') }} €</span>
+                    </div>
+                </div>
+            @endif
+        </div>
+
+        {{-- Bons d'achat émis --}}
+        <div class="bg-white rounded-xl shadow-sm border border-stone-100 p-5">
+            <h3 class="font-semibold text-stone-800 mb-4">Bons d'achat émis</h3>
+
+            @php $vouchersIssued = $dailyReport->vouchers_issued ?? []; @endphp
+            @if(empty($vouchersIssued))
+                <p class="text-sm text-stone-400 italic">Aucun bon d'achat émis ce jour.</p>
+            @else
+                <div class="space-y-2">
+                    @foreach($vouchersIssued as $v)
+                    <div class="flex items-center justify-between py-2 border-b border-stone-50 last:border-0 gap-3">
+                        <div class="min-w-0">
+                            <p class="font-mono text-sm font-semibold text-stone-800">{{ $v['code'] }}</p>
+                            <p class="text-xs text-stone-400 mt-0.5">
+                                Expire le {{ $v['expires_at'] }}
+                                @if(!empty($v['restricted_to']))
+                                    · <span class="text-stone-500">Réservé à {{ $v['restricted_to'] }}</span>
+                                @endif
+                                @if(!empty($v['is_used']))
+                                    · <span class="text-stone-400 italic">Utilisé</span>
+                                @endif
+                            </p>
+                        </div>
+                        <span class="font-semibold text-purple-700 flex-shrink-0">{{ number_format($v['amount'], 2, ',', ' ') }} €</span>
+                    </div>
+                    @endforeach
+                    <div class="flex items-center justify-between pt-3 font-bold text-purple-700 text-base">
+                        <span>Total émis</span>
+                        <span>{{ number_format($dailyReport->total_vouchers_issued ?? 0, 2, ',', ' ') }} €</span>
                     </div>
                 </div>
             @endif
