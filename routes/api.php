@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\LoyaltyCardController;
 use App\Http\Controllers\Api\LoyaltyDiscountController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\PaymentMethodController;
+use App\Http\Controllers\Api\VoucherController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -61,4 +62,7 @@ Route::middleware('auth:api')->group(function () {
 
     // Réductions fidélité
     Route::get('/loyalty-discounts', [LoyaltyDiscountController::class, 'index']);
+
+    // Bons d'achat
+    Route::get('/vouchers/check', [VoucherController::class, 'check']);
 });

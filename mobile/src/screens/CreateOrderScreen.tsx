@@ -68,6 +68,14 @@ export default function CreateOrderScreen() {
   const [cardSearched, setCardSearched] = useState(false);
   const cardSearchDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Bon d'achat
+  const [voucherCode, setVoucherCode] = useState('');
+  const [voucherData, setVoucherData] = useState<{ amount: number; expires: string; code: string } | null>(null);
+  const [voucherError, setVoucherError] = useState('');
+  const [checkingVoucher, setCheckingVoucher] = useState(false);
+  const [voucherScannerVisible, setVoucherScannerVisible] = useState(false);
+  const voucherScannerLocked = useRef(false);
+
   // Modaux
   const [drinkModalVisible, setDrinkModalVisible] = useState(false);
   const [drinkSearch, setDrinkSearch] = useState('');
@@ -230,6 +238,64 @@ export default function CreateOrderScreen() {
     setStep(2);
   };
 
+  // ─────────── Bon d'achat ───────────
+
+  const checkVoucher = async (codeOverride?: string) => {
+    const raw = (codeOverride ?? voucherCode).replace(/\s/g, '').toUpperCase();
+    if (!raw) return;
+    setCheckingVoucher(true);
+    setVoucherError('');
+    setVoucherData(null);
+    try {
+      const params: Record<string, string> = { code: raw };
+      if (loyaltyCard?.id) params.loyalty_card_id = String(loyaltyCard.id);
+      else {
+        const name = `${firstName.trim()} ${lastName.trim()}`.trim();
+        if (name) params.customer_name = name;
+      }
+      const { data } = await api.get('/vouchers/check', { params });
+      if (data.valid) {
+        setVoucherData({ amount: data.amount, expires: data.expires, code: data.code });
+        if (codeOverride) setVoucherCode(data.code);
+      } else {
+        setVoucherError(data.message);
+      }
+    } catch {
+      setVoucherError('Erreur lors de la vérification du bon.');
+    } finally {
+      setCheckingVoucher(false);
+    }
+  };
+
+  const clearVoucher = () => {
+    setVoucherCode('');
+    setVoucherData(null);
+    setVoucherError('');
+  };
+
+  const openVoucherScanner = async () => {
+    if (!cameraPermission?.granted) {
+      const result = await requestCameraPermission();
+      if (!result.granted) {
+        Alert.alert('Permission refusée', "L'accès à la caméra est requis pour scanner le bon d'achat.");
+        return;
+      }
+    }
+    voucherScannerLocked.current = false;
+    setVoucherScannerVisible(true);
+  };
+
+  const onVoucherScanned = ({ data }: { data: string }) => {
+    if (voucherScannerLocked.current) return;
+    const cleaned = data.replace(/\s/g, '').toUpperCase();
+    // Format XXXX-XXXX-XXXX (Code128 / QR sur le bon imprimé)
+    if (!/^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(cleaned)) return;
+    voucherScannerLocked.current = true;
+    setVoucherScannerVisible(false);
+    setVoucherCode(cleaned);
+    checkVoucher(cleaned);
+  };
+
   // ─────────── Étape 2 : Panier ───────────
 
   const addToCart = (drink: Drink) => {
@@ -312,13 +378,15 @@ export default function CreateOrderScreen() {
     }
 
     const employeeDiscount = isEmployeeOrder ? Math.round(remaining * 0.15 * 100) / 100 : 0;
-    const total = Math.max(0, remaining - employeeDiscount);
+    const afterEmployee = Math.max(0, remaining - employeeDiscount);
+    const voucherDiscount = voucherData ? Math.min(voucherData.amount, afterEmployee) : 0;
+    const total = Math.max(0, afterEmployee - voucherDiscount);
     const pointsCost = selectedDiscountIds.reduce((sum, id) => {
       const d = discounts.find((disc) => disc.id === id);
       return sum + (d?.points_cost ?? 0);
     }, 0);
-    return { subtotal, loyaltyDiscount, employeeDiscount, total, pointsCost };
-  }, [cart, loyaltyCard, selectedDiscountIds, discounts, isEmployeeOrder]);
+    return { subtotal, loyaltyDiscount, employeeDiscount, voucherDiscount, total, pointsCost };
+  }, [cart, loyaltyCard, selectedDiscountIds, discounts, isEmployeeOrder, voucherData]);
 
   const handleSubmit = async () => {
     if (cart.length === 0) {
@@ -346,6 +414,9 @@ export default function CreateOrderScreen() {
       if (selectedDiscountIds.length > 0) {
         payload.loyalty_discount_ids = selectedDiscountIds;
         payload.card_pin = cardPin;
+      }
+      if (voucherData) {
+        payload.voucher_code = voucherData.code;
       }
 
       await api.post('/orders', payload);
@@ -410,6 +481,12 @@ export default function CreateOrderScreen() {
             itemLabel={itemLabel} itemUnitPrice={itemUnitPrice}
             notes={notes} setNotes={setNotes}
             totals={totals}
+            voucherCode={voucherCode} setVoucherCode={(v) => { setVoucherCode(v); setVoucherError(''); setVoucherData(null); }}
+            voucherData={voucherData} voucherError={voucherError}
+            checkingVoucher={checkingVoucher}
+            onCheckVoucher={() => checkVoucher()}
+            onClearVoucher={clearVoucher}
+            onOpenVoucherScanner={openVoucherScanner}
           />
         )}
       </ScrollView>
@@ -599,11 +676,30 @@ export default function CreateOrderScreen() {
           </View>
         </View>
       </Modal>
+      {/* ── Modal scanner QR bon d'achat ── */}
+      <Modal visible={voucherScannerVisible} animationType="slide" presentationStyle="fullScreen">
+        <View style={{ flex: 1, backgroundColor: '#000' }}>
+          <View style={styles.scannerHeader}>
+            <Text style={styles.scannerTitle}>Scanner le bon d'achat</Text>
+            <TouchableOpacity onPress={() => setVoucherScannerVisible(false)} style={styles.scannerCloseBtn}>
+              <Text style={styles.scannerCloseText}>Annuler</Text>
+            </TouchableOpacity>
+          </View>
+          <CameraView
+            style={{ flex: 1 }}
+            facing="back"
+            barcodeScannerSettings={{ barcodeTypes: ['qr', 'code128'] }}
+            onBarcodeScanned={onVoucherScanned}
+          />
+          <View style={styles.scannerOverlay}>
+            <View style={styles.scannerFrame} />
+            <Text style={styles.scannerHint}>Pointez vers le QR code ou le code-barres du bon d'achat</Text>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
-
-// ─────────── Composants ───────────
 
 function StepDot({ n, label, active, done, onPress }: {
   n: number; label: string; active: boolean; done: boolean; onPress?: () => void;
@@ -801,12 +897,21 @@ function Step2Cart(props: {
   onUpdateQty: (uid: string, delta: number) => void; onRemove: (uid: string) => void;
   itemLabel: (i: CartItem) => string; itemUnitPrice: (i: CartItem) => number;
   notes: string; setNotes: (v: string) => void;
-  totals: { subtotal: number; loyaltyDiscount: number; employeeDiscount: number; total: number; pointsCost: number };
+  totals: { subtotal: number; loyaltyDiscount: number; employeeDiscount: number; voucherDiscount: number; total: number; pointsCost: number };
+  voucherCode: string; setVoucherCode: (v: string) => void;
+  voucherData: { amount: number; expires: string; code: string } | null;
+  voucherError: string;
+  checkingVoucher: boolean;
+  onCheckVoucher: () => void;
+  onClearVoucher: () => void;
+  onOpenVoucherScanner: () => void;
 }) {
   const {
     firstName, lastName, loyaltyCard, isEmployeeOrder,
     cart, onOpenDrinkModal, onOpenCustomModal, onUpdateQty, onRemove,
     itemLabel, itemUnitPrice, notes, setNotes, totals,
+    voucherCode, setVoucherCode, voucherData, voucherError,
+    checkingVoucher, onCheckVoucher, onClearVoucher, onOpenVoucherScanner,
   } = props;
 
   const clientDisplayName = loyaltyCard
@@ -888,6 +993,55 @@ function Step2Cart(props: {
         />
       </View>
 
+      {/* Bon d'achat */}
+      <Text style={styles.sectionTitle}>Bon d'achat</Text>
+      <View style={styles.card}>
+        {voucherData ? (
+          <View>
+            <Text style={{ color: '#16a34a', fontWeight: '700', marginBottom: 2 }}>✓ Bon d'achat valide</Text>
+            <Text style={{ fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', letterSpacing: 2, fontSize: 15, color: '#1c1917' }}>
+              {voucherData.code}
+            </Text>
+            <Text style={{ color: '#6b7280', fontSize: 12, marginTop: 2 }}>
+              −{voucherData.amount.toFixed(2)} € · expire le {voucherData.expires}
+            </Text>
+            <TouchableOpacity onPress={onClearVoucher} style={{ marginTop: 8 }}>
+              <Text style={{ color: '#ef4444', fontSize: 13 }}>Retirer le bon</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <>
+            <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+              <TextInput
+                style={[styles.input, { flex: 1, marginBottom: 0, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', letterSpacing: 1 }]}
+                placeholder="XXXX-XXXX-XXXX"
+                placeholderTextColor="#9ca3af"
+                value={voucherCode}
+                onChangeText={setVoucherCode}
+                autoCapitalize="characters"
+                autoCorrect={false}
+              />
+              <TouchableOpacity
+                style={[styles.checkBtn, { paddingHorizontal: 10 }]}
+                onPress={onOpenVoucherScanner}
+              >
+                <Text style={styles.checkBtnText}>📷</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.checkBtn, (!voucherCode || checkingVoucher) && { opacity: 0.5 }]}
+                onPress={onCheckVoucher}
+                disabled={!voucherCode || checkingVoucher}
+              >
+                {checkingVoucher
+                  ? <ActivityIndicator size="small" color="#fff" />
+                  : <Text style={styles.checkBtnText}>Vérifier</Text>}
+              </TouchableOpacity>
+            </View>
+            {voucherError ? <Text style={styles.error}>{voucherError}</Text> : null}
+          </>
+        )}
+      </View>
+
       {cart.length > 0 && (
         <View style={[styles.card, { marginTop: 8 }]}>
           <View style={styles.summaryRow}>
@@ -904,6 +1058,12 @@ function Step2Cart(props: {
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Réduction salarié (15%)</Text>
               <Text style={[styles.summaryValue, { color: '#22c55e' }]}>−{totals.employeeDiscount.toFixed(2)} €</Text>
+            </View>
+          )}
+          {totals.voucherDiscount > 0 && (
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Bon d'achat</Text>
+              <Text style={[styles.summaryValue, { color: '#7c3aed' }]}>−{totals.voucherDiscount.toFixed(2)} €</Text>
             </View>
           )}
           {totals.pointsCost > 0 && (
