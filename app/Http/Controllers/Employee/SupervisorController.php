@@ -16,11 +16,14 @@ class SupervisorController extends Controller
 
         $search = trim((string) $request->query('q', ''));
 
-        $supervisors = Supervisor::where('superadmin_id', auth()->id())
-            ->when($search !== '', fn($query) => $query->where(function ($query) use ($search) {
-                $query->where('supervisor_number', 'like', "%{$search}%");
+        $supervisors = Supervisor::with('superadmin:id,name')
+            ->when($search !== '', fn($query) => $query->where(function ($q) use ($search) {
+                $q->where('supervisor_number', 'like', "%{$search}%")
+                  ->orWhereHas('superadmin', fn($sq) => $sq->where('name', 'like', "%{$search}%"));
             }))
-            ->orderByDesc('created_at')
+            // Les superviseurs du compte connecté apparaissent en premier
+            ->orderByRaw('superadmin_id = ? DESC', [auth()->id()])
+            ->orderBy('supervisor_number')
             ->get();
 
         return view('employee.supervisors.index', compact('supervisors', 'search'));
