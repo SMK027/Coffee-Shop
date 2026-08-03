@@ -1,7 +1,7 @@
 <x-employee-layout title="Bon d'achat — {{ $voucher->code }}">
     <x-slot name="headerActions">
         <div class="flex items-center gap-3">
-            @unless($isUsed)
+            @unless($voucher->is_used)
             <a href="{{ route('employee.vouchers.edit', $voucher) }}"
                class="flex items-center gap-1.5 bg-stone-100 hover:bg-stone-200 text-stone-700 text-sm font-medium px-3 py-1.5 rounded-lg transition-colors print:hidden">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
