@@ -112,10 +112,18 @@
                                 @endif
                             </td>
                             <td class="px-5 py-3 text-right">
-                                <a href="{{ route('employee.vouchers.show', $voucher) }}"
-                                   class="text-amber-700 hover:text-amber-900 text-xs font-medium transition-colors">
-                                    Détails →
-                                </a>
+                                <div class="flex items-center justify-end gap-3">
+                                    <a href="{{ route('employee.vouchers.show', $voucher) }}"
+                                       class="text-amber-700 hover:text-amber-900 text-xs font-medium transition-colors">
+                                        Détails →
+                                    </a>
+                                    @unless($isUsed)
+                                    <a href="{{ route('employee.vouchers.edit', $voucher) }}"
+                                       class="text-stone-500 hover:text-stone-700 text-xs font-medium transition-colors">
+                                        Modifier
+                                    </a>
+                                    @endunless
+                                </div>
                             </td>
                         </tr>
                         @endforeach

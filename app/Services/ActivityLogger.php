@@ -13,6 +13,7 @@ class ActivityLogger
     private static array $routeLabels = [
         // Bons d'achat
         'employee.vouchers.store'              => "Création d'un bon d'achat",
+        'employee.vouchers.update'             => "Modification d'un bon d'achat",
         // Remboursements
         'employee.orders.refund.store'         => 'Remboursement (depuis la commande)',
         'employee.refunds.store'               => 'Remboursement (section dédiée)',
