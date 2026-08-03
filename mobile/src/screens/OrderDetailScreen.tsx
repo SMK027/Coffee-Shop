@@ -168,7 +168,8 @@ export default function OrderDetailScreen() {
   const subtotal =
     (order.total_amount ?? 0) +
     (order.discount_amount ?? 0) +
-    (order.loyalty_discount_amount ?? 0);
+    (order.loyalty_discount_amount ?? 0) +
+    (order.voucher_discount_amount ?? 0);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ padding: 16, paddingBottom: 48 }}>
@@ -229,6 +230,16 @@ export default function OrderDetailScreen() {
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Réduction salarié (15%)</Text>
             <Text style={styles.summaryDiscount}>−{order.discount_amount.toFixed(2)} €</Text>
+          </View>
+        )}
+        {(order.voucher_discount_amount ?? 0) > 0 && (
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>
+              Bon d'achat{order.voucher ? ` (${order.voucher.code})` : ''}
+            </Text>
+            <Text style={[styles.summaryDiscount, { color: '#7c3aed' }]}>
+              −{(order.voucher_discount_amount ?? 0).toFixed(2)} €
+            </Text>
           </View>
         )}
         <View style={[styles.summaryRow, styles.totalRow]}>

@@ -121,6 +121,8 @@ export interface Order {
   discount_amount: number;
   loyalty_discount_amount: number;
   loyalty_points_spent: number;
+  voucher_discount_amount: number;
+  voucher?: { code: string; amount: number } | null;
   refunded_amount: number;
   points_refunded: number;
   notes: string | null;

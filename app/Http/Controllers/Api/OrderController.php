@@ -70,7 +70,7 @@ class OrderController extends Controller
      */
     public function show(Order $order): JsonResponse
     {
-        $order->load('items.drink', 'handler', 'loyaltyCard', 'loyaltyDiscounts', 'payments.paymentMethod', 'refunds.paymentMethod');
+        $order->load('items.drink', 'handler', 'loyaltyCard', 'loyaltyDiscounts', 'payments.paymentMethod', 'refunds.paymentMethod', 'voucher');
         return response()->json(['order' => $this->formatOrder($order, true)]);
     }
 
@@ -619,6 +619,7 @@ class OrderController extends Controller
             'discount_amount'         => (float) $order->discount_amount,
             'loyalty_discount_amount' => (float) $order->loyalty_discount_amount,
             'loyalty_points_spent'    => (int) $order->loyalty_points_spent,
+            'voucher_discount_amount' => (float) ($order->voucher_discount_amount ?? 0),
             'notes'                   => $order->notes,
             'created_at'              => $order->created_at?->toIso8601String(),
             'completed_at'            => $order->completed_at?->toIso8601String(),
@@ -643,6 +644,10 @@ class OrderController extends Controller
                 'card_number' => $order->loyaltyCard->card_number,
                 'full_name'   => $order->loyaltyCard->full_name,
                 'points'      => (int) $order->loyaltyCard->points,
+            ] : null;
+            $data['voucher'] = $order->voucher ? [
+                'code'   => $order->voucher->code,
+                'amount' => (float) $order->voucher->amount,
             ] : null;
             $data['loyalty_discounts'] = $order->loyaltyDiscounts->map(fn(LoyaltyDiscount $d) => [
                 'id'              => $d->id,
