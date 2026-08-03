@@ -62,7 +62,17 @@ class Voucher extends Model
             if (empty($customerName)) {
                 return false;
             }
-            return mb_strtolower(trim($customerName)) === mb_strtolower(trim($this->restricted_name));
+
+            // Découpe les deux noms en mots, normalise la casse et les trie.
+            // Permet de faire correspondre "Jean Dupont" et "Dupont Jean".
+            $normalize = static function (string $s): array {
+                $words = preg_split('/[\s\-]+/u', mb_strtolower(trim($s)));
+                $words = array_values(array_filter($words, fn($w) => $w !== ''));
+                sort($words);
+                return $words;
+            };
+
+            return $normalize($customerName) === $normalize($this->restricted_name);
         }
 
         return true; // Aucune restriction
