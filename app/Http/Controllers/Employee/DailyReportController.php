@@ -27,9 +27,12 @@ class DailyReportController extends Controller
             $query->where('generated_by', auth()->id());
         }
 
-        $reports = $query->paginate(20);
+        // Groupement : année → mois → rapports
+        $grouped = $query->get()
+            ->groupBy(fn($r) => $r->report_date->format('Y'))
+            ->map(fn($byYear) => $byYear->groupBy(fn($r) => $r->report_date->format('Y-m')));
 
-        return view('employee.daily-reports.index', compact('reports', 'isSuperAdmin'));
+        return view('employee.daily-reports.index', compact('grouped', 'isSuperAdmin'));
     }
 
     public function create(Request $request)
