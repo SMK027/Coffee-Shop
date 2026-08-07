@@ -1,5 +1,8 @@
 <x-employee-layout title="Nouvelle commande">
     <x-slot name="headerActions">
+        <span id="server-clock" class="inline-flex items-center gap-1.5 bg-stone-100 border border-stone-200 text-stone-700 font-mono text-sm font-semibold px-3 py-1.5 rounded-lg">
+            🕐 <span id="server-clock-time">{{ now()->timezone('Europe/Paris')->format('H:i:s') }}</span>
+        </span>
         <a href="{{ route('employee.orders.index') }}" class="text-stone-500 hover:text-stone-700 text-sm">← Retour</a>
     </x-slot>
 
@@ -181,7 +184,7 @@
                 @include('employee.shared.supervisor-auth-fields')
             @endif
 
-            <div class="flex gap-3">
+            <div class="flex items-center gap-3">
                 <button type="submit"
                         class="bg-amber-700 hover:bg-amber-600 text-white px-6 py-2.5 rounded-lg font-medium text-sm transition-colors">
                     Créer la commande
@@ -190,6 +193,7 @@
                    class="bg-stone-100 hover:bg-stone-200 text-stone-700 px-6 py-2.5 rounded-lg font-medium text-sm transition-colors">
                     ← Modifier l'identification
                 </a>
+                <span class="text-xs text-stone-400 ml-auto"></span>
             </div>
         </form>
     </div>
@@ -463,6 +467,18 @@
 
         updateRemoveButtons();
         updateTotal();
+    })();
+    </script>
+
+    <script>
+    (function () {
+        const el = document.getElementById('server-clock-time');
+        if (!el) return;
+        function tick() {
+            el.textContent = new Date().toLocaleTimeString('fr-FR', { timeZone: 'Europe/Paris', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+        }
+        tick();
+        setInterval(tick, 1000);
     })();
     </script>
 </x-employee-layout>
