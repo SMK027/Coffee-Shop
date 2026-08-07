@@ -173,6 +173,14 @@
                 </div>
             </div>
 
+            @if (!\App\Models\Setting::isWithinOpeningHours() && !auth()->user()->isSuperAdmin())
+                <div class="bg-red-50 border border-red-200 rounded-xl p-4 mb-4">
+                    <p class="text-sm font-semibold text-red-800 mb-1">Boutique fermée</p>
+                    <p class="text-xs text-red-700">La création de commande est restreinte en dehors des horaires d'ouverture. Un superviseur doit autoriser cette opération.</p>
+                </div>
+                @include('employee.shared.supervisor-auth-fields')
+            @endif
+
             <div class="flex gap-3">
                 <button type="submit"
                         class="bg-amber-700 hover:bg-amber-600 text-white px-6 py-2.5 rounded-lg font-medium text-sm transition-colors">

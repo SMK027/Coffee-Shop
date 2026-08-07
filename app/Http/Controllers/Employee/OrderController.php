@@ -295,6 +295,11 @@ class OrderController extends Controller
                 ->with('error', 'Session expirée. Veuillez recommencer.');
         }
 
+        // Vérification des horaires d'ouverture
+        if (!\App\Models\Setting::isWithinOpeningHours()) {
+            $this->requireSuperAdminOrSupervisor($request, 'La boutique est fermée. Un bypass superviseur est requis pour créer une commande.');
+        }
+
         $validated = $request->validate([
             'items'                  => ['required', 'array', 'min:1'],
             'items.*.drink_id'       => ['nullable', 'integer', 'exists:drinks,id'],
