@@ -85,6 +85,13 @@ export default function CreateOrderScreen() {
   const [customQuantity, setCustomQuantity] = useState('1');
   const [customError, setCustomError] = useState('');
 
+  // Bypass superviseur (hors horaires)
+  const [supervisorModalVisible, setSupervisorModalVisible] = useState(false);
+  const [supervisorNumber, setSupervisorNumber] = useState('');
+  const [supervisorPin, setSupervisorPin] = useState('');
+  const [supervisorError, setSupervisorError] = useState('');
+  const pendingPayloadRef = React.useRef<Record<string, any> | null>(null);
+
   // Soumission
   const [submitting, setSubmitting] = useState(false);
 
@@ -393,42 +400,48 @@ export default function CreateOrderScreen() {
     setCart((prev) => prev.map((i) => (i.uid === uid ? { ...i, quantity: clamped } : i)));
   };
 
-  const handleSubmit = async () => {
-    if (cart.length === 0) {
-      Alert.alert('Panier vide', 'Ajoutez au moins un article.');
-      return;
+  const buildPayload = () => {
+    const combinedName = `${firstName.trim()} ${lastName.trim()}`.trim();
+    const payload: Record<string, any> = {
+      items: cart.map((i) =>
+        i.type === 'drink'
+          ? { drink_id: i.drink.id, quantity: i.quantity }
+          : { custom_label: i.label, custom_price: i.unitPrice, quantity: i.quantity }
+      ),
+      is_employee_order: isEmployeeOrder,
+      notes: notes.trim() || undefined,
+    };
+    if (loyaltyCard) {
+      payload.loyalty_card_number = loyaltyCard.card_number;
+    } else if (combinedName) {
+      payload.customer_name = combinedName;
     }
+    if (selectedDiscountIds.length > 0) {
+      payload.loyalty_discount_ids = selectedDiscountIds;
+      payload.card_pin = cardPin;
+    }
+    if (voucherData) {
+      payload.voucher_code = voucherData.code;
+    }
+    return payload;
+  };
 
+  const submitOrder = async (payload: Record<string, any>) => {
     setSubmitting(true);
     try {
-      const combinedName = `${firstName.trim()} ${lastName.trim()}`.trim();
-      const payload: Record<string, any> = {
-        items: cart.map((i) =>
-          i.type === 'drink'
-            ? { drink_id: i.drink.id, quantity: i.quantity }
-            : { custom_label: i.label, custom_price: i.unitPrice, quantity: i.quantity }
-        ),
-        is_employee_order: isEmployeeOrder,
-        notes: notes.trim() || undefined,
-      };
-      if (loyaltyCard) {
-        payload.loyalty_card_number = loyaltyCard.card_number;
-      } else if (combinedName) {
-        payload.customer_name = combinedName;
-      }
-      if (selectedDiscountIds.length > 0) {
-        payload.loyalty_discount_ids = selectedDiscountIds;
-        payload.card_pin = cardPin;
-      }
-      if (voucherData) {
-        payload.voucher_code = voucherData.code;
-      }
-
       await api.post('/orders', payload);
       Alert.alert('Succès', 'Commande créée avec succès.', [
         { text: 'OK', onPress: () => navigation.goBack() },
       ]);
     } catch (err: any) {
+      if (err?.response?.data?.error_code === 'outside_hours') {
+        pendingPayloadRef.current = payload;
+        setSupervisorNumber('');
+        setSupervisorPin('');
+        setSupervisorError('');
+        setSupervisorModalVisible(true);
+        return;
+      }
       const msg = err?.response?.data?.message
         ?? Object.values(err?.response?.data?.errors ?? {}).flat().join('\n')
         ?? 'Une erreur est survenue.';
@@ -436,6 +449,24 @@ export default function CreateOrderScreen() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleSubmit = async () => {
+    if (cart.length === 0) {
+      Alert.alert('Panier vide', 'Ajoutez au moins un article.');
+      return;
+    }
+    await submitOrder(buildPayload());
+  };
+
+  const handleSupervisorBypass = async () => {
+    if (!supervisorNumber.trim() || !supervisorPin.trim()) {
+      setSupervisorError('Veuillez renseigner le numéro et le PIN du superviseur.');
+      return;
+    }
+    const payload = { ...pendingPayloadRef.current!, supervisor_number: supervisorNumber.trim(), supervisor_pin: supervisorPin.trim() };
+    setSupervisorModalVisible(false);
+    await submitOrder(payload);
   };
 
   const filteredDrinks = drinks.filter((d) =>
@@ -700,6 +731,52 @@ export default function CreateOrderScreen() {
             <View style={styles.scannerFrame} />
             <Text style={styles.scannerHint}>Pointez vers le QR code ou le code-barres du bon d'achat</Text>
           </View>
+        </View>
+      </Modal>
+
+      {/* ── Modal bypass superviseur (hors horaires) ── */}
+      <Modal visible={supervisorModalVisible} animationType="fade" transparent>
+        <View style={styles.overlayBackdrop}>
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+            <View style={styles.supervisorModal}>
+              <Text style={styles.supervisorModalTitle}>Boutique fermée</Text>
+              <Text style={styles.supervisorModalSubtitle}>
+                La création de commande est restreinte en dehors des horaires d'ouverture.{"\n"}Un superviseur doit autoriser cette opération.
+              </Text>
+              <Text style={styles.subLabel}>N° superviseur</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Numéro du superviseur"
+                placeholderTextColor="#9ca3af"
+                value={supervisorNumber}
+                onChangeText={setSupervisorNumber}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              <Text style={styles.subLabel}>PIN superviseur</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="PIN (4–6 chiffres)"
+                placeholderTextColor="#9ca3af"
+                value={supervisorPin}
+                onChangeText={setSupervisorPin}
+                secureTextEntry
+                keyboardType="numeric"
+              />
+              {supervisorError ? <Text style={styles.error}>{supervisorError}</Text> : null}
+              <View style={{ flexDirection: 'row', gap: 10, marginTop: 8 }}>
+                <TouchableOpacity
+                  style={[styles.backBtn, { flex: 1 }]}
+                  onPress={() => setSupervisorModalVisible(false)}
+                >
+                  <Text style={[styles.backBtnText, { textAlign: 'center' }]}>Annuler</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.submitBtn, { flex: 1 }]} onPress={handleSupervisorBypass}>
+                  <Text style={styles.submitBtnText}>Valider</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </KeyboardAvoidingView>
         </View>
       </Modal>
     </View>
@@ -1291,4 +1368,16 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   scannerHint: { color: '#fff', fontSize: 14, textAlign: 'center', paddingHorizontal: 40, opacity: 0.85 },
+
+  // Modal bypass superviseur
+  overlayBackdrop: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.55)',
+    justifyContent: 'center', alignItems: 'center', padding: 24,
+  },
+  supervisorModal: {
+    backgroundColor: '#fff', borderRadius: 16, padding: 20, width: '100%',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 12, elevation: 8,
+  },
+  supervisorModalTitle: { fontSize: 18, fontWeight: '700', color: '#1f2937', marginBottom: 6 },
+  supervisorModalSubtitle: { fontSize: 13, color: '#6b7280', marginBottom: 16, lineHeight: 18 },
 });

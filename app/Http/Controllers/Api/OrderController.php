@@ -109,6 +109,40 @@ class OrderController extends Controller
             'items.*.quantity'       => ['required', 'integer', 'min:1', 'max:250'],
         ]);
 
+        // Vérification des horaires d'ouverture
+        $user = Auth::guard('api')->user();
+        if (!\App\Models\Setting::isWithinOpeningHours()) {
+            if (!$user?->isSuperAdmin()) {
+                $supervisorData = $request->only(['supervisor_number', 'supervisor_pin']);
+                $supervisorValidator = Validator::make($supervisorData, [
+                    'supervisor_number' => ['required', 'string', 'max:50'],
+                    'supervisor_pin'    => ['required', 'string', 'regex:/^\d{4,6}$/'],
+                ], [
+                    'supervisor_number.required' => 'La boutique est fermée. Un bypass superviseur est requis (numéro manquant).',
+                    'supervisor_pin.required'    => 'La boutique est fermée. Un bypass superviseur est requis (PIN manquant).',
+                    'supervisor_pin.regex'       => 'Le PIN du superviseur doit contenir entre 4 et 6 chiffres.',
+                ]);
+
+                if ($supervisorValidator->fails()) {
+                    return response()->json([
+                        'message'      => 'La boutique est actuellement fermée. Un bypass superviseur est requis pour créer une commande.',
+                        'error_code'   => 'outside_hours',
+                        'errors'       => $supervisorValidator->errors(),
+                    ], 422);
+                }
+
+                $supervisor = Supervisor::where('supervisor_number', $supervisorData['supervisor_number'])
+                    ->where('is_active', true)
+                    ->first();
+
+                if (!$supervisor || !Hash::check($supervisorData['supervisor_pin'], $supervisor->password)) {
+                    throw ValidationException::withMessages([
+                        'supervisor_pin' => ['Numéro de superviseur ou PIN invalide.'],
+                    ]);
+                }
+            }
+        }
+
         $isEmployeeOrder = (bool) ($validated['is_employee_order'] ?? false);
         $loyaltyCard     = null;
         $discountIds     = array_values(array_filter((array) ($validated['loyalty_discount_ids'] ?? [])));

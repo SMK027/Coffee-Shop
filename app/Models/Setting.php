@@ -187,4 +187,43 @@ class Setting extends Model
     {
         return (int) self::get(self::KEY_POINTS_PER_EURO, '5');
     }
+
+    /**
+     * Vérifie si l'heure actuelle est dans la plage d'ouverture ± $marginMinutes.
+     * Retourne true si la boutique est ouverte (ou dans la marge), false sinon.
+     */
+    public static function isWithinOpeningHours(int $marginMinutes = 15): bool
+    {
+        $hours = self::getHours();
+        $now   = now();
+        $day   = strtolower($now->format('l')); // 'monday', 'tuesday', …
+
+        // Vérifier d'abord les exceptions
+        foreach ($hours['exceptions'] as $exception) {
+            if (($exception['date'] ?? '') === $now->toDateString()) {
+                if (!($exception['open'] ?? false)) {
+                    return false;
+                }
+                return self::timeInRange($now, $exception['from'] ?? '00:00', $exception['to'] ?? '23:59', $marginMinutes);
+            }
+        }
+
+        $regular = $hours['regular'][$day] ?? ['open' => false];
+        if (!($regular['open'] ?? false)) {
+            return false;
+        }
+
+        return self::timeInRange($now, $regular['from'] ?? '00:00', $regular['to'] ?? '23:59', $marginMinutes);
+    }
+
+    private static function timeInRange(\Carbon\Carbon $now, string $from, string $to, int $marginMinutes): bool
+    {
+        [$fh, $fm] = array_map('intval', explode(':', $from));
+        [$th, $tm] = array_map('intval', explode(':', $to));
+
+        $open  = $now->copy()->setTime($fh, $fm)->subMinutes($marginMinutes);
+        $close = $now->copy()->setTime($th, $tm)->addMinutes($marginMinutes);
+
+        return $now->between($open, $close);
+    }
 }
