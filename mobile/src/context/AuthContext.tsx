@@ -43,7 +43,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const { data } = await api.post('/auth/login', { email, password });
     await SecureStore.setItemAsync(ACCESS_TOKEN_KEY, data.access_token);
-    await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, data.access_token);
+    await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, data.refresh_token);
     setUser(data.user);
   };
 
