@@ -1,12 +1,11 @@
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
-import { API_BASE_URL } from './config';
 
 export const ACCESS_TOKEN_KEY = 'access_token';
 export const REFRESH_TOKEN_KEY = 'refresh_token';
 
 const api = axios.create({
-  baseURL: `${API_BASE_URL}/api`,
+  baseURL: '', // injectée dynamiquement par ServerContext
   headers: {
     'Content-Type': 'application/json',
     Accept: 'application/json',
@@ -35,9 +34,8 @@ api.interceptors.response.use(
         const refreshToken = await SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
         if (!refreshToken) throw new Error('Pas de token de renouvellement');
 
-        // On utilise le refresh token comme token pour appeler /refresh
         const refreshResponse = await axios.post(
-          `${API_BASE_URL}/api/auth/refresh`,
+          `${api.defaults.baseURL}/auth/refresh`,
           {},
           {
             headers: {
@@ -56,8 +54,6 @@ api.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${access_token}`;
         return api(originalRequest);
       } catch {
-        // Le refresh a échoué — on laisse l'erreur 401 se propager
-        // pour que le contexte Auth déconnecte l'utilisateur
         await SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY);
         await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
       }

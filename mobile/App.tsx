@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import * as NavigationBar from 'expo-navigation-bar';
+import { ServerProvider } from './src/context/ServerContext';
 import { AuthProvider } from './src/context/AuthContext';
 import RootNavigator from './src/components/RootNavigator';
 
@@ -14,9 +15,11 @@ export default function App() {
   }, []);
 
   return (
-    <AuthProvider>
-      <StatusBar hidden />
-      <RootNavigator />
-    </AuthProvider>
+    <ServerProvider>
+      <AuthProvider>
+        <StatusBar hidden />
+        <RootNavigator />
+      </AuthProvider>
+    </ServerProvider>
   );
 }

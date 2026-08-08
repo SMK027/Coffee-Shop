@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import ServerManager from '../components/ServerManager';
 
 const roleLabels: Record<string, string> = {
   superadmin: 'Super administrateur',
@@ -28,11 +29,8 @@ export default function ProfileScreen() {
   }
 
   const initials = user.name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((s) => s[0].toUpperCase())
-    .join('');
+    .split(' ').filter(Boolean).slice(0, 2)
+    .map((s) => s[0].toUpperCase()).join('');
 
   const confirmLogout = () => {
     Alert.alert('Déconnexion', 'Voulez-vous vraiment vous déconnecter ?', [
@@ -63,6 +61,10 @@ export default function ProfileScreen() {
         <Field label="Rôle" value={roleLabel} last />
       </View>
 
+      <View style={styles.serverSection}>
+        <ServerManager />
+      </View>
+
       <TouchableOpacity style={styles.logoutBtn} onPress={confirmLogout}>
         <Text style={styles.logoutBtnText}>Se déconnecter</Text>
       </TouchableOpacity>
@@ -85,36 +87,25 @@ const styles = StyleSheet.create({
   empty: { color: '#9ca3af', fontSize: 15 },
   avatarWrap: { alignItems: 'center', paddingVertical: 24 },
   avatar: {
-    width: 96, height: 96, borderRadius: 48,
-    backgroundColor: '#92400e',
-    justifyContent: 'center', alignItems: 'center',
-    marginBottom: 12,
+    width: 96, height: 96, borderRadius: 48, backgroundColor: '#92400e',
+    justifyContent: 'center', alignItems: 'center', marginBottom: 12,
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 6, elevation: 4,
   },
   avatarText: { color: '#fff', fontSize: 36, fontWeight: '700' },
   name: { fontSize: 22, fontWeight: '700', color: '#1f2937', marginBottom: 6 },
   roleBadge: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12 },
   roleBadgeText: { fontSize: 13, fontWeight: '600' },
-
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 4,
-    marginTop: 8,
+    backgroundColor: '#fff', borderRadius: 12, padding: 4, marginTop: 8,
     shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2,
   },
   field: { paddingHorizontal: 14, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
   fieldLabel: { fontSize: 12, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 },
   fieldValue: { fontSize: 15, color: '#1f2937', fontWeight: '500' },
-
+  serverSection: { marginTop: 24 },
   logoutBtn: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginTop: 24,
-    borderWidth: 1,
-    borderColor: '#ef4444',
+    backgroundColor: '#fff', borderRadius: 12, paddingVertical: 14,
+    alignItems: 'center', marginTop: 24, borderWidth: 1, borderColor: '#ef4444',
   },
   logoutBtnText: { color: '#ef4444', fontSize: 15, fontWeight: '700' },
 });

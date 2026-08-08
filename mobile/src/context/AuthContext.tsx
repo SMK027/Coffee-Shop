@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import api, { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY } from '../api/client';
+import { useServer } from './ServerContext';
 import { User } from '../types';
 
 interface AuthContextValue {
@@ -13,11 +14,13 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const { isReady } = useServer();
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Restaure la session au démarrage
+  // Restaure la session une fois le serveur initialisé
   useEffect(() => {
+    if (!isReady) return;
     (async () => {
       try {
         const token = await SecureStore.getItemAsync(ACCESS_TOKEN_KEY);
@@ -32,17 +35,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setIsLoading(false);
       }
     })();
-  }, []);
+  }, [isReady]);
 
   const login = async (email: string, password: string) => {
-    // Purge d'éventuels anciens tokens (issus d'une session antérieure avec
-    // un JWT_SECRET différent) pour éviter d'envoyer un Bearer invalide.
     await SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY);
     await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
 
     const { data } = await api.post('/auth/login', { email, password });
     await SecureStore.setItemAsync(ACCESS_TOKEN_KEY, data.access_token);
-    // On stocke également l'access token comme refresh token (il est valide 30j)
     await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, data.access_token);
     setUser(data.user);
   };
