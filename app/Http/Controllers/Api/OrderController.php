@@ -102,6 +102,8 @@ class OrderController extends Controller
             'loyalty_discount_ids.*' => ['integer', 'exists:loyalty_discounts,id'],
             'notes'                  => ['nullable', 'string', 'max:500'],
             'voucher_code'           => ['nullable', 'string', 'max:20'],
+            'card_offer_ids'         => ['nullable', 'array'],
+            'card_offer_ids.*'       => ['integer'],
             'items'                  => ['required', 'array', 'min:1'],
             'items.*.drink_id'       => ['nullable', 'integer', 'exists:drinks,id'],
             'items.*.custom_label'   => ['nullable', 'string', 'max:150'],
@@ -131,6 +133,7 @@ class OrderController extends Controller
         $isEmployeeOrder = (bool) ($validated['is_employee_order'] ?? false);
         $loyaltyCard     = null;
         $discountIds     = array_values(array_filter((array) ($validated['loyalty_discount_ids'] ?? [])));
+        $cardOfferIds    = array_values(array_filter((array) ($validated['card_offer_ids'] ?? [])));
 
         // Résolution de la carte de fidélité
         if (!empty($validated['loyalty_card_number'])) {
@@ -185,6 +188,27 @@ class OrderController extends Controller
                 throw ValidationException::withMessages([
                     'loyalty_discount_ids' => 'Points insuffisants pour appliquer toutes les réductions sélectionnées.',
                 ]);
+            }
+        }
+
+        // Résolution et validation des offres carte
+        $cardOffers = collect();
+        if (! empty($cardOfferIds)) {
+            if (! $loyaltyCard) {
+                throw ValidationException::withMessages([
+                    'card_offer_ids' => 'Les offres personnalisées nécessitent une carte de fidélité valide.',
+                ]);
+            }
+            $cardOffers = \App\Models\CardOffer::whereIn('id', $cardOfferIds)
+                ->where('loyalty_card_id', $loyaltyCard->id)
+                ->get();
+
+            foreach ($cardOffers as $offer) {
+                if (! $offer->isValid()) {
+                    throw ValidationException::withMessages([
+                        'card_offer_ids' => "L'offre « {$offer->label} » est expirée ou déjà utilisée.",
+                    ]);
+                }
             }
         }
 
@@ -284,11 +308,31 @@ class OrderController extends Controller
         }
         $total = round(max(0.0, $afterEmployee - $voucherDiscount), 2);
 
+        // Calcul de la réduction des offres carte (appliquée après toutes les autres réductions)
+        $cardOfferDiscount = 0;
+        $cardOfferRows     = [];
+        $remainingForOffer = $total;
+        foreach ($cardOffers as $offer) {
+            if ($offer->discount_type === \App\Models\CardOffer::TYPE_PERCENT) {
+                $amount = round($remainingForOffer * ((float) $offer->discount_value / 100), 2);
+                if ($offer->max_discount_amount !== null) {
+                    $amount = min($amount, round((float) $offer->max_discount_amount, 2));
+                }
+            } else {
+                $amount = round(min($remainingForOffer, (float) $offer->discount_value), 2);
+            }
+            $remainingForOffer  = max(0.0, $remainingForOffer - $amount);
+            $cardOfferDiscount += $amount;
+            $cardOfferRows[]    = ['offer' => $offer, 'amount' => $amount];
+        }
+        $cardOfferDiscount = round($cardOfferDiscount, 2);
+        $total             = round(max(0.0, $total - $cardOfferDiscount), 2);
+
         $order = DB::transaction(function () use (
             $validated, $loyaltyCard, $isEmployeeOrder, $total,
             $employeeDiscount, $loyaltyDiscounts, $discountRows,
             $totalLoyaltyPoints, $totalLoyaltyAmount, $orderItems,
-            $voucher, $voucherDiscount
+            $voucher, $voucherDiscount, $cardOfferRows, $cardOfferDiscount
         ) {
             $initialStatus = OrderStatus::where('is_active', true)
                 ->orderBy('sort_order')
@@ -306,6 +350,7 @@ class OrderController extends Controller
                 'loyalty_discount_amount' => $totalLoyaltyAmount,
                 'voucher_id'              => $voucher?->id,
                 'voucher_discount_amount' => $voucherDiscount,
+                'card_offer_discount'     => $cardOfferDiscount,
                 'handled_by'              => Auth::guard('api')->id(),
                 'points_credited'         => false,
             ]);
@@ -339,6 +384,15 @@ class OrderController extends Controller
                     ]);
                 }
                 $lockedVoucher->update(['is_used' => true, 'used_at' => now()]);
+            }
+
+            // Marquer les offres carte comme utilisées
+            foreach ($cardOfferRows as $row) {
+                $row['offer']->update([
+                    'is_used'         => true,
+                    'used_at'         => now(),
+                    'used_in_order_id' => $order->id,
+                ]);
             }
 
             return $order;
@@ -639,6 +693,7 @@ class OrderController extends Controller
             'loyalty_discount_amount' => (float) $order->loyalty_discount_amount,
             'loyalty_points_spent'    => (int) $order->loyalty_points_spent,
             'voucher_discount_amount' => (float) ($order->voucher_discount_amount ?? 0),
+            'card_offer_discount'     => (float) ($order->card_offer_discount ?? 0),
             'notes'                   => $order->notes,
             'created_at'              => $order->created_at?->toIso8601String(),
             'completed_at'            => $order->completed_at?->toIso8601String(),

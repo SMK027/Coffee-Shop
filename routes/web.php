@@ -23,6 +23,7 @@ use App\Http\Controllers\Employee\DailyReportController;
 use App\Http\Controllers\Employee\RefundOrderController;
 use App\Http\Controllers\Employee\VoucherController;
 use App\Http\Controllers\Employee\ActivityLogController;
+use App\Http\Controllers\Employee\CardOfferController;
 use App\Http\Controllers\Auth\EmployeePasswordResetController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
@@ -172,6 +173,8 @@ Route::prefix('espace-employe')->name('employee.')->middleware(['auth', 'employe
     Route::patch('/fidelite/{loyaltyCard}/titulaire', [EmployeeLoyaltyController::class, 'updateHolder'])->name('loyalty.holder.update');
     Route::post('/fidelite/{loyaltyCard}/ajuster-points', [EmployeeLoyaltyController::class, 'adjustPoints'])->name('loyalty.points.adjust');
     Route::delete('/fidelite/{loyaltyCard}', [EmployeeLoyaltyController::class, 'destroy'])->name('loyalty.destroy');
+    Route::post('/fidelite/{loyaltyCard}/offres', [CardOfferController::class, 'store'])->name('loyalty.offers.store');
+    Route::delete('/fidelite/{loyaltyCard}/offres/{cardOffer}', [CardOfferController::class, 'destroy'])->name('loyalty.offers.destroy');
     Route::get('/fidelite/reductions', [LoyaltyDiscountController::class, 'index'])->name('loyalty-discounts.index');
     Route::get('/fidelite/reductions/nouvelle', [LoyaltyDiscountController::class, 'create'])->name('loyalty-discounts.create');
     Route::post('/fidelite/reductions', [LoyaltyDiscountController::class, 'store'])->name('loyalty-discounts.store');

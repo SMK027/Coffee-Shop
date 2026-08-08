@@ -47,6 +47,7 @@ class LoyaltyController extends Controller
             'orders' => fn ($q) => $q->latest(),
             'user',
             'pointAdjustments' => fn ($q) => $q->with('user')->latest(),
+            'cardOffers'       => fn ($q) => $q->with('issuedBy')->latest(),
         ]);
 
         return view('employee.loyalty.show', compact('loyaltyCard'));

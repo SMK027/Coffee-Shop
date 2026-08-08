@@ -43,6 +43,11 @@ class LoyaltyCard extends Model
         return $this->hasMany(LoyaltyPointAdjustment::class);
     }
 
+    public function cardOffers(): HasMany
+    {
+        return $this->hasMany(CardOffer::class);
+    }
+
     /**
      * Compte salarié (salarié) auquel la carte est éventuellement rattachée.
      */

@@ -185,6 +185,103 @@
             @endif
 
             @if(auth()->user()->isAdmin())
+            {{-- Offres personnalisées --}}
+            <div class="bg-white rounded-xl shadow-sm border border-stone-100 p-4 sm:p-6">
+                <h2 class="font-semibold text-stone-800 mb-1">Offres personnalisées</h2>
+                <p class="text-sm text-stone-500 mb-4">Réductions ponctuelles réservées à cette carte (anniversaire, fêtes…).</p>
+
+                {{-- Liste des offres existantes --}}
+                @if($loyaltyCard->cardOffers->isNotEmpty())
+                <div class="divide-y divide-stone-100 mb-4 border border-stone-100 rounded-lg overflow-hidden">
+                    @foreach($loyaltyCard->cardOffers as $offer)
+                    <div class="flex items-center justify-between gap-2 px-3 py-2.5 {{ $offer->is_used ? 'bg-stone-50 opacity-60' : 'bg-white' }}">
+                        <div class="min-w-0">
+                            <p class="text-sm font-medium text-stone-800 truncate">{{ $offer->label }}</p>
+                            <p class="text-xs text-stone-400">
+                                {{ $offer->display_value }}
+                                · expire le {{ $offer->expires_at->format('d/m/Y') }}
+                                @if($offer->is_used)
+                                    · <span class="text-stone-500">utilisée le {{ $offer->used_at->format('d/m/Y') }}</span>
+                                @endif
+                            </p>
+                        </div>
+                        @if(! $offer->is_used)
+                        <form action="{{ route('employee.loyalty.offers.destroy', [$loyaltyCard, $offer]) }}" method="POST"
+                              onsubmit="return confirm('Supprimer cette offre ?')">
+                            @csrf @method('DELETE')
+                            @if(! auth()->user()->isSuperAdmin())
+                                @include('employee.shared.supervisor-auth-fields')
+                            @endif
+                            <button type="submit" class="flex-shrink-0 text-red-400 hover:text-red-600 transition-colors">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                            </button>
+                        </form>
+                        @endif
+                    </div>
+                    @endforeach
+                </div>
+                @endif
+
+                {{-- Formulaire de création --}}
+                <form action="{{ route('employee.loyalty.offers.store', $loyaltyCard) }}" method="POST" class="space-y-3">
+                    @csrf
+                    <div>
+                        <label for="offer_label" class="block text-sm font-medium text-stone-700 mb-1">Libellé</label>
+                        <input type="text" name="label" id="offer_label" required maxlength="150"
+                               value="{{ old('label') }}"
+                               placeholder="Ex. Offre anniversaire, Noël 2025…"
+                               class="w-full border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
+                        @error('label')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label for="offer_type" class="block text-sm font-medium text-stone-700 mb-1">Type</label>
+                            <select name="discount_type" id="offer_type"
+                                    class="w-full border border-stone-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
+                                <option value="fixed"   {{ old('discount_type') === 'fixed'   ? 'selected' : '' }}>Montant fixe (€)</option>
+                                <option value="percent" {{ old('discount_type') === 'percent' ? 'selected' : '' }}>Pourcentage (%)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="offer_value" class="block text-sm font-medium text-stone-700 mb-1">Valeur</label>
+                            <input type="number" name="discount_value" id="offer_value" required min="0.01" max="9999.99" step="0.01"
+                                   value="{{ old('discount_value') }}"
+                                   class="w-full border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
+                            @error('discount_value')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="offer_max" class="block text-sm font-medium text-stone-700 mb-1">Plafond (€, optionnel)</label>
+                        <input type="number" name="max_discount_amount" id="offer_max" min="0.01" max="9999.99" step="0.01"
+                               value="{{ old('max_discount_amount') }}"
+                               placeholder="Laisser vide si aucun plafond"
+                               class="w-full border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
+                        @error('max_discount_amount')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                    </div>
+
+                    <div>
+                        <label for="offer_expires" class="block text-sm font-medium text-stone-700 mb-1">Expire le</label>
+                        <input type="date" name="expires_at" id="offer_expires" required
+                               value="{{ old('expires_at') }}"
+                               min="{{ now()->addDay()->toDateString() }}"
+                               class="w-full border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
+                        @error('expires_at')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                    </div>
+
+                    @if(! auth()->user()->isSuperAdmin())
+                        @include('employee.shared.supervisor-auth-fields')
+                    @endif
+
+                    <button type="submit" class="w-full bg-amber-700 hover:bg-amber-600 text-white px-4 py-2.5 rounded-lg font-medium text-sm transition-colors">
+                        Créer l'offre
+                    </button>
+                </form>
+            </div>
+            @endif
+
+            @if(auth()->user()->isAdmin())
             <div id="points-adjustment" class="bg-white rounded-xl shadow-sm border border-stone-100 p-4 sm:p-6">
                 <h2 class="font-semibold text-stone-800 mb-2">Ajuster les points</h2>
                 <p class="text-sm text-stone-500 mb-4">
