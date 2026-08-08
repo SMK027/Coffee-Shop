@@ -11,7 +11,7 @@ import {
   TextInput,
   ScrollView,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import api from '../api/client';
 import { Order, OrderStatus } from '../types';
 
@@ -19,6 +19,7 @@ type EmployeeFilter = 'all' | 'yes' | 'no';
 
 export default function OrdersScreen() {
   const navigation = useNavigation<any>();
+  const route = useRoute<any>();
   const [orders, setOrders] = useState<Order[]>([]);
   const [statuses, setStatuses] = useState<OrderStatus[]>([]);
   const [loading, setLoading] = useState(true);
@@ -73,6 +74,19 @@ export default function OrdersScreen() {
     setLoading(true);
     Promise.all([loadOrders(1, true), loadStatuses()]).finally(() => setLoading(false));
   }, [loadOrders, loadStatuses]);
+
+  // Insère immédiatement la nouvelle commande si elle arrive via les params
+  useEffect(() => {
+    const newOrder: Order | undefined = route.params?.newOrder;
+    if (!newOrder) return;
+    // Réinitialise le param pour éviter une réinsertion au prochain focus
+    navigation.setParams({ newOrder: undefined });
+    setActiveFilter('active');
+    setOrders((prev) => {
+      if (prev.some((o) => o.id === newOrder.id)) return prev;
+      return [newOrder, ...prev];
+    });
+  }, [route.params?.newOrder]);
 
   const onRefresh = async () => {
     setRefreshing(true);

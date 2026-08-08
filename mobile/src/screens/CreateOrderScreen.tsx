@@ -429,10 +429,8 @@ export default function CreateOrderScreen() {
   const submitOrder = async (payload: Record<string, any>) => {
     setSubmitting(true);
     try {
-      await api.post('/orders', payload);
-      Alert.alert('Succès', 'Commande créée avec succès.', [
-        { text: 'OK', onPress: () => navigation.goBack() },
-      ]);
+      const { data } = await api.post('/orders', payload);
+      navigation.navigate('OrdersList', { newOrder: data.order });
     } catch (err: any) {
       if (err?.response?.data?.error_code === 'outside_hours') {
         pendingPayloadRef.current = payload;
