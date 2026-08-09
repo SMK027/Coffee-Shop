@@ -59,6 +59,18 @@
                         <span>Sous-total</span>
                         <span>{{ number_format($grossTotal, 2, ',', ' ') }} €</span>
                     </div>
+                    @php
+                        $usedCardOffers = $order->loyaltyCard?->cardOffers()
+                            ->where('used_in_order_id', $order->id)
+                            ->where('is_used', true)
+                            ->get() ?? collect();
+                    @endphp
+                    @if($usedCardOffers->isNotEmpty())
+                    <div class="flex justify-between text-sm text-amber-700">
+                        <span>Réduction offre personnalisée</span>
+                        <span>-{{ number_format($usedCardOffers->sum(fn ($offer) => (float) $offer->discount_value), 2, ',', ' ') }} €</span>
+                    </div>
+                    @endif
                     @if($order->loyalty_discount_amount > 0)
                     <div class="flex justify-between text-sm text-blue-700">
                         <span>Réduction{{ $order->loyaltyDiscounts->count() > 1 ? 's' : '' }} fidélité</span>
