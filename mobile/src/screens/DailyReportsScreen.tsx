@@ -189,45 +189,44 @@ export default function DailyReportsScreen() {
                     </View>
                   ))
                 )}
+                <View style={[styles.summaryRow, { marginTop: 8 }]}> 
+                  <Text style={styles.summaryLabel}>Total encaissé</Text>
+                  <Text style={[styles.summaryValue, { color: '#16a34a' }]}>{preview.total_collected.toFixed(2).replace('.', ',')} €</Text>
+                </View>
 
-                <Text style={[styles.previewSection, { marginTop: 10 }]}>Remboursements</Text>
+                <Text style={[styles.previewSection, { marginTop: 14 }]}>Remboursements</Text>
                 {preview.refund_breakdown.length === 0 ? (
                   <Text style={styles.emptyLine}>Aucun remboursement ce jour</Text>
                 ) : (
                   preview.refund_breakdown.map((r) => (
                     <View key={r.method_id} style={styles.breakdownRow}>
                       <Text style={styles.breakdownLabel}>{r.method_name}</Text>
-                      <Text style={[styles.breakdownValue, { color: '#dc2626' }]}>
-                        -{r.total.toFixed(2).replace('.', ',')} €
+                      <Text style={[styles.breakdownValue, { color: '#dc2626' }]}>-
+                        {r.total.toFixed(2).replace('.', ',')} €
                       </Text>
                     </View>
                   ))
                 )}
-
-                <View style={styles.netRow}>
-                  <Text style={styles.netLabel}>Net encaissé</Text>
-                  <Text style={styles.netValue}>
-                    {Math.max(0, preview.total_collected - preview.total_refunded).toFixed(2).replace('.', ',')} €
-                  </Text>
+                <View style={[styles.summaryRow, { marginTop: 8 }]}> 
+                  <Text style={styles.summaryLabel}>Total remboursé</Text>
+                  <Text style={[styles.summaryValue, { color: '#dc2626' }]}>{preview.total_refunded.toFixed(2).replace('.', ',')} €</Text>
                 </View>
-              </View>
-            ) : null}
 
-            <TouchableOpacity
-              style={[styles.generateBtn, (!preview || generating) && { opacity: 0.5 }]}
-              onPress={handleGenerate}
-              disabled={!preview || generating}
-            >
-              {generating ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.generateBtnText}>
-                  {preview?.existing ? 'Mettre à jour' : 'Enregistrer le récapitulatif'}
-                </Text>
-              )}
-            </TouchableOpacity>
-          </View>
-
+                <Text style={[styles.previewSection, { marginTop: 14 }]}>Bons d'achat émis</Text>
+                {preview.vouchers_issued.length === 0 ? (
+                  <Text style={styles.emptyLine}>Aucun bon d'achat émis ce jour</Text>
+                ) : (
+                  preview.vouchers_issued.map((v) => (
+                    <View key={v.code} style={styles.breakdownRow}>
+                      <Text style={styles.breakdownLabel} numberOfLines={1}>{v.code}</Text>
+                      <Text style={[styles.breakdownValue, { color: '#7c3aed' }]}>{v.amount.toFixed(2).replace('.', ',')} €</Text>
+                    </View>
+                  ))
+                )}
+                <View style={[styles.summaryRow, { marginTop: 8 }]}> 
+                  <Text style={styles.summaryLabel}>Total bons émis</Text>
+                  <Text style={[styles.summaryValue, { color: '#7c3aed' }]}>{preview.total_vouchers_issued.toFixed(2).replace('.', ',')} €</Text>
+                </View>
           <Text style={styles.sectionTitle}>Historique</Text>
         </>
       }

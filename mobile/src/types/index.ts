@@ -47,9 +47,17 @@ export interface DailyReport {
   report_date: string;
   total_collected: number;
   total_refunded: number;
+  total_vouchers_issued: number;
   net: number;
   breakdown: DailyReportBreakdownRow[];
   refund_breakdown: DailyReportBreakdownRow[];
+  vouchers_issued: Array<{
+    code: string;
+    amount: number;
+    expires_at: string | null;
+    restricted_to: string | null;
+    is_used: boolean;
+  }>;
   generated_at: string | null;
   updated_at: string | null;
 }
@@ -58,8 +66,10 @@ export interface DailyReportPreview {
   date: string;
   total_collected: number;
   total_refunded: number;
+  total_vouchers_issued: number;
   breakdown: DailyReportBreakdownRow[];
   refund_breakdown: DailyReportBreakdownRow[];
+  vouchers_issued: DailyReport['vouchers_issued'];
   existing: DailyReport | null;
 }
 
