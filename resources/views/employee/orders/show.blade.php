@@ -166,6 +166,25 @@
                         </dd>
                     </div>
                     @endif
+                    @php
+                        $usedCardOffers = $order->loyaltyCard?->cardOffers()
+                            ->where('used_in_order_id', $order->id)
+                            ->where('is_used', true)
+                            ->get() ?? collect();
+                    @endphp
+                    @if($usedCardOffers->isNotEmpty())
+                    <div>
+                        <dt class="text-stone-500">Offres personnalisées utilisées</dt>
+                        <dd class="space-y-0.5 mt-0.5">
+                            @foreach($usedCardOffers as $offer)
+                            <p class="font-medium text-amber-700 text-sm">
+                                {{ $offer->label }}
+                                <span class="font-normal text-amber-600">({{ $offer->display_value }})</span>
+                            </p>
+                            @endforeach
+                        </dd>
+                    </div>
+                    @endif
                     @if($order->points_credited)
                     <div>
                         <dt class="text-stone-500">Points crédités</dt>
