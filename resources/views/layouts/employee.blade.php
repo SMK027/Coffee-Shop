@@ -39,142 +39,256 @@
             </div>
             <p class="px-6 pt-2 pb-1 text-amber-300 text-xs">Espace Salarié</p>
 
-            <nav class="flex-1 overflow-y-auto px-3 py-3">
-                @php
-                    $navItems = [
-                        ['route' => 'employee.dashboard',          'label' => 'Tableau de bord', 'icon' => 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6'],
-                        ['route' => 'employee.orders.index',       'label' => 'Commandes',       'icon' => 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2'],
-                        ['route' => 'employee.drinks.index',       'label' => 'Gestion du menu', 'icon' => 'M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z'],
-                        ['route' => 'employee.testimonials.index', 'label' => 'Témoignages',    'icon' => 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z'],
-                        ['route' => 'employee.contacts.index',     'label' => 'Contacts',        'icon' => 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z'],
-                        ['route' => 'employee.stats.index',        'label' => 'Statistiques',    'icon' => 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z'],
-                        ['route' => 'employee.loyalty.index',      'label' => 'Fidélité',        'icon' => 'M3 5a2 2 0 012-2h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5zm0 5h18M7 15h4'],
-                        ['route' => 'employee.loyalty-discounts.index', 'label' => 'Réductions', 'icon' => 'M12 8c-2.21 0-4 1.79-4 4h-2l3 4 3-4h-2c0-1.1.9-2 2-2s2 .9 2 2h2c0-2.21-1.79-4-4-4zm-6 9h12v2H6z'],
-                        ['route' => 'employee.home-images.index',  'label' => "Images d'accueil", 'icon' => 'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z'],
-                    ];
-                @endphp
+            <nav class="flex-1 overflow-y-auto px-3 py-3 space-y-4">
 
-                <ul class="space-y-1">
-                    @foreach($navItems as $item)
+                {{-- Général --}}
+                <div>
+                    <button class="nav-group-btn w-full flex items-center justify-between px-3 mb-1 text-xs font-semibold uppercase tracking-wider text-amber-400 hover:text-amber-200 transition-colors" data-group="general">
+                        Général
+                        <svg class="nav-chevron w-3 h-3 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                    </button>
+                    <ul class="space-y-1 overflow-hidden transition-all duration-200" data-group-list="general">
                         <li>
-                            <a href="{{ route($item['route']) }}"
+                            <a href="{{ route('employee.dashboard') }}"
                                class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium
-                                      {{ request()->routeIs($item['route'] . '*') ? 'bg-amber-800 text-white' : 'text-amber-100 hover:bg-amber-800 hover:text-white' }}">
+                                      {{ request()->routeIs('employee.dashboard*') ? 'bg-amber-800 text-white' : 'text-amber-100 hover:bg-amber-800 hover:text-white' }}">
                                 <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $item['icon'] }}"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
                                 </svg>
-                                {{ $item['label'] }}
+                                Tableau de bord
                             </a>
                         </li>
-                    @endforeach
+                    </ul>
+                </div>
 
-                    {{-- Remboursements : admins uniquement --}}
-                    @if(auth()->user()->isAdmin())
-                    <li>
-                        <a href="{{ route('employee.refunds.index') }}"
-                           class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium
-                                  {{ request()->routeIs('employee.refunds*') ? 'bg-amber-800 text-white' : 'text-amber-100 hover:bg-amber-800 hover:text-white' }}">
-                            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
-                            </svg>
-                            Remboursements
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ route('employee.vouchers.index') }}"
-                           class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium
-                                  {{ request()->routeIs('employee.vouchers*') ? 'bg-amber-800 text-white' : 'text-amber-100 hover:bg-amber-800 hover:text-white' }}">
-                            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
-                            </svg>
-                            Bons d'achat
-                        </a>
-                    </li>
-                    @endif
+                {{-- Ventes --}}
+                <div>
+                    <button class="nav-group-btn w-full flex items-center justify-between px-3 mb-1 text-xs font-semibold uppercase tracking-wider text-amber-400 hover:text-amber-200 transition-colors" data-group="ventes">
+                        Ventes
+                        <svg class="nav-chevron w-3 h-3 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                    </button>
+                    <ul class="space-y-1 overflow-hidden transition-all duration-200" data-group-list="ventes">
+                        <li>
+                            <a href="{{ route('employee.orders.index') }}"
+                               class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium
+                                      {{ request()->routeIs('employee.orders*') ? 'bg-amber-800 text-white' : 'text-amber-100 hover:bg-amber-800 hover:text-white' }}">
+                                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                                </svg>
+                                Commandes
+                            </a>
+                        </li>
+                        @if(auth()->user()->isAdmin())
+                        <li>
+                            <a href="{{ route('employee.refunds.index') }}"
+                               class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium
+                                      {{ request()->routeIs('employee.refunds*') ? 'bg-amber-800 text-white' : 'text-amber-100 hover:bg-amber-800 hover:text-white' }}">
+                                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
+                                </svg>
+                                Remboursements
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ route('employee.vouchers.index') }}"
+                               class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium
+                                      {{ request()->routeIs('employee.vouchers*') ? 'bg-amber-800 text-white' : 'text-amber-100 hover:bg-amber-800 hover:text-white' }}">
+                                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                                </svg>
+                                Bons d'achat
+                            </a>
+                        </li>
+                        @endif
+                    </ul>
+                </div>
 
-                    {{-- Gestion des salariés : admin uniquement --}}
-                    <li>
-                        <a href="{{ route('employee.users.index') }}"
-                           class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium
-                                  {{ request()->routeIs('employee.users*') ? 'bg-amber-800 text-white' : 'text-amber-100 hover:bg-amber-800 hover:text-white' }}">
-                            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
-                            </svg>
-                            Salariés
-                        </a>
-                    </li>
+                {{-- Menu --}}
+                <div>
+                    <button class="nav-group-btn w-full flex items-center justify-between px-3 mb-1 text-xs font-semibold uppercase tracking-wider text-amber-400 hover:text-amber-200 transition-colors" data-group="menu">
+                        Menu
+                        <svg class="nav-chevron w-3 h-3 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                    </button>
+                    <ul class="space-y-1 overflow-hidden transition-all duration-200" data-group-list="menu">
+                        <li>
+                            <a href="{{ route('employee.drinks.index') }}"
+                               class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium
+                                      {{ request()->routeIs('employee.drinks*') ? 'bg-amber-800 text-white' : 'text-amber-100 hover:bg-amber-800 hover:text-white' }}">
+                                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>
+                                </svg>
+                                Gestion du menu
+                            </a>
+                        </li>
+                    </ul>
+                </div>
 
-                    @if(auth()->user()->isSuperAdmin())
-                    <li>
-                        <a href="{{ route('employee.supervisors.index') }}"
-                           class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium
-                                  {{ request()->routeIs('employee.supervisors*') ? 'bg-amber-800 text-white' : 'text-amber-100 hover:bg-amber-800 hover:text-white' }}">
-                            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-3-3v6m-6 3h12a2 2 0 002-2V7a2 2 0 00-2-2H6a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-                            </svg>
-                            Superviseurs
-                        </a>
-                    </li>
-                    @endif
+                {{-- Clients --}}
+                <div>
+                    <button class="nav-group-btn w-full flex items-center justify-between px-3 mb-1 text-xs font-semibold uppercase tracking-wider text-amber-400 hover:text-amber-200 transition-colors" data-group="clients">
+                        Clients
+                        <svg class="nav-chevron w-3 h-3 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                    </button>
+                    <ul class="space-y-1 overflow-hidden transition-all duration-200" data-group-list="clients">
+                        <li>
+                            <a href="{{ route('employee.loyalty.index') }}"
+                               class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium
+                                      {{ request()->routeIs('employee.loyalty.index*') ? 'bg-amber-800 text-white' : 'text-amber-100 hover:bg-amber-800 hover:text-white' }}">
+                                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5zm0 5h18M7 15h4"/>
+                                </svg>
+                                Fidélité
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ route('employee.loyalty-discounts.index') }}"
+                               class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium
+                                      {{ request()->routeIs('employee.loyalty-discounts*') ? 'bg-amber-800 text-white' : 'text-amber-100 hover:bg-amber-800 hover:text-white' }}">
+                                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-2.21 0-4 1.79-4 4h-2l3 4 3-4h-2c0-1.1.9-2 2-2s2 .9 2 2h2c0-2.21-1.79-4-4-4zm-6 9h12v2H6z"/>
+                                </svg>
+                                Réductions
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ route('employee.testimonials.index') }}"
+                               class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium
+                                      {{ request()->routeIs('employee.testimonials*') ? 'bg-amber-800 text-white' : 'text-amber-100 hover:bg-amber-800 hover:text-white' }}">
+                                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                                </svg>
+                                Témoignages
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ route('employee.contacts.index') }}"
+                               class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium
+                                      {{ request()->routeIs('employee.contacts*') ? 'bg-amber-800 text-white' : 'text-amber-100 hover:bg-amber-800 hover:text-white' }}">
+                                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                                </svg>
+                                Contacts
+                            </a>
+                        </li>
+                    </ul>
+                </div>
 
-                    {{-- Statuts de commande : admins uniquement --}}
-                    @if(auth()->user()->isAdmin())
-                    <li>
-                        <a href="{{ route('employee.order-statuses.index') }}"
-                           class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium
-                                  {{ request()->routeIs('employee.order-statuses*') ? 'bg-amber-800 text-white' : 'text-amber-100 hover:bg-amber-800 hover:text-white' }}">
-                            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 8l2 2 4-4"/>
-                            </svg>
-                            Statuts de commande
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ route('employee.payment-methods.index') }}"
-                           class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium
-                                  {{ request()->routeIs('employee.payment-methods*') ? 'bg-amber-800 text-white' : 'text-amber-100 hover:bg-amber-800 hover:text-white' }}">
-                            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
-                            </svg>
-                            Moyens de paiement
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ route('employee.daily-reports.index') }}"
-                           class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium
-                                  {{ request()->routeIs('employee.daily-reports*') ? 'bg-amber-800 text-white' : 'text-amber-100 hover:bg-amber-800 hover:text-white' }}">
-                            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                            </svg>
-                            Récapitulatifs
-                        </a>
-                    </li>
-                    @endif
+                {{-- Analyses --}}
+                <div>
+                    <button class="nav-group-btn w-full flex items-center justify-between px-3 mb-1 text-xs font-semibold uppercase tracking-wider text-amber-400 hover:text-amber-200 transition-colors" data-group="analyses">
+                        Analyses
+                        <svg class="nav-chevron w-3 h-3 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                    </button>
+                    <ul class="space-y-1 overflow-hidden transition-all duration-200" data-group-list="analyses">
+                        <li>
+                            <a href="{{ route('employee.stats.index') }}"
+                               class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium
+                                      {{ request()->routeIs('employee.stats*') ? 'bg-amber-800 text-white' : 'text-amber-100 hover:bg-amber-800 hover:text-white' }}">
+                                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                                </svg>
+                                Statistiques
+                            </a>
+                        </li>
+                        @if(auth()->user()->isAdmin())
+                        <li>
+                            <a href="{{ route('employee.daily-reports.index') }}"
+                               class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium
+                                      {{ request()->routeIs('employee.daily-reports*') ? 'bg-amber-800 text-white' : 'text-amber-100 hover:bg-amber-800 hover:text-white' }}">
+                                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
+                                Récapitulatifs
+                            </a>
+                        </li>
+                        @endif
+                    </ul>
+                </div>
 
-                    {{-- Paramètres boutique : super admin et admins avec validation superviseur --}}
-                    @if(auth()->user()->isAdmin())
-                    <li>
-                        <a href="{{ route('employee.shop-settings.index') }}"
-                           class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium
-                                  {{ request()->routeIs('employee.shop-settings*') ? 'bg-amber-800 text-white' : 'text-amber-100 hover:bg-amber-800 hover:text-white' }}">
-                            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                            </svg>
-                            Paramètres boutique
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ route('employee.activity-logs.index') }}"
-                           class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium
-                                  {{ request()->routeIs('employee.activity-logs*') ? 'bg-amber-800 text-white' : 'text-amber-100 hover:bg-amber-800 hover:text-white' }}">
-                            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
-                            </svg>
-                            Journal d'activité
-                        </a>
-                    </li>
-                    @endif
-                </ul>
+                {{-- Administration --}}
+                <div>
+                    <button class="nav-group-btn w-full flex items-center justify-between px-3 mb-1 text-xs font-semibold uppercase tracking-wider text-amber-400 hover:text-amber-200 transition-colors" data-group="administration">
+                        Administration
+                        <svg class="nav-chevron w-3 h-3 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                    </button>
+                    <ul class="space-y-1 overflow-hidden transition-all duration-200" data-group-list="administration">
+                        <li>
+                            <a href="{{ route('employee.users.index') }}"
+                               class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium
+                                      {{ request()->routeIs('employee.users*') ? 'bg-amber-800 text-white' : 'text-amber-100 hover:bg-amber-800 hover:text-white' }}">
+                                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                                </svg>
+                                Salariés
+                            </a>
+                        </li>
+                        @if(auth()->user()->isSuperAdmin())
+                        <li>
+                            <a href="{{ route('employee.supervisors.index') }}"
+                               class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium
+                                      {{ request()->routeIs('employee.supervisors*') ? 'bg-amber-800 text-white' : 'text-amber-100 hover:bg-amber-800 hover:text-white' }}">
+                                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-3-3v6m-6 3h12a2 2 0 002-2V7a2 2 0 00-2-2H6a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                                </svg>
+                                Superviseurs
+                            </a>
+                        </li>
+                        @endif
+                        @if(auth()->user()->isAdmin())
+                        <li>
+                            <a href="{{ route('employee.order-statuses.index') }}"
+                               class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium
+                                      {{ request()->routeIs('employee.order-statuses*') ? 'bg-amber-800 text-white' : 'text-amber-100 hover:bg-amber-800 hover:text-white' }}">
+                                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 8l2 2 4-4"/>
+                                </svg>
+                                Statuts de commande
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ route('employee.payment-methods.index') }}"
+                               class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium
+                                      {{ request()->routeIs('employee.payment-methods*') ? 'bg-amber-800 text-white' : 'text-amber-100 hover:bg-amber-800 hover:text-white' }}">
+                                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                                </svg>
+                                Moyens de paiement
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ route('employee.home-images.index') }}"
+                               class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium
+                                      {{ request()->routeIs('employee.home-images*') ? 'bg-amber-800 text-white' : 'text-amber-100 hover:bg-amber-800 hover:text-white' }}">
+                                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                </svg>
+                                Images d'accueil
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ route('employee.shop-settings.index') }}"
+                               class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium
+                                      {{ request()->routeIs('employee.shop-settings*') ? 'bg-amber-800 text-white' : 'text-amber-100 hover:bg-amber-800 hover:text-white' }}">
+                                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                </svg>
+                                Paramètres boutique
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ route('employee.activity-logs.index') }}"
+                               class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium
+                                      {{ request()->routeIs('employee.activity-logs*') ? 'bg-amber-800 text-white' : 'text-amber-100 hover:bg-amber-800 hover:text-white' }}">
+                                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+                                </svg>
+                                Journal d'activité
+                            </a>
+                        </li>
+                        @endif
+                    </ul>
+                </div>
+
             </nav>
 
             <div class="px-3 py-4 border-t border-amber-800">
@@ -274,6 +388,69 @@
         sidebar?.querySelectorAll('a').forEach(a => {
             a.addEventListener('click', () => {
                 if (window.innerWidth < 1024) close();
+            });
+        });
+    })();
+
+    // Groupes repliables
+    (function () {
+        const STORAGE_KEY = 'nav_collapsed_groups';
+
+        function getCollapsed() {
+            try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+            catch { return []; }
+        }
+        function saveCollapsed(list) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+        }
+
+        function collapseList(list, chevron, animate) {
+            if (animate) {
+                list.style.maxHeight = list.scrollHeight + 'px';
+                requestAnimationFrame(() => { list.style.maxHeight = '0'; });
+            } else {
+                list.style.maxHeight = '0';
+            }
+            chevron.style.transform = 'rotate(-90deg)';
+        }
+        function expandList(list, chevron) {
+            list.style.maxHeight = list.scrollHeight + 'px';
+            chevron.style.transform = '';
+            // Libérer max-height après la transition pour que le contenu dynamique soit visible
+            list.addEventListener('transitionend', () => {
+                if (list.style.maxHeight !== '0px') list.style.maxHeight = 'none';
+            }, { once: true });
+        }
+
+        const buttons = document.querySelectorAll('.nav-group-btn');
+        const collapsed = getCollapsed();
+
+        // Groupes contenant un lien actif — toujours ouverts
+        const activeGroups = new Set();
+        document.querySelectorAll('[data-group-list]').forEach(ul => {
+            if (ul.querySelector('.bg-amber-800')) activeGroups.add(ul.dataset.groupList);
+        });
+
+        buttons.forEach(btn => {
+            const group = btn.dataset.group;
+            const list  = document.querySelector(`[data-group-list="${group}"]`);
+            const chevron = btn.querySelector('.nav-chevron');
+            if (!list || !chevron) return;
+
+            const isCollapsed = collapsed.includes(group) && !activeGroups.has(group);
+            collapseList(list, chevron, false);
+            if (!isCollapsed) expandList(list, chevron);
+
+            btn.addEventListener('click', () => {
+                const nowCollapsed = list.style.maxHeight === '0px' || list.style.maxHeight === '0';
+                const current = getCollapsed();
+                if (nowCollapsed) {
+                    expandList(list, chevron);
+                    saveCollapsed(current.filter(g => g !== group));
+                } else {
+                    collapseList(list, chevron, true);
+                    if (!current.includes(group)) saveCollapsed([...current, group]);
+                }
             });
         });
     })();
