@@ -117,12 +117,12 @@
                                        class="text-amber-700 hover:text-amber-900 text-xs font-medium transition-colors">
                                         Détails →
                                     </a>
-                                    @unless($isUsed)
-                                    <a href="{{ route('employee.vouchers.edit', $voucher) }}"
-                                       class="text-stone-500 hover:text-stone-700 text-xs font-medium transition-colors">
-                                        Modifier
-                                    </a>
-                                    @endunless
+                                    @if((auth()->user()->isAdmin() || auth()->user()->isSuperAdmin()) && !$isUsed)
+                                        <a href="{{ route('employee.vouchers.edit', $voucher) }}"
+                                           class="text-stone-500 hover:text-stone-700 text-xs font-medium transition-colors">
+                                            Modifier
+                                        </a>
+                                    @endif
                                 </div>
                             </td>
                         </tr>

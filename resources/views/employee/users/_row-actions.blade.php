@@ -1,10 +1,10 @@
 {{-- Boutons d'actions sur un compte salarié (partagé desktop/mobile) --}}
-@if(!$user->isSuperAdmin() || auth()->user()->isSuperAdmin())
+@if(auth()->user()->isAdmin() || auth()->user()->isSuperAdmin())
     <a href="{{ route('employee.users.edit', $user) }}"
        class="text-amber-600 hover:text-amber-700 text-xs font-medium px-2 py-1.5 rounded hover:bg-amber-50 transition-colors">
         Modifier
     </a>
-    @if(auth()->user()->isSuperAdmin() && $user->id !== auth()->id())
+    @if((auth()->user()->isSuperAdmin() || auth()->user()->isAdmin()) && $user->id !== auth()->id())
         <form action="{{ route('employee.users.reset-link', $user) }}" method="POST"
               onsubmit="return confirm('Envoyer un lien de réinitialisation à {{ addslashes($user->name) }} ?')">
             @csrf

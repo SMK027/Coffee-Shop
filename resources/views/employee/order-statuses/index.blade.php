@@ -1,13 +1,15 @@
 <x-employee-layout title="Statuts de commande">
     <x-slot name="headerActions">
-        <a href="{{ route('employee.order-statuses.create') }}"
-           class="bg-amber-700 hover:bg-amber-600 text-white px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 sm:gap-2">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-            </svg>
-            <span class="hidden sm:inline">Nouveau statut</span>
-            <span class="sm:hidden">Nouveau</span>
-        </a>
+        @if(auth()->user()->isAdmin() || auth()->user()->isSuperAdmin())
+            <a href="{{ route('employee.order-statuses.create') }}"
+               class="bg-amber-700 hover:bg-amber-600 text-white px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 sm:gap-2">
+                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                <span class="hidden sm:inline">Nouveau statut</span>
+                <span class="sm:hidden">Nouveau</span>
+            </a>
+        @endif
     </x-slot>
 
     @unless($isSuperAdmin)
@@ -72,10 +74,12 @@
                             </td>
                             <td class="px-5 py-3 text-right">
                                 <div class="flex items-center justify-end gap-2">
-                                    <a href="{{ route('employee.order-statuses.edit', $status) }}"
-                                       class="text-stone-500 hover:text-stone-700 text-xs font-medium transition-colors">
-                                        Modifier
-                                    </a>
+                                    @if(auth()->user()->isAdmin() || auth()->user()->isSuperAdmin())
+                                        <a href="{{ route('employee.order-statuses.edit', $status) }}"
+                                           class="text-stone-500 hover:text-stone-700 text-xs font-medium transition-colors">
+                                            Modifier
+                                        </a>
+                                    @endif
                                     @if($isSuperAdmin)
                                         <form action="{{ route('employee.order-statuses.toggle', $status) }}" method="POST">
                                             @csrf @method('PATCH')
@@ -127,8 +131,10 @@
                             </div>
                         </div>
                         <div class="flex flex-col items-end gap-1.5 flex-shrink-0 text-xs font-medium">
-                            <a href="{{ route('employee.order-statuses.edit', $status) }}"
-                               class="text-stone-500 hover:text-stone-700 transition-colors">Modifier</a>
+                                     @if(auth()->user()->isAdmin() || auth()->user()->isSuperAdmin())
+                                          <a href="{{ route('employee.order-statuses.edit', $status) }}"
+                                              class="text-stone-500 hover:text-stone-700 transition-colors">Modifier</a>
+                                     @endif
                             @if($isSuperAdmin)
                                 <form action="{{ route('employee.order-statuses.toggle', $status) }}" method="POST">
                                     @csrf @method('PATCH')
