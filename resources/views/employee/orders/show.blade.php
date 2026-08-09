@@ -45,13 +45,16 @@
                     @endforeach
                 </div>
                 <div class="mt-4 pt-4 border-t border-stone-100 space-y-1.5">
-                    @php
+                        @php
+                        $cardOfferDiscount = (float) ($order->card_offer_discount ?? 0);
                         $hasDiscounts = $order->discount_amount > 0
                             || $order->loyalty_discount_amount > 0
+                            || $cardOfferDiscount > 0
                             || $order->voucher_discount_amount > 0;
                         $grossTotal = $order->total_amount
                             + $order->discount_amount
                             + $order->loyalty_discount_amount
+                            + $cardOfferDiscount
                             + $order->voucher_discount_amount;
                     @endphp
                     @if($hasDiscounts)
@@ -65,10 +68,10 @@
                             ->where('is_used', true)
                             ->get() ?? collect();
                     @endphp
-                    @if($usedCardOffers->isNotEmpty())
+                    @if($cardOfferDiscount > 0)
                     <div class="flex justify-between text-sm text-amber-700">
                         <span>Réduction offre personnalisée</span>
-                        <span>-{{ number_format($usedCardOffers->sum(fn ($offer) => (float) $offer->discount_value), 2, ',', ' ') }} €</span>
+                        <span>-{{ number_format($cardOfferDiscount, 2, ',', ' ') }} €</span>
                     </div>
                     @endif
                     @if($order->loyalty_discount_amount > 0)

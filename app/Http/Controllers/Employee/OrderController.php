@@ -632,9 +632,7 @@ class OrderController extends Controller
                 'discount_amount'          => $employeeDiscount,
                 'loyalty_points_spent'     => $totalPointsNeeded,
                 'loyalty_discount_amount'  => $totalLoyaltyAmount,
-                'voucher_id'               => $voucher?->id,
-                'voucher_discount_amount'  => $voucherDiscount,
-                'status'                   => Order::STATUS_PENDING,
+            'card_offer_discount'      => $cardOfferDiscount,
                 'handled_by'               => auth()->id(),
             ]);
 

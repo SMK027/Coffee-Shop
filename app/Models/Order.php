@@ -12,7 +12,7 @@ class Order extends Model
     protected $fillable = [
         'customer_name', 'loyalty_card_id', 'is_employee_order', 'status', 'notes',
         'total_amount', 'discount_amount', 'loyalty_points_spent', 'loyalty_discount_amount',
-        'refunded_amount', 'handled_by', 'completed_at',
+        'card_offer_discount', 'refunded_amount', 'handled_by', 'completed_at',
         'points_credited', 'points_awarded', 'points_refunded',
         'voucher_id', 'voucher_discount_amount',
     ];
@@ -21,6 +21,7 @@ class Order extends Model
         'total_amount'             => 'decimal:2',
         'discount_amount'          => 'decimal:2',
         'loyalty_discount_amount'  => 'decimal:2',
+        'card_offer_discount'      => 'decimal:2',
         'refunded_amount'          => 'decimal:2',
         'voucher_discount_amount'  => 'decimal:2',
         'is_employee_order'        => 'boolean',
