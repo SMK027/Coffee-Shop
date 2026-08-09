@@ -17,7 +17,7 @@ class OrderPaymentController extends Controller
      */
     public function create(Order $order)
     {
-        abort_unless(auth()->user()->isAdmin(), 403);
+        abort_unless(auth()->user()->isAdmin() || auth()->user()->isModerator(), 403);
 
         $paymentMethods = PaymentMethod::active()->orderBy('sort_order')->get();
         $order->load('payments.paymentMethod', 'voucher');
@@ -34,7 +34,7 @@ class OrderPaymentController extends Controller
      */
     public function store(Request $request, Order $order)
     {
-        abort_unless(auth()->user()->isAdmin(), 403);
+        abort_unless(auth()->user()->isAdmin() || auth()->user()->isModerator(), 403);
 
         $request->validate([
             'payments'                  => ['required', 'array', 'min:1'],

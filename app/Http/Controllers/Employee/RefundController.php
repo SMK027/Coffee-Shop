@@ -19,7 +19,7 @@ class RefundController extends Controller
      */
     public function create(Order $order)
     {
-        abort_unless(auth()->user()->isAdmin(), 403);
+        abort_unless(auth()->user()->isAdmin() || auth()->user()->isModerator(), 403);
 
         $order->load('items.drink', 'loyaltyCard', 'payments.paymentMethod');
 

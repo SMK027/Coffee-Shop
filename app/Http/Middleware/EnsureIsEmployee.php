@@ -18,7 +18,7 @@ class EnsureIsEmployee
             abort(403, 'Compte désactivé.');
         }
 
-        if (!$request->user()?->isAdmin()) {
+        if (!($request->user()?->isAdmin() || $request->user()?->isModerator())) {
             abort(403, 'Accès réservé aux salariés.');
         }
 

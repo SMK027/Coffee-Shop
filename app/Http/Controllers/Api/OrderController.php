@@ -514,7 +514,7 @@ class OrderController extends Controller
 
     public function refund(Request $request, Order $order): JsonResponse
     {
-        abort_unless(Auth::user()?->isAdmin(), 403);
+        abort_unless(Auth::user()?->isAdmin() || Auth::user()?->isModerator(), 403);
         $this->requireSuperAdminOrSupervisor($request);
 
         $request->validate([
@@ -689,7 +689,7 @@ class OrderController extends Controller
      */
     public function storePayments(Request $request, Order $order): JsonResponse
     {
-        abort_unless(Auth::user()?->isAdmin(), 403);
+        abort_unless(Auth::user()?->isAdmin() || Auth::user()?->isModerator(), 403);
 
         $request->validate([
             'payments'                        => ['required', 'array', 'min:1'],

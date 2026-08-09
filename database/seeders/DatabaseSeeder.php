@@ -21,6 +21,7 @@ class DatabaseSeeder extends Seeder
             TestimonialSeeder::class,
             SettingSeeder::class,
             PaymentMethodSeeder::class,
+            ModeratorSeeder::class,
         ]);
     }
 }
