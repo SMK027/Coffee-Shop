@@ -57,17 +57,25 @@ class AdminSeeder extends Seeder
             ]
         );
 
+        $existingCard = LoyaltyCard::where('email', 'client-test@app.local')->first();
+        $cardNumber = $existingCard?->card_number ?? '100000000000';
+
+        if (strlen($cardNumber) < 12) {
+            $cardNumber = str_pad($cardNumber, 12, '0', STR_PAD_LEFT);
+        }
+
         $card = LoyaltyCard::updateOrCreate(
-            ['card_number' => '0000'],
+            ['email' => 'client-test@app.local'],
             [
-                'first_name' => 'Client',
-                'last_name'  => 'Test',
-                'email'      => 'client-test@app.local',
-                'phone'      => '0600000000',
-                'birth_date' => now()->subYears(25)->toDateString(),
-                'pin'        => '0000',
-                'points'     => 100,
-                'user_id'    => $simpleAdmin->id,
+                'card_number' => $cardNumber,
+                'first_name'  => 'Client',
+                'last_name'   => 'Test',
+                'email'       => 'client-test@app.local',
+                'phone'       => '0600000000',
+                'birth_date'  => now()->subYears(25)->toDateString(),
+                'pin'         => '0000',
+                'points'      => 100,
+                'user_id'     => $simpleAdmin->id,
             ]
         );
 
