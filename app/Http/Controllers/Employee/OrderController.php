@@ -76,6 +76,47 @@ class OrderController extends Controller
         return view('employee.orders.show', compact('order', 'statusLabels', 'availableTransitions'));
     }
 
+    /**
+     * Supprime définitivement une commande annulée.
+     * Super administrateur autorisé directement, les administrateurs simples
+     * doivent fournir la validation d'un superviseur.
+     */
+    public function destroy(Request $request, Order $order)
+    {
+        abort_unless(auth()->user()->isAdmin(), 403);
+
+        if ($order->status !== Order::STATUS_CANCELLED) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'La commande doit être annulée pour être supprimée.'], 403);
+            }
+            return back()->withErrors(['order' => 'La commande doit être annulée pour être supprimée.']);
+        }
+
+        if (! auth()->user()->isSuperAdmin()) {
+            $this->requireSuperAdminOrSupervisor($request, 'Action réservée aux super administrateurs ou à un superviseur valide.');
+        }
+
+        DB::transaction(function () use ($order, $request) {
+            // Supprime les éléments liés proprement
+            $order->items()->delete();
+            $order->payments()->delete();
+            $order->refunds()->delete();
+            $order->loyaltyDiscounts()->detach();
+
+            $orderId = $order->id;
+            $order->delete();
+
+            ActivityLogger::log(
+                'order.deleted',
+                "Commande #{$orderId} supprimée par " . auth()->user()->name,
+                null, null,
+                ['order_id' => $orderId]
+            );
+        });
+
+        return redirect()->route('employee.orders.index')->with('success', 'Commande supprimée.');
+    }
+
     public function create()
     {
         // Étape 2 : nécessite que l'étape 1 ait été complétée

@@ -261,4 +261,27 @@
         </div>
     </div>
 
+    {{-- Suppression de la commande (super admin ou superviseur requis) --}}
+    <div class="mt-4">
+        @if(auth()->user()->isAdmin())
+        <div class="bg-white rounded-xl shadow-sm border border-stone-100 p-4 sm:p-6">
+            <h2 class="font-semibold text-stone-800 mb-3">Supprimer la commande</h2>
+            <p class="text-sm text-stone-600 mb-3">La suppression est définitive. La commande doit être au statut <strong>Annulée</strong>.</p>
+
+            <form action="{{ route('employee.orders.destroy', $order) }}" method="POST" onsubmit="return confirm('Supprimer définitivement cette commande ? Cette action est irréversible.');">
+                @csrf
+                @method('DELETE')
+
+                @unless(auth()->user()->isSuperAdmin())
+                    @include('employee.shared.supervisor-auth-fields')
+                @endunless
+
+                <div class="mt-3">
+                    <button type="submit" class="w-full inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-3 rounded-lg">Supprimer la commande</button>
+                </div>
+            </form>
+        </div>
+        @endif
+    </div>
+
 </x-employee-layout>
