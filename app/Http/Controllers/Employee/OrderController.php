@@ -97,6 +97,32 @@ class OrderController extends Controller
         }
 
         DB::transaction(function () use ($order, $request) {
+            $order->load('loyaltyCard', 'loyaltyDiscounts', 'voucher');
+
+            // Restaurer les points dépensés sur la carte fidélité
+            if ($order->loyaltyCard && ($order->loyalty_points_spent ?? 0) > 0) {
+                $order->loyaltyCard()->increment('points', (int) $order->loyalty_points_spent);
+            }
+
+            // Restaurer les compteurs des réductions consommables
+            foreach ($order->loyaltyDiscounts as $discount) {
+                if (! $discount->is_permanent && $discount->quantity_limit !== null) {
+                    // Ne pas descendre en dessous de 0
+                    $discount->decrement('quantity_used');
+                }
+            }
+
+            // Marquer le bon d'achat comme disponible à nouveau
+            if ($order->voucher) {
+                $order->voucher->update(['is_used' => false, 'used_at' => null]);
+            }
+
+            // Restaurer les offres personnalisées utilisées par cette commande
+            $usedCardOffers = \App\Models\CardOffer::where('used_in_order_id', $order->id)->get();
+            foreach ($usedCardOffers as $offer) {
+                $offer->update(['is_used' => false, 'used_at' => null, 'used_in_order_id' => null]);
+            }
+
             // Supprime les éléments liés proprement
             $order->items()->delete();
             $order->payments()->delete();
