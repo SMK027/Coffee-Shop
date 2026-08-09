@@ -130,6 +130,7 @@ export interface Order {
   total_amount: number;
   discount_amount: number;
   loyalty_discount_amount: number;
+  card_offer_discount: number;
   loyalty_points_spent: number;
   voucher_discount_amount: number;
   voucher?: { code: string; amount: number } | null;

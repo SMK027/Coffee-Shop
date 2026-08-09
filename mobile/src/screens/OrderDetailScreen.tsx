@@ -169,7 +169,8 @@ export default function OrderDetailScreen() {
     (order.total_amount ?? 0) +
     (order.discount_amount ?? 0) +
     (order.loyalty_discount_amount ?? 0) +
-    (order.voucher_discount_amount ?? 0);
+    (order.voucher_discount_amount ?? 0) +
+    (order.card_offer_discount ?? 0);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ padding: 16, paddingBottom: 48 }}>
@@ -236,6 +237,12 @@ export default function OrderDetailScreen() {
               </View>
             )}
           </>
+        )}
+        {order.card_offer_discount > 0 && (
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Offres personnalisées</Text>
+            <Text style={[styles.summaryDiscount, { color: '#f59e0b' }]}>−{order.card_offer_discount.toFixed(2)} €</Text>
+          </View>
         )}
         {order.discount_amount > 0 && (
           <View style={styles.summaryRow}>
