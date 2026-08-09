@@ -19,7 +19,7 @@ class RefundOrderController extends Controller
      */
     public function index(Request $request)
     {
-        abort_unless(auth()->user()->isAdmin(), 403);
+        abort_unless(auth()->user()->isAdmin() || auth()->user()->isModerator(), 403);
 
         $search = trim((string) $request->query('q', ''));
         $orders = collect();
@@ -54,7 +54,7 @@ class RefundOrderController extends Controller
      */
     public function create(Request $request)
     {
-        abort_unless(auth()->user()->isAdmin(), 403);
+        abort_unless(auth()->user()->isAdmin() || auth()->user()->isModerator(), 403);
 
         $order = Order::findOrFail($request->integer('order_id'));
         $order->load('items.drink', 'loyaltyCard', 'payments.paymentMethod');
@@ -81,7 +81,7 @@ class RefundOrderController extends Controller
      */
     public function store(Request $request, Order $order)
     {
-        abort_unless(auth()->user()->isAdmin(), 403);
+        abort_unless(auth()->user()->isAdmin() || auth()->user()->isModerator(), 403);
         $this->requireSuperAdminOrSupervisor($request);
 
         $order->load('items.drink', 'loyaltyCard');

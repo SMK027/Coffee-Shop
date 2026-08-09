@@ -55,7 +55,7 @@ export default function LoyaltyCardDetailScreen() {
   const [adjustSubmitting, setAdjustSubmitting] = useState(false);
   const { user } = useAuth();
   const isSuperAdmin = user?.global_role === 'superadmin';
-  const isAdmin = user?.global_role === 'admin' || isSuperAdmin;
+  const isAdmin = user?.global_role === 'admin' || isSuperAdmin || user?.global_role === 'moderator';
 
   const load = useCallback(async () => {
     const { data: json } = await api.get<LoyaltyCardDetail>(`/loyalty-cards/${cardId}`);

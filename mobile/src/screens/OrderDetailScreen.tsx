@@ -23,6 +23,8 @@ export default function OrderDetailScreen() {
   const { user } = useAuth();
   const isSuperAdmin = user?.global_role === 'superadmin';
   const isAdmin = user?.global_role === 'admin' || isSuperAdmin;
+  const isModerator = user?.global_role === 'moderator';
+  const canHandlePayments = isAdmin || isModerator;
 
   const [order, setOrder] = useState<Order | null>(null);
   const [statuses, setStatuses] = useState<OrderStatus[]>([]);
@@ -42,6 +44,11 @@ export default function OrderDetailScreen() {
   const [refundPaymentMethodId, setRefundPaymentMethodId] = useState<string>('');
   const [refundReason, setRefundReason] = useState('');
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [deleteSupervisorNumber, setDeleteSupervisorNumber] = useState('');
+  const [deleteSupervisorPin, setDeleteSupervisorPin] = useState('');
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -155,6 +162,30 @@ export default function OrderDetailScreen() {
     }
   };
 
+  const performDelete = async (supervisor?: { number: string; pin: string }) => {
+    setDeleting(true);
+    try {
+      const config: any = {};
+      const payload: Record<string, any> = {};
+      if (supervisor) {
+        payload.supervisor_number = supervisor.number;
+        payload.supervisor_pin = supervisor.pin;
+        config.data = payload;
+      }
+
+      await api.delete(`/orders/${orderId}`, config);
+      Alert.alert('Succès', 'Commande supprimée.');
+      navigation.navigate('OrdersList');
+    } catch (error: any) {
+      const message = error?.response?.data?.message || 'Impossible de supprimer la commande.';
+      setDeleteError(message);
+      Alert.alert('Erreur', message);
+    } finally {
+      setDeleting(false);
+      setDeleteModalVisible(false);
+    }
+  };
+
   if (loading || !order) {
     return (
       <View style={styles.center}>
@@ -169,7 +200,8 @@ export default function OrderDetailScreen() {
     (order.total_amount ?? 0) +
     (order.discount_amount ?? 0) +
     (order.loyalty_discount_amount ?? 0) +
-    (order.voucher_discount_amount ?? 0);
+    (order.voucher_discount_amount ?? 0) +
+    (order.card_offer_discount ?? 0);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ padding: 16, paddingBottom: 48 }}>
@@ -237,6 +269,12 @@ export default function OrderDetailScreen() {
             )}
           </>
         )}
+        {order.card_offer_discount > 0 && (
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Offres personnalisées</Text>
+            <Text style={[styles.summaryDiscount, { color: '#f59e0b' }]}>−{order.card_offer_discount.toFixed(2)} €</Text>
+          </View>
+        )}
         {order.discount_amount > 0 && (
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Réduction salarié (15%)</Text>
@@ -253,9 +291,15 @@ export default function OrderDetailScreen() {
             </Text>
           </View>
         )}
+        {order.refunded_amount > 0 && (
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Remboursé</Text>
+            <Text style={[styles.summaryDiscount, { color: '#dc2626' }]}>−{order.refunded_amount.toFixed(2)} €</Text>
+          </View>
+        )}
         <View style={[styles.summaryRow, styles.totalRow]}>
-          <Text style={styles.totalLabel}>Total</Text>
-          <Text style={styles.totalValue}>{order.total_amount.toFixed(2)} €</Text>
+          <Text style={styles.totalLabel}>{order.refunded_amount > 0 ? 'Net dû' : 'Total'}</Text>
+          <Text style={styles.totalValue}>{Math.max(0, order.total_amount - order.refunded_amount).toFixed(2)} €</Text>
         </View>
       </View>
 
@@ -294,7 +338,7 @@ export default function OrderDetailScreen() {
         </>
       )}
 
-      {isAdmin && totalRefundableAmount > 0 && (
+      {canHandlePayments && totalRefundableAmount > 0 && (
         <View style={styles.sectionButtonRow}>
           <TouchableOpacity
             style={styles.paymentBtn}
@@ -313,6 +357,29 @@ export default function OrderDetailScreen() {
           >
             <Text style={styles.refundBtnText}>Remboursement</Text>
           </TouchableOpacity>
+          {isAdmin && (
+            <TouchableOpacity
+              style={[styles.refundBtn, { backgroundColor: '#a11a1a' }]}
+              onPress={() => {
+                if (order.status !== 'cancelled') {
+                  Alert.alert('Impossibilité', "La commande doit être au statut 'Annulée' pour être supprimée.");
+                  return;
+                }
+                if (isSuperAdmin) {
+                  Alert.alert('Supprimer la commande', 'Supprimer définitivement cette commande ?', [
+                    { text: 'Annuler', style: 'cancel' },
+                    { text: 'Supprimer', style: 'destructive', onPress: () => performDelete() },
+                  ]);
+                  return;
+                }
+                setDeleteModalVisible(true);
+                setDeleteError(null);
+              }}
+              disabled={updating || deleting}
+            >
+              <Text style={styles.refundBtnText}>Supprimer</Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
 
@@ -543,6 +610,54 @@ export default function OrderDetailScreen() {
                 ) : (
                   <Text style={styles.modalConfirmText}>Valider</Text>
                 )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+      <Modal visible={deleteModalVisible} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Supprimer la commande</Text>
+            <Text style={styles.modalDescription}>Un superviseur doit autoriser cette suppression.</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Numéro du superviseur"
+              placeholderTextColor="#9ca3af"
+              value={deleteSupervisorNumber}
+              onChangeText={setDeleteSupervisorNumber}
+              autoCapitalize="none"
+              keyboardType="default"
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="PIN du superviseur"
+              placeholderTextColor="#9ca3af"
+              value={deleteSupervisorPin}
+              onChangeText={setDeleteSupervisorPin}
+              secureTextEntry
+              keyboardType="numeric"
+            />
+            {deleteError ? <Text style={styles.errorText}>{deleteError}</Text> : null}
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalCancelButton]}
+                onPress={() => {
+                  setDeleteModalVisible(false);
+                  setDeleteSupervisorNumber('');
+                  setDeleteSupervisorPin('');
+                  setDeleteError(null);
+                }}
+                disabled={deleting}
+              >
+                <Text style={styles.modalCancelText}>Annuler</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalConfirmButton]}
+                onPress={() => performDelete({ number: deleteSupervisorNumber, pin: deleteSupervisorPin })}
+                disabled={deleting}
+              >
+                {deleting ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.modalConfirmText}>Supprimer</Text>}
               </TouchableOpacity>
             </View>
           </View>

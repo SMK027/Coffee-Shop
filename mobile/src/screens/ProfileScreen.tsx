@@ -6,6 +6,7 @@ import ServerManager from '../components/ServerManager';
 const roleLabels: Record<string, string> = {
   superadmin: 'Super administrateur',
   admin: 'Administrateur',
+  moderator: 'Modérateur',
   employee: 'Salarié',
   user: 'Utilisateur',
 };
@@ -13,6 +14,7 @@ const roleLabels: Record<string, string> = {
 const roleColors: Record<string, string> = {
   superadmin: '#7c3aed',
   admin: '#92400e',
+  moderator: '#2563eb',
   employee: '#0369a1',
   user: '#6b7280',
 };

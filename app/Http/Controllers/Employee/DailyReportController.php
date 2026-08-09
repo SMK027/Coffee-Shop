@@ -17,7 +17,7 @@ class DailyReportController extends Controller
 {
     public function index()
     {
-        abort_unless(auth()->user()->isAdmin(), 403);
+        abort_unless(auth()->user()->isAdmin() || auth()->user()->isModerator(), 403);
 
         $isSuperAdmin = auth()->user()->isSuperAdmin();
 
@@ -37,7 +37,7 @@ class DailyReportController extends Controller
 
     public function create(Request $request)
     {
-        abort_unless(auth()->user()->isAdmin(), 403);
+        abort_unless(auth()->user()->isAdmin() || auth()->user()->isModerator(), 403);
 
         $date = $request->input('date', today()->toDateString());
 
@@ -104,7 +104,7 @@ class DailyReportController extends Controller
 
     public function store(Request $request)
     {
-        abort_unless(auth()->user()->isAdmin(), 403);
+        abort_unless(auth()->user()->isAdmin() || auth()->user()->isModerator(), 403);
 
         $request->validate(['date' => ['required', 'date']]);
         $date = $request->input('date');
@@ -177,7 +177,7 @@ class DailyReportController extends Controller
 
     public function show(DailyReport $dailyReport)
     {
-        abort_unless(auth()->user()->isAdmin(), 403);
+        abort_unless(auth()->user()->isAdmin() || auth()->user()->isModerator(), 403);
 
         // Seul le générateur ou un super admin peut consulter un rapport
         abort_unless(

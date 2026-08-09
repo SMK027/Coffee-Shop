@@ -47,9 +47,17 @@ export interface DailyReport {
   report_date: string;
   total_collected: number;
   total_refunded: number;
+  total_vouchers_issued: number;
   net: number;
   breakdown: DailyReportBreakdownRow[];
   refund_breakdown: DailyReportBreakdownRow[];
+  vouchers_issued: Array<{
+    code: string;
+    amount: number;
+    expires_at: string | null;
+    restricted_to: string | null;
+    is_used: boolean;
+  }>;
   generated_at: string | null;
   updated_at: string | null;
 }
@@ -58,8 +66,10 @@ export interface DailyReportPreview {
   date: string;
   total_collected: number;
   total_refunded: number;
+  total_vouchers_issued: number;
   breakdown: DailyReportBreakdownRow[];
   refund_breakdown: DailyReportBreakdownRow[];
+  vouchers_issued: DailyReport['vouchers_issued'];
   existing: DailyReport | null;
 }
 
@@ -99,6 +109,16 @@ export interface LoyaltyDiscount {
   employee_only: boolean;
 }
 
+export interface CardOffer {
+  id: number;
+  label: string;
+  discount_type: 'fixed' | 'percent';
+  discount_value: number;
+  max_discount_amount: number | null;
+  display_value: string;
+  expires_at: string | null;
+}
+
 export interface OrderItem {
   id: number;
   drink_id: number | null;
@@ -120,6 +140,7 @@ export interface Order {
   total_amount: number;
   discount_amount: number;
   loyalty_discount_amount: number;
+  card_offer_discount: number;
   loyalty_points_spent: number;
   voucher_discount_amount: number;
   voucher?: { code: string; amount: number } | null;

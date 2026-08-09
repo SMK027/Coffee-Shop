@@ -42,6 +42,7 @@ Route::middleware('auth:api')->group(function () {
     Route::patch('/orders/{order}/status',   [OrderController::class, 'updateStatus']);
     Route::post('/orders/{order}/refund',    [OrderController::class, 'refund']);
     Route::post('/orders/{order}/payments',  [OrderController::class, 'storePayments']);
+    Route::delete('/orders/{order}',         [OrderController::class, 'destroy']);
 
     // Moyens de paiement
     Route::get('/payment-methods', [PaymentMethodController::class, 'index']);
@@ -57,6 +58,7 @@ Route::middleware('auth:api')->group(function () {
     Route::post('/loyalty-cards',            [LoyaltyCardController::class, 'store']);
     Route::post('/loyalty-cards/check',      [LoyaltyCardController::class, 'check']);
     Route::post('/loyalty-cards/verify-pin', [LoyaltyCardController::class, 'verifyPin']);
+    Route::get('/loyalty-cards/{card}/offers', [LoyaltyCardController::class, 'offers']);
     Route::get('/loyalty-cards/{card}',      [LoyaltyCardController::class, 'show']);
     Route::post('/loyalty-cards/{card}/adjust', [LoyaltyCardController::class, 'adjust']);
 

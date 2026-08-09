@@ -82,6 +82,7 @@ Route::prefix('espace-employe')->name('employee.')->middleware(['auth', 'employe
 
     Route::get('/commandes/{order}', [OrderController::class, 'show'])->name('orders.show');
     Route::patch('/commandes/{order}/statut', [OrderController::class, 'updateStatus'])->name('orders.status');
+    Route::delete('/commandes/{order}', [OrderController::class, 'destroy'])->name('orders.destroy');
 
     // Remboursements (super admin uniquement)
     Route::get('/commandes/{order}/remboursement', [RefundController::class, 'create'])->name('orders.refund');

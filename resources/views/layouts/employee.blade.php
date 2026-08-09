@@ -140,6 +140,7 @@
                                 Fidélité
                             </a>
                         </li>
+                        @if(auth()->user()->isAdmin())
                         <li>
                             <a href="{{ route('employee.loyalty-discounts.index') }}"
                                class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium
@@ -170,6 +171,7 @@
                                 Contacts
                             </a>
                         </li>
+                        @endif
                     </ul>
                 </div>
 
@@ -190,7 +192,7 @@
                                 Statistiques
                             </a>
                         </li>
-                        @if(auth()->user()->isAdmin())
+                        @if(auth()->user()->isAdmin() || auth()->user()->isModerator())
                         <li>
                             <a href="{{ route('employee.daily-reports.index') }}"
                                class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium
@@ -212,6 +214,7 @@
                         <svg class="nav-chevron w-3 h-3 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
                     </button>
                     <ul class="space-y-1 overflow-hidden transition-all duration-200" data-group-list="administration">
+                        @if(auth()->user()->isAdmin())
                         <li>
                             <a href="{{ route('employee.users.index') }}"
                                class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium
@@ -222,6 +225,7 @@
                                 Salariés
                             </a>
                         </li>
+                        @endif
                         @if(auth()->user()->isSuperAdmin())
                         <li>
                             <a href="{{ route('employee.supervisors.index') }}"

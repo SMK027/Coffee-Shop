@@ -43,10 +43,11 @@
         <select name="global_role" id="global_role" required
                 class="w-full border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
             <option value="admin" {{ old('global_role', $user->global_role ?? 'admin') === 'admin' ? 'selected' : '' }}>Admin</option>
+            <option value="moderator" {{ old('global_role', $user->global_role ?? '') === 'moderator' ? 'selected' : '' }}>Modérateur</option>
             <option value="superadmin" {{ old('global_role', $user->global_role ?? '') === 'superadmin' ? 'selected' : '' }}>Super Admin</option>
         </select>
         @error('global_role')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
-        <p class="text-xs text-stone-400 mt-1">Les Super Admins peuvent créer des Admins et des Super Admins. Les Superviseurs sont gérés séparément.</p>
+        <p class="text-xs text-stone-400 mt-1">Les Super Admins peuvent créer des Admins, des Modérateurs et des Super Admins. Les Superviseurs sont gérés séparément.</p>
     </div>
     @else
         {{-- Les admins ne peuvent créer que des admins --}}

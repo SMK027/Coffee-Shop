@@ -45,13 +45,16 @@
                     @endforeach
                 </div>
                 <div class="mt-4 pt-4 border-t border-stone-100 space-y-1.5">
-                    @php
+                        @php
+                        $cardOfferDiscount = (float) ($order->card_offer_discount ?? 0);
                         $hasDiscounts = $order->discount_amount > 0
                             || $order->loyalty_discount_amount > 0
+                            || $cardOfferDiscount > 0
                             || $order->voucher_discount_amount > 0;
                         $grossTotal = $order->total_amount
                             + $order->discount_amount
                             + $order->loyalty_discount_amount
+                            + $cardOfferDiscount
                             + $order->voucher_discount_amount;
                     @endphp
                     @if($hasDiscounts)
@@ -59,6 +62,18 @@
                         <span>Sous-total</span>
                         <span>{{ number_format($grossTotal, 2, ',', ' ') }} €</span>
                     </div>
+                    @php
+                        $usedCardOffers = $order->loyaltyCard?->cardOffers()
+                            ->where('used_in_order_id', $order->id)
+                            ->where('is_used', true)
+                            ->get() ?? collect();
+                    @endphp
+                    @if($cardOfferDiscount > 0)
+                    <div class="flex justify-between text-sm text-amber-700">
+                        <span>Réduction offre personnalisée</span>
+                        <span>-{{ number_format($cardOfferDiscount, 2, ',', ' ') }} €</span>
+                    </div>
+                    @endif
                     @if($order->loyalty_discount_amount > 0)
                     <div class="flex justify-between text-sm text-blue-700">
                         <span>Réduction{{ $order->loyaltyDiscounts->count() > 1 ? 's' : '' }} fidélité</span>
@@ -166,6 +181,25 @@
                         </dd>
                     </div>
                     @endif
+                    @php
+                        $usedCardOffers = $order->loyaltyCard?->cardOffers()
+                            ->where('used_in_order_id', $order->id)
+                            ->where('is_used', true)
+                            ->get() ?? collect();
+                    @endphp
+                    @if($usedCardOffers->isNotEmpty())
+                    <div>
+                        <dt class="text-stone-500">Offres personnalisées utilisées</dt>
+                        <dd class="space-y-0.5 mt-0.5">
+                            @foreach($usedCardOffers as $offer)
+                            <p class="font-medium text-amber-700 text-sm">
+                                {{ $offer->label }}
+                                <span class="font-normal text-amber-600">({{ $offer->display_value }})</span>
+                            </p>
+                            @endforeach
+                        </dd>
+                    </div>
+                    @endif
                     @if($order->points_credited)
                     <div>
                         <dt class="text-stone-500">Points crédités</dt>
@@ -225,6 +259,29 @@
             </div>
             @endif
         </div>
+    </div>
+
+    {{-- Suppression de la commande (super admin ou superviseur requis) --}}
+    <div class="mt-4">
+        @if(auth()->user()->isAdmin())
+        <div class="bg-white rounded-xl shadow-sm border border-stone-100 p-4 sm:p-6">
+            <h2 class="font-semibold text-stone-800 mb-3">Supprimer la commande</h2>
+            <p class="text-sm text-stone-600 mb-3">La suppression est définitive. La commande doit être au statut <strong>Annulée</strong>.</p>
+
+            <form action="{{ route('employee.orders.destroy', $order) }}" method="POST" onsubmit="return confirm('Supprimer définitivement cette commande ? Cette action est irréversible.');">
+                @csrf
+                @method('DELETE')
+
+                @unless(auth()->user()->isSuperAdmin())
+                    @include('employee.shared.supervisor-auth-fields')
+                @endunless
+
+                <div class="mt-3">
+                    <button type="submit" class="w-full inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-3 rounded-lg">Supprimer la commande</button>
+                </div>
+            </form>
+        </div>
+        @endif
     </div>
 
 </x-employee-layout>

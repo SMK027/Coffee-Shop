@@ -76,6 +76,73 @@ class OrderController extends Controller
         return view('employee.orders.show', compact('order', 'statusLabels', 'availableTransitions'));
     }
 
+    /**
+     * Supprime définitivement une commande annulée.
+     * Super administrateur autorisé directement, les administrateurs simples
+     * doivent fournir la validation d'un superviseur.
+     */
+    public function destroy(Request $request, Order $order)
+    {
+        abort_unless(auth()->user()->isAdmin(), 403);
+
+        if ($order->status !== Order::STATUS_CANCELLED) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'La commande doit être annulée pour être supprimée.'], 403);
+            }
+            return back()->withErrors(['order' => 'La commande doit être annulée pour être supprimée.']);
+        }
+
+        if (! auth()->user()->isSuperAdmin()) {
+            $this->requireSuperAdminOrSupervisor($request, 'Action réservée aux super administrateurs ou à un superviseur valide.');
+        }
+
+        DB::transaction(function () use ($order, $request) {
+            $order->load('loyaltyCard', 'loyaltyDiscounts', 'voucher');
+
+            // Restaurer les points dépensés sur la carte fidélité
+            if ($order->loyaltyCard && ($order->loyalty_points_spent ?? 0) > 0) {
+                $order->loyaltyCard()->increment('points', (int) $order->loyalty_points_spent);
+            }
+
+            // Restaurer les compteurs des réductions consommables
+            foreach ($order->loyaltyDiscounts as $discount) {
+                if (! $discount->is_permanent && $discount->quantity_limit !== null) {
+                    // Ne pas descendre en dessous de 0
+                    $discount->decrement('quantity_used');
+                }
+            }
+
+            // Marquer le bon d'achat comme disponible à nouveau
+            if ($order->voucher) {
+                $order->voucher->update(['is_used' => false, 'used_at' => null]);
+            }
+
+            // Restaurer les offres personnalisées utilisées par cette commande
+            $usedCardOffers = \App\Models\CardOffer::where('used_in_order_id', $order->id)->get();
+            foreach ($usedCardOffers as $offer) {
+                $offer->update(['is_used' => false, 'used_at' => null, 'used_in_order_id' => null]);
+            }
+
+            // Supprime les éléments liés proprement
+            $order->items()->delete();
+            $order->payments()->delete();
+            $order->refunds()->delete();
+            $order->loyaltyDiscounts()->detach();
+
+            $orderId = $order->id;
+            $order->delete();
+
+            ActivityLogger::log(
+                'order.deleted',
+                "Commande #{$orderId} supprimée par " . auth()->user()->name,
+                null, null,
+                ['order_id' => $orderId]
+            );
+        });
+
+        return redirect()->route('employee.orders.index')->with('success', 'Commande supprimée.');
+    }
+
     public function create()
     {
         // Étape 2 : nécessite que l'étape 1 ait été complétée
@@ -86,13 +153,24 @@ class OrderController extends Controller
         $drinks    = Drink::available()->with('category')->orderBy('category_id')->orderBy('sort_order')->get();
         $customer  = session('order_draft_customer');
 
-        // Charge les réductions pour le calcul du total en JS
+        // Charge les réductions et offres de carte pour le calcul du total en JS
         $loyaltyDiscounts = collect();
+        $cardOffers = collect();
         if (!empty($customer['loyalty_discount_ids'])) {
             $loyaltyDiscounts = LoyaltyDiscount::whereIn('id', $customer['loyalty_discount_ids'])->get();
         }
+        if (!empty($customer['card_offer_ids']) && !empty($customer['loyalty_card_id'])) {
+            $card = LoyaltyCard::find($customer['loyalty_card_id']);
+            if ($card) {
+                $cardOffers = $card->cardOffers()
+                    ->whereIn('id', (array) $customer['card_offer_ids'])
+                    ->where('is_used', false)
+                    ->where('expires_at', '>', now())
+                    ->get();
+            }
+        }
 
-        return view('employee.orders.create', compact('drinks', 'customer', 'loyaltyDiscounts'));
+        return view('employee.orders.create', compact('drinks', 'customer', 'loyaltyDiscounts', 'cardOffers'));
     }
 
     public function identify()
@@ -103,16 +181,42 @@ class OrderController extends Controller
             ->filter(fn(LoyaltyDiscount $d) => $d->isValidForUse())
             ->values();
 
-        // Pré-remplit si on revient en arrière depuis l'étape 2
         $draft = session('order_draft_customer');
+        $cardOffers = collect();
 
-        return view('employee.orders.identify', compact('discounts', 'draft'));
+        if (!empty($draft['loyalty_card_id'])) {
+            $card = LoyaltyCard::find($draft['loyalty_card_id']);
+            if ($card) {
+                $cardOffers = $card->cardOffers()
+                    ->where('is_used', false)
+                    ->where('expires_at', '>', now())
+                    ->latest()
+                    ->get();
+            }
+        }
+
+        if ($draft['use_loyalty'] ?? false) {
+            $cardNumber = $draft['loyalty_card_number'] ?? null;
+            if ($cardNumber && $cardOffers->isEmpty()) {
+                $card = LoyaltyCard::where('card_number', str_replace(' ', '', $cardNumber))->first();
+                if ($card) {
+                    $cardOffers = $card->cardOffers()
+                        ->where('is_used', false)
+                        ->where('expires_at', '>', now())
+                        ->latest()
+                        ->get();
+                }
+            }
+        }
+
+        return view('employee.orders.identify', compact('discounts', 'draft', 'cardOffers'));
     }
 
     public function storeIdentification(Request $request)
     {
         $useLoyalty    = $request->boolean('use_loyalty');
         $usesDiscounts = !empty($request->input('loyalty_discount_ids'));
+        $usesCardOffers = !empty($request->input('card_offer_ids'));
 
         $validated = $request->validate([
             'use_loyalty'            => ['nullable', 'boolean'],
@@ -121,7 +225,9 @@ class OrderController extends Controller
             'loyalty_card_number'    => [Rule::requiredIf($useLoyalty), 'nullable', 'string', 'max:20'],
             'loyalty_discount_ids'   => ['nullable', 'array'],
             'loyalty_discount_ids.*' => ['integer', 'exists:loyalty_discounts,id'],
-            'card_pin'               => [Rule::requiredIf($usesDiscounts), 'nullable', 'string', 'max:10'],
+            'card_offer_ids'         => ['nullable', 'array'],
+            'card_offer_ids.*'       => ['integer', 'exists:card_offers,id'],
+            'card_pin'               => [Rule::requiredIf($usesDiscounts || $usesCardOffers), 'nullable', 'string', 'max:10'],
             'notes'                  => ['nullable', 'string', 'max:500'],
         ]);
 
@@ -145,9 +251,10 @@ class OrderController extends Controller
 
         // Vérification du PIN et des réductions (si des réductions sont sélectionnées)
         $discountIds  = array_values(array_filter((array) ($validated['loyalty_discount_ids'] ?? [])));
+        $cardOfferIds = array_values(array_filter((array) ($validated['card_offer_ids'] ?? [])));
         $pinVerified  = false;
 
-        if (!empty($discountIds)) {
+        if (!empty($discountIds) || !empty($cardOfferIds)) {
             if (!$loyaltyCard) {
                 return back()->withInput()->withErrors([
                     'loyalty_discount_ids' => 'Les réductions fidélité nécessitent une carte valide.',
@@ -184,6 +291,18 @@ class OrderController extends Controller
                 ]);
             }
 
+            $selectedCardOffers = $loyaltyCard->cardOffers()
+                ->whereIn('id', $cardOfferIds)
+                ->where('is_used', false)
+                ->where('expires_at', '>', now())
+                ->get();
+
+            if ($selectedCardOffers->count() !== count($cardOfferIds)) {
+                return back()->withInput()->withErrors([
+                    'card_offer_ids' => 'Une ou plusieurs offres personnalisées ne sont plus valides.',
+                ]);
+            }
+
             $pinVerified = true;
         }
 
@@ -198,6 +317,7 @@ class OrderController extends Controller
                 'card_has_benefits'    => $loyaltyCard ? $loyaltyCard->hasEmployeeBenefits() : false,
                 'is_employee_order'    => $isEmployeeOrder,
                 'loyalty_discount_ids' => $discountIds,
+                'card_offer_ids'       => $cardOfferIds,
                 'pin_verified'         => $pinVerified,
                 'notes'                => $validated['notes'] ?? null,
             ],
@@ -283,7 +403,21 @@ class OrderController extends Controller
             return response()->json(['valid' => false, 'message' => 'Code incorrect.']);
         }
 
-        return response()->json(['valid' => true]);
+        $offers = $card->cardOffers()
+            ->where('is_used', false)
+            ->where('expires_at', '>', now())
+            ->latest()
+            ->get()
+            ->map(fn ($offer) => [
+                'id' => $offer->id,
+                'label' => $offer->label,
+                'display_value' => $offer->display_value,
+            ]);
+
+        return response()->json([
+            'valid' => true,
+            'offers' => $offers,
+        ]);
     }
 
     public function store(Request $request)
@@ -313,6 +447,7 @@ class OrderController extends Controller
         $useLoyalty      = (bool) $customer['use_loyalty'];
         $isEmployeeOrder = (bool) $customer['is_employee_order'];
         $discountIds     = (array) ($customer['loyalty_discount_ids'] ?? []);
+        $cardOfferIds    = (array) ($customer['card_offer_ids'] ?? []);
         $pinVerified     = (bool) ($customer['pin_verified'] ?? false);
 
         $loyaltyCard = null;
@@ -327,6 +462,7 @@ class OrderController extends Controller
 
         // Chargement des réductions depuis la session
         $loyaltyDiscounts = collect();
+        $cardOffers = collect();
         if (!empty($discountIds)) {
             if (!$pinVerified || !$loyaltyCard) {
                 session()->forget('order_draft_customer');
@@ -353,6 +489,26 @@ class OrderController extends Controller
             if ($loyaltyCard->points < $totalPointsCost) {
                 throw ValidationException::withMessages([
                     'loyalty_discount_ids' => 'Points insuffisants pour appliquer toutes les réductions sélectionnées.',
+                ]);
+            }
+        }
+
+        if (!empty($cardOfferIds)) {
+            if (!$pinVerified || !$loyaltyCard) {
+                session()->forget('order_draft_customer');
+                return redirect()->route('employee.orders.identify')
+                    ->with('error', 'Erreur de session. Veuillez recommencer.');
+            }
+
+            $cardOffers = $loyaltyCard->cardOffers()
+                ->whereIn('id', $cardOfferIds)
+                ->where('is_used', false)
+                ->where('expires_at', '>', now())
+                ->get();
+
+            if ($cardOffers->count() !== count($cardOfferIds)) {
+                throw ValidationException::withMessages([
+                    'card_offer_ids' => 'Une ou plusieurs offres personnalisées ne sont plus valides.',
                 ]);
             }
         }
@@ -397,6 +553,7 @@ class OrderController extends Controller
         $discountRows       = [];
         $totalLoyaltyPoints = 0;
         $totalLoyaltyAmount = 0;
+        $cardOfferDiscount  = 0;
         $remaining          = $subtotal;
 
         foreach ($loyaltyDiscounts as $discount) {
@@ -418,8 +575,23 @@ class OrderController extends Controller
             $totalLoyaltyAmount += $amount;
         }
 
+        foreach ($cardOffers as $offer) {
+            if ($offer->discount_type === \App\Models\CardOffer::TYPE_PERCENT) {
+                $amount = round($remaining * ((float) $offer->discount_value / 100), 2);
+                if ($offer->max_discount_amount !== null) {
+                    $amount = min($amount, round((float) $offer->max_discount_amount, 2));
+                }
+            } else {
+                $amount = round(min($remaining, (float) $offer->discount_value), 2);
+            }
+
+            $remaining = max(0.0, $remaining - $amount);
+            $cardOfferDiscount += $amount;
+        }
+
         $totalLoyaltyAmount    = round($totalLoyaltyAmount, 2);
-        $subtotalAfterLoyalty  = round(max(0.0, $subtotal - $totalLoyaltyAmount), 2);
+        $cardOfferDiscount     = round($cardOfferDiscount, 2);
+        $subtotalAfterLoyalty  = round(max(0.0, $subtotal - $totalLoyaltyAmount - $cardOfferDiscount), 2);
 
         // 2. Réduction salarié appliquée sur le solde après réductions fidélité.
         $employeeDiscount = $isEmployeeOrder ? round($subtotalAfterLoyalty * Order::EMPLOYEE_DISCOUNT_RATE, 2) : 0;
@@ -456,7 +628,7 @@ class OrderController extends Controller
             $validated, $customer, $loyaltyCard, $isEmployeeOrder, $total,
             $employeeDiscount, $loyaltyDiscounts, $discountRows,
             $totalLoyaltyPoints, $totalLoyaltyAmount, $orderItems,
-            $voucher, $voucherDiscount
+            $voucher, $voucherDiscount, $cardOffers, $cardOfferDiscount
         ) {
             $lockedCard = null;
             if ($loyaltyCard) {
@@ -527,9 +699,7 @@ class OrderController extends Controller
                 'discount_amount'          => $employeeDiscount,
                 'loyalty_points_spent'     => $totalPointsNeeded,
                 'loyalty_discount_amount'  => $totalLoyaltyAmount,
-                'voucher_id'               => $voucher?->id,
-                'voucher_discount_amount'  => $voucherDiscount,
-                'status'                   => Order::STATUS_PENDING,
+            'card_offer_discount'      => $cardOfferDiscount,
                 'handled_by'               => auth()->id(),
             ]);
 
@@ -540,6 +710,14 @@ class OrderController extends Controller
                     'points_spent'    => $row['points_spent'],
                     'discount_amount' => $row['discount_amount'],
                 ]);
+            }
+
+            foreach ($cardOffers as $offer) {
+                $offer->forceFill([
+                    'is_used' => true,
+                    'used_at' => now(),
+                    'used_in_order_id' => $order->id,
+                ])->save();
             }
 
             // Traçabilité : enregistre le débit de points dans l'historique de la carte.

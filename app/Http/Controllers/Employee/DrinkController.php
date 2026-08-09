@@ -42,6 +42,7 @@ class DrinkController extends Controller
 
     public function create()
     {
+        abort_unless(auth()->user()->isAdmin(), 403);
         $categories = DrinkCategory::orderBy('sort_order')->get();
 
         return view('employee.drinks.create', compact('categories'));
@@ -49,6 +50,8 @@ class DrinkController extends Controller
 
     public function store(Request $request)
     {
+        abort_unless(auth()->user()->isAdmin(), 403);
+
         $validated = $request->validate([
             'category_id'    => ['required', 'exists:drink_categories,id'],
             'name'           => ['required', 'string', 'max:150'],
@@ -83,6 +86,7 @@ class DrinkController extends Controller
 
     public function edit(Drink $drink)
     {
+        abort_unless(auth()->user()->isAdmin(), 403);
         $categories = DrinkCategory::orderBy('sort_order')->get();
 
         return view('employee.drinks.edit', compact('drink', 'categories'));
@@ -90,6 +94,8 @@ class DrinkController extends Controller
 
     public function update(Request $request, Drink $drink)
     {
+        abort_unless(auth()->user()->isAdmin(), 403);
+
         $validated = $request->validate([
             'category_id'    => ['required', 'exists:drink_categories,id'],
             'name'           => ['required', 'string', 'max:150'],
@@ -127,6 +133,8 @@ class DrinkController extends Controller
 
     public function destroy(Drink $drink)
     {
+        abort_unless(auth()->user()->isAdmin(), 403);
+
         if ($drink->image) {
             \Storage::disk('public')->delete($drink->image);
         }
@@ -141,6 +149,7 @@ class DrinkController extends Controller
 
     public function toggleAvailability(Drink $drink)
     {
+        abort_unless(auth()->user()->isAdmin(), 403);
         $drink->update(['available' => !$drink->available]);
 
         return redirect()->back()->with('success', 'Disponibilité mise à jour.');
@@ -151,6 +160,8 @@ class DrinkController extends Controller
      */
     public function bulkDisable(Request $request)
     {
+        abort_unless(auth()->user()->isAdmin(), 403);
+
         $validated = $request->validate([
             'drink_ids'   => ['required', 'array', 'min:1'],
             'drink_ids.*' => ['integer', 'distinct', 'exists:drinks,id'],
@@ -175,6 +186,8 @@ class DrinkController extends Controller
      */
     public function bulkEnable(Request $request)
     {
+        abort_unless(auth()->user()->isAdmin(), 403);
+
         $validated = $request->validate([
             'drink_ids'   => ['required', 'array', 'min:1'],
             'drink_ids.*' => ['integer', 'distinct', 'exists:drinks,id'],

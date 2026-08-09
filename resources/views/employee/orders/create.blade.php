@@ -47,6 +47,13 @@
                         </span>
                     @endforeach
                 @endif
+                @if(!empty($customer['card_offer_ids']) && $cardOffers->isNotEmpty())
+                    @foreach($cardOffers as $offer)
+                        <span class="inline-flex px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs font-medium">
+                            {{ $offer->label }} ({{ $offer->display_value }})
+                        </span>
+                    @endforeach
+                @endif
                 @if($customer['notes'])
                     <span class="text-xs text-stone-500">📝 {{ $customer['notes'] }}</span>
                 @endif

@@ -21,7 +21,7 @@ class UserController extends Controller
 
         $search = trim((string) $request->query('q', ''));
 
-        $roles = ['superadmin', 'admin'];
+        $roles = ['superadmin', 'admin', 'moderator'];
 
         $users = User::whereIn('global_role', $roles)
             ->when($search !== '', function ($query) use ($search) {
@@ -56,7 +56,7 @@ class UserController extends Controller
             'email'    => ['required', 'email', 'max:150', 'unique:users,email'],
             'global_role' => ['required', Rule::in(
                 auth()->user()->isSuperAdmin()
-                    ? ['admin', 'superadmin']
+                    ? ['admin', 'moderator', 'superadmin']
                     : ['admin']
             )],
         ], [
@@ -114,7 +114,7 @@ class UserController extends Controller
             'email'    => ['required', 'email', 'max:150', Rule::unique('users', 'email')->ignore($user->id)],
             'global_role' => ['required', Rule::in(
                 auth()->user()->isSuperAdmin()
-                    ? ['admin', 'superadmin']
+                    ? ['admin', 'moderator', 'superadmin']
                     : ['admin']
             )],
         ]);

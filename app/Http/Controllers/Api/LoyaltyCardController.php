@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\CardOffer;
 use App\Models\LoyaltyCard;
 use App\Models\LoyaltyPointAdjustment;
 use App\Models\Order;
@@ -156,6 +157,25 @@ class LoyaltyCardController extends Controller
             'adjustments' => $adjustments,
             'totals'      => $totals,
         ]);
+    }
+
+    public function offers(LoyaltyCard $card): JsonResponse
+    {
+        $offers = $card->cardOffers()
+            ->where('is_used', false)
+            ->where('expires_at', '>', now())
+            ->latest()
+            ->get();
+
+        return response()->json($offers->map(fn (CardOffer $offer) => [
+            'id'              => $offer->id,
+            'label'           => $offer->label,
+            'discount_type'   => $offer->discount_type,
+            'discount_value'  => (float) $offer->discount_value,
+            'max_discount_amount' => $offer->max_discount_amount !== null ? (float) $offer->max_discount_amount : null,
+            'display_value'   => $offer->display_value,
+            'expires_at'      => $offer->expires_at?->toIso8601String(),
+        ]));
     }
 
     public function adjust(Request $request, LoyaltyCard $card): JsonResponse

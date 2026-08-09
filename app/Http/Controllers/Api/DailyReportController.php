@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\DailyReport;
 use App\Models\OrderPayment;
 use App\Models\OrderRefund;
+use App\Models\Voucher;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -32,19 +33,21 @@ class DailyReportController extends Controller
         $request->validate(['date' => ['required', 'date']]);
         $date = $request->input('date');
 
-        [$totalCollected, $totalRefunded, $breakdown, $refundBreakdown] = $this->computeData($date);
+        [$totalCollected, $totalRefunded, $totalVouchersIssued, $breakdown, $refundBreakdown, $vouchersIssued] = $this->computeData($date);
 
         $existing = DailyReport::where('generated_by', Auth::id())
             ->where('report_date', $date)
             ->first();
 
         return response()->json([
-            'date'             => $date,
-            'total_collected'  => $totalCollected,
-            'total_refunded'   => $totalRefunded,
-            'breakdown'        => $breakdown,
-            'refund_breakdown' => $refundBreakdown,
-            'existing'         => $existing ? $this->formatReport($existing) : null,
+            'date'                 => $date,
+            'total_collected'      => $totalCollected,
+            'total_refunded'       => $totalRefunded,
+            'total_vouchers_issued'=> $totalVouchersIssued,
+            'breakdown'            => $breakdown,
+            'refund_breakdown'     => $refundBreakdown,
+            'vouchers_issued'      => $vouchersIssued,
+            'existing'             => $existing ? $this->formatReport($existing) : null,
         ]);
     }
 
@@ -53,15 +56,17 @@ class DailyReportController extends Controller
         $request->validate(['date' => ['required', 'date']]);
         $date = $request->input('date');
 
-        [$totalCollected, $totalRefunded, $breakdown, $refundBreakdown] = $this->computeData($date);
+        [$totalCollected, $totalRefunded, $totalVouchersIssued, $breakdown, $refundBreakdown, $vouchersIssued] = $this->computeData($date);
 
         $reportData = [
-            'report_date'      => $date,
-            'generated_by'     => Auth::id(),
-            'total_collected'  => $totalCollected,
-            'total_refunded'   => $totalRefunded,
-            'breakdown'        => $breakdown,
-            'refund_breakdown' => $refundBreakdown,
+            'report_date'           => $date,
+            'generated_by'          => Auth::id(),
+            'total_collected'       => $totalCollected,
+            'total_refunded'        => $totalRefunded,
+            'total_vouchers_issued' => $totalVouchersIssued,
+            'breakdown'             => $breakdown,
+            'refund_breakdown'      => $refundBreakdown,
+            'vouchers_issued'       => $vouchersIssued,
         ];
 
         $existing = DailyReport::where('generated_by', Auth::id())
@@ -105,10 +110,9 @@ class DailyReportController extends Controller
             ->get();
 
         $refundsRaw = OrderRefund::query()
-            ->join('orders', 'order_refunds.order_id', '=', 'orders.id')
             ->join('payment_methods', 'order_refunds.payment_method_id', '=', 'payment_methods.id')
             ->whereDate('order_refunds.created_at', $date)
-            ->where('orders.handled_by', Auth::id())
+            ->where('order_refunds.created_by', Auth::id())
             ->select(
                 'payment_methods.id as method_id',
                 'payment_methods.name as method_name',
@@ -117,29 +121,46 @@ class DailyReportController extends Controller
             ->groupBy('payment_methods.id', 'payment_methods.name')
             ->get();
 
+        $vouchersIssuedRaw = Voucher::where('issued_by', Auth::id())
+            ->whereDate('issued_at', $date)
+            ->with('restrictedCard:id,first_name,last_name')
+            ->get();
+
+        $vouchersIssued = $vouchersIssuedRaw->map(fn ($v) => [
+            'code'          => $v->code,
+            'amount'        => (float) $v->amount,
+            'expires_at'    => $v->expires_at?->format('d/m/Y'),
+            'restricted_to' => $v->restricted_name ?? ($v->restrictedCard ? $v->restrictedCard->full_name : null),
+            'is_used'       => $v->is_used,
+        ])->values()->toArray();
+
         $breakdown       = $paymentsRaw->map(fn ($r) => ['method_id' => $r->method_id, 'method_name' => $r->method_name, 'total' => round($r->total, 2)])->values()->toArray();
         $refundBreakdown = $refundsRaw->map(fn ($r) => ['method_id' => $r->method_id, 'method_name' => $r->method_name, 'total' => round($r->total, 2)])->values()->toArray();
 
         return [
             round($paymentsRaw->sum('total'), 2),
             round($refundsRaw->sum('total'), 2),
+            round($vouchersIssuedRaw->sum('amount'), 2),
             $breakdown,
             $refundBreakdown,
+            $vouchersIssued,
         ];
     }
 
     private function formatReport(DailyReport $report): array
     {
         return [
-            'id'               => $report->id,
-            'report_date'      => $report->report_date->toDateString(),
-            'total_collected'  => (float) $report->total_collected,
-            'total_refunded'   => (float) $report->total_refunded,
-            'net'              => round((float) $report->total_collected - (float) $report->total_refunded, 2),
-            'breakdown'        => $report->breakdown ?? [],
-            'refund_breakdown' => $report->refund_breakdown ?? [],
-            'generated_at'     => $report->created_at?->toIso8601String(),
-            'updated_at'       => $report->updated_at?->toIso8601String(),
+            'id'                    => $report->id,
+            'report_date'           => $report->report_date->toDateString(),
+            'total_collected'       => (float) $report->total_collected,
+            'total_refunded'        => (float) $report->total_refunded,
+            'total_vouchers_issued' => (float) ($report->total_vouchers_issued ?? 0),
+            'net'                   => round((float) $report->total_collected - (float) $report->total_refunded, 2),
+            'breakdown'             => $report->breakdown ?? [],
+            'refund_breakdown'      => $report->refund_breakdown ?? [],
+            'vouchers_issued'       => $report->vouchers_issued ?? [],
+            'generated_at'          => $report->created_at?->toIso8601String(),
+            'updated_at'            => $report->updated_at?->toIso8601String(),
         ];
     }
 }
