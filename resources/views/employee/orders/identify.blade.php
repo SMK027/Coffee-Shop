@@ -99,6 +99,24 @@
                     {{-- Réductions disponibles (après validation du PIN) --}}
                     <div id="discounts-block" class="hidden">
                         <p class="text-sm font-medium text-stone-700 mb-2">Réductions disponibles</p>
+
+                        <div id="card-offers-block" class="{{ $cardOffers->isNotEmpty() ? '' : 'hidden' }} mb-3">
+                            <div class="space-y-2" id="card-offers-list">
+                                @foreach($cardOffers as $offer)
+                                    <label class="flex items-start gap-3 p-2.5 rounded-lg border border-amber-200 cursor-pointer hover:bg-amber-50 transition-colors bg-amber-50"
+                                           data-offer-id="{{ $offer->id }}">
+                                        <input type="checkbox" name="card_offer_ids[]" value="{{ $offer->id }}"
+                                               class="card-offer-checkbox mt-0.5 h-4 w-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500"
+                                               @checked(in_array((string)$offer->id, (array)old('card_offer_ids', $d['card_offer_ids'] ?? [])))>
+                                        <span class="text-sm leading-tight">
+                                            <span class="font-medium text-stone-800">{{ $offer->label }}</span>
+                                            <span class="text-stone-500"> — {{ $offer->display_value }}</span>
+                                        </span>
+                                    </label>
+                                @endforeach
+                            </div>
+                        </div>
+
                         @if($discounts->isNotEmpty())
                             <div class="space-y-2" id="discounts-list">
                                 @foreach($discounts as $discount)
@@ -124,10 +142,11 @@
                                 @endforeach
                             </div>
                             <p id="points-summary" class="text-xs text-stone-500 mt-2"></p>
-                        @else
+                        @elseif($cardOffers->isEmpty())
                             <p class="text-xs text-stone-500 italic">Aucune réduction active disponible.</p>
                         @endif
                         @error('loyalty_discount_ids')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                        @error('card_offer_ids')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
                     </div>
                 </div>
 
@@ -188,6 +207,8 @@
         const verifyBtn    = document.getElementById('verify-pin-btn');
         const discountsBlk = document.getElementById('discounts-block');
         const pointsSummary = document.getElementById('points-summary');
+        const cardOffersBlock = document.getElementById('card-offers-block');
+        const cardOffersList = document.getElementById('card-offers-list');
 
         let currentCard   = null;
         let pinVerified   = false;
@@ -221,10 +242,32 @@
         }
         function clearPinStatus() { pinStatusBox.classList.add('hidden'); }
 
+        function renderCardOffers(offers) {
+            if (!cardOffersBlock || !cardOffersList) return;
+            if (!offers || !offers.length) {
+                cardOffersList.innerHTML = '';
+                cardOffersBlock.classList.add('hidden');
+                return;
+            }
+            cardOffersList.innerHTML = offers.map(offer => `
+                <label class="flex items-start gap-3 p-2.5 rounded-lg border border-amber-200 cursor-pointer hover:bg-amber-50 transition-colors bg-amber-50"
+                       data-offer-id="${offer.id}">
+                    <input type="checkbox" name="card_offer_ids[]" value="${offer.id}"
+                           class="card-offer-checkbox mt-0.5 h-4 w-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500">
+                    <span class="text-sm leading-tight">
+                        <span class="font-medium text-stone-800">${offer.label}</span>
+                        <span class="text-stone-500"> — ${offer.display_value}</span>
+                    </span>
+                </label>
+            `).join('');
+            cardOffersBlock.classList.remove('hidden');
+        }
+
         function setPinVerified(verified) {
             pinVerified = verified;
             discountsBlk.classList.toggle('hidden', !verified);
             if (!verified) {
+                renderCardOffers([]);
                 document.querySelectorAll('.discount-checkbox').forEach(cb => { cb.checked = false; cb.disabled = false; });
                 document.querySelectorAll('[data-id]').forEach(lbl => {
                     lbl.classList.remove('opacity-40','cursor-not-allowed');
@@ -295,6 +338,7 @@
                 const data = await res.json();
                 if (data.valid) {
                     setPinStatus('success', 'Code validé — sélectionnez les réductions souhaitées.');
+                    renderCardOffers(data.offers || []);
                     setPinVerified(true);
                 } else {
                     setPinStatus('error', data.message || 'Code incorrect.');
