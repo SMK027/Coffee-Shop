@@ -260,9 +260,15 @@ export default function OrderDetailScreen() {
             </Text>
           </View>
         )}
+        {order.refunded_amount > 0 && (
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Remboursé</Text>
+            <Text style={[styles.summaryDiscount, { color: '#dc2626' }]}>−{order.refunded_amount.toFixed(2)} €</Text>
+          </View>
+        )}
         <View style={[styles.summaryRow, styles.totalRow]}>
-          <Text style={styles.totalLabel}>Total</Text>
-          <Text style={styles.totalValue}>{order.total_amount.toFixed(2)} €</Text>
+          <Text style={styles.totalLabel}>{order.refunded_amount > 0 ? 'Net dû' : 'Total'}</Text>
+          <Text style={styles.totalValue}>{Math.max(0, order.total_amount - order.refunded_amount).toFixed(2)} €</Text>
         </View>
       </View>
 

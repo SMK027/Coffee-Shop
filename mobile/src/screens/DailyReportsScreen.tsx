@@ -189,9 +189,9 @@ export default function DailyReportsScreen() {
                     </View>
                   ))
                 )}
-                <View style={[styles.summaryRow, { marginTop: 8 }]}> 
-                  <Text style={styles.summaryLabel}>Total encaissé</Text>
-                  <Text style={[styles.summaryValue, { color: '#16a34a' }]}>{preview.total_collected.toFixed(2).replace('.', ',')} €</Text>
+                <View style={[styles.breakdownRow, { marginTop: 8 }]}> 
+                  <Text style={styles.breakdownLabel}>Total encaissé</Text>
+                  <Text style={[styles.breakdownValue, { color: '#16a34a' }]}>{preview.total_collected.toFixed(2).replace('.', ',')} €</Text>
                 </View>
 
                 <Text style={[styles.previewSection, { marginTop: 14 }]}>Remboursements</Text>
@@ -207,9 +207,9 @@ export default function DailyReportsScreen() {
                     </View>
                   ))
                 )}
-                <View style={[styles.summaryRow, { marginTop: 8 }]}> 
-                  <Text style={styles.summaryLabel}>Total remboursé</Text>
-                  <Text style={[styles.summaryValue, { color: '#dc2626' }]}>{preview.total_refunded.toFixed(2).replace('.', ',')} €</Text>
+                <View style={[styles.breakdownRow, { marginTop: 8 }]}> 
+                  <Text style={styles.breakdownLabel}>Total remboursé</Text>
+                  <Text style={[styles.breakdownValue, { color: '#dc2626' }]}>{preview.total_refunded.toFixed(2).replace('.', ',')} €</Text>
                 </View>
 
                 <Text style={[styles.previewSection, { marginTop: 14 }]}>Bons d'achat émis</Text>
@@ -223,10 +223,13 @@ export default function DailyReportsScreen() {
                     </View>
                   ))
                 )}
-                <View style={[styles.summaryRow, { marginTop: 8 }]}> 
-                  <Text style={styles.summaryLabel}>Total bons émis</Text>
-                  <Text style={[styles.summaryValue, { color: '#7c3aed' }]}>{preview.total_vouchers_issued.toFixed(2).replace('.', ',')} €</Text>
+                <View style={[styles.breakdownRow, { marginTop: 8 }]}> 
+                  <Text style={styles.breakdownLabel}>Total bons émis</Text>
+                  <Text style={[styles.breakdownValue, { color: '#7c3aed' }]}>{preview.total_vouchers_issued.toFixed(2).replace('.', ',')} €</Text>
                 </View>
+              </View>
+            ) : null}
+          </View>
           <Text style={styles.sectionTitle}>Historique</Text>
         </>
       }
