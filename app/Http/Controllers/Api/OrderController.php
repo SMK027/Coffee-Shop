@@ -22,6 +22,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
+use App\Services\ActivityLogger;
 
 class OrderController extends Controller
 {
@@ -404,6 +405,63 @@ class OrderController extends Controller
             'message' => 'Commande créée avec succès.',
             'order'   => $this->formatOrder($order, true),
         ], 201);
+    }
+
+    /**
+     * Supprime une commande annulée (superadmin ou superviseur requis).
+     */
+    public function destroy(Request $request, Order $order): JsonResponse
+    {
+        $user = Auth::guard('api')->user();
+        abort_unless($user?->isAdmin(), 403);
+
+        if ($order->status !== Order::STATUS_CANCELLED) {
+            return response()->json(['message' => 'La commande doit être annulée pour être supprimée.'], 403);
+        }
+
+        if (! $user?->isSuperAdmin()) {
+            $this->requireSuperAdminOrSupervisor($request, 'Action réservée aux super administrateurs ou à un superviseur valide.');
+        }
+
+        DB::transaction(function () use ($order, $user) {
+            $order->load('loyaltyCard', 'loyaltyDiscounts', 'voucher');
+
+            if ($order->loyaltyCard && ($order->loyalty_points_spent ?? 0) > 0) {
+                $order->loyaltyCard()->increment('points', (int) $order->loyalty_points_spent);
+            }
+
+            foreach ($order->loyaltyDiscounts as $discount) {
+                if (! $discount->is_permanent && $discount->quantity_limit !== null) {
+                    $discount->decrement('quantity_used');
+                }
+            }
+
+            if ($order->voucher) {
+                $order->voucher->update(['is_used' => false, 'used_at' => null]);
+            }
+
+            $usedCardOffers = \App\Models\CardOffer::where('used_in_order_id', $order->id)->get();
+            foreach ($usedCardOffers as $offer) {
+                $offer->update(['is_used' => false, 'used_at' => null, 'used_in_order_id' => null]);
+            }
+
+            $order->items()->delete();
+            $order->payments()->delete();
+            $order->refunds()->delete();
+            $order->loyaltyDiscounts()->detach();
+
+            $orderId = $order->id;
+            $order->delete();
+
+            ActivityLogger::log(
+                'order.deleted',
+                "Commande #{$orderId} supprimée par " . $user->name,
+                null, null,
+                ['order_id' => $orderId]
+            );
+        });
+
+        return response()->json(['message' => 'Commande supprimée.']);
     }
 
     /**
