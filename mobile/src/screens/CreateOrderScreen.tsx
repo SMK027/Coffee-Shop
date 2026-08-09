@@ -1093,7 +1093,7 @@ function Step2Cart(props: {
   onRemove: (uid: string) => void;
   itemLabel: (i: CartItem) => string; itemUnitPrice: (i: CartItem) => number;
   notes: string; setNotes: (v: string) => void;
-  totals: { subtotal: number; loyaltyDiscount: number; employeeDiscount: number; voucherDiscount: number; total: number; pointsCost: number };
+  totals: { subtotal: number; loyaltyDiscount: number; employeeDiscount: number; voucherDiscount: number; cardOfferDiscount: number; total: number; pointsCost: number };
   voucherCode: string; setVoucherCode: (v: string) => void;
   voucherData: { amount: number; expires: string; code: string } | null;
   voucherError: string;
@@ -1248,6 +1248,12 @@ function Step2Cart(props: {
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Réductions fidélité</Text>
               <Text style={[styles.summaryValue, { color: '#22c55e' }]}>−{totals.loyaltyDiscount.toFixed(2)} €</Text>
+            </View>
+          )}
+          {totals.cardOfferDiscount > 0 && (
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Réductions offres personnalisées</Text>
+              <Text style={[styles.summaryValue, { color: '#f59e0b' }]}>−{totals.cardOfferDiscount.toFixed(2)} €</Text>
             </View>
           )}
           {totals.employeeDiscount > 0 && (
