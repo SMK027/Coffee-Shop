@@ -78,7 +78,7 @@ function LogoutButton({ onPress }: { onPress: () => void }) {
 
 function AppTabs() {
   const { logout, user } = useAuth();
-  const isAdmin = user?.global_role === 'admin' || user?.global_role === 'superadmin';
+  const isAdmin = user?.global_role === 'admin' || user?.global_role === 'superadmin' || user?.global_role === 'moderator';
 
   return (
     <Tab.Navigator

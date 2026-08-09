@@ -23,6 +23,8 @@ export default function OrderDetailScreen() {
   const { user } = useAuth();
   const isSuperAdmin = user?.global_role === 'superadmin';
   const isAdmin = user?.global_role === 'admin' || isSuperAdmin;
+  const isModerator = user?.global_role === 'moderator';
+  const canHandlePayments = isAdmin || isModerator;
 
   const [order, setOrder] = useState<Order | null>(null);
   const [statuses, setStatuses] = useState<OrderStatus[]>([]);
@@ -336,7 +338,7 @@ export default function OrderDetailScreen() {
         </>
       )}
 
-      {isAdmin && totalRefundableAmount > 0 && (
+      {canHandlePayments && totalRefundableAmount > 0 && (
         <View style={styles.sectionButtonRow}>
           <TouchableOpacity
             style={styles.paymentBtn}
@@ -355,27 +357,29 @@ export default function OrderDetailScreen() {
           >
             <Text style={styles.refundBtnText}>Remboursement</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.refundBtn, { backgroundColor: '#a11a1a' }]}
-            onPress={() => {
-              if (order.status !== 'cancelled') {
-                Alert.alert('Impossibilité', "La commande doit être au statut 'Annulée' pour être supprimée.");
-                return;
-              }
-              if (isSuperAdmin) {
-                Alert.alert('Supprimer la commande', 'Supprimer définitivement cette commande ?', [
-                  { text: 'Annuler', style: 'cancel' },
-                  { text: 'Supprimer', style: 'destructive', onPress: () => performDelete() },
-                ]);
-                return;
-              }
-              setDeleteModalVisible(true);
-              setDeleteError(null);
-            }}
-            disabled={updating || deleting}
-          >
-            <Text style={styles.refundBtnText}>Supprimer</Text>
-          </TouchableOpacity>
+          {isAdmin && (
+            <TouchableOpacity
+              style={[styles.refundBtn, { backgroundColor: '#a11a1a' }]}
+              onPress={() => {
+                if (order.status !== 'cancelled') {
+                  Alert.alert('Impossibilité', "La commande doit être au statut 'Annulée' pour être supprimée.");
+                  return;
+                }
+                if (isSuperAdmin) {
+                  Alert.alert('Supprimer la commande', 'Supprimer définitivement cette commande ?', [
+                    { text: 'Annuler', style: 'cancel' },
+                    { text: 'Supprimer', style: 'destructive', onPress: () => performDelete() },
+                  ]);
+                  return;
+                }
+                setDeleteModalVisible(true);
+                setDeleteError(null);
+              }}
+              disabled={updating || deleting}
+            >
+              <Text style={styles.refundBtnText}>Supprimer</Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
 

@@ -55,6 +55,11 @@ class User extends Authenticatable implements JWTSubject
         return $this->global_role === 'supervisor';
     }
 
+    public function isModerator(): bool
+    {
+        return $this->global_role === 'moderator';
+    }
+
     public function isActive(): bool
     {
         return (bool) $this->is_active;

@@ -190,7 +190,7 @@
                                 Statistiques
                             </a>
                         </li>
-                        @if(auth()->user()->isAdmin())
+                        @if(auth()->user()->isAdmin() || auth()->user()->isModerator())
                         <li>
                             <a href="{{ route('employee.daily-reports.index') }}"
                                class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium
