@@ -17,7 +17,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import api from '../api/client';
-import { Drink, LoyaltyCard, LoyaltyDiscount } from '../types';
+import { CardOffer, Drink, LoyaltyCard, LoyaltyDiscount } from '../types';
 
 type CartItem =
   | { uid: string; type: 'drink'; drink: Drink; quantity: number }
@@ -37,6 +37,7 @@ export default function CreateOrderScreen() {
   // Données API
   const [drinks, setDrinks] = useState<Drink[]>([]);
   const [discounts, setDiscounts] = useState<LoyaltyDiscount[]>([]);
+  const [cardOffers, setCardOffers] = useState<CardOffer[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Étape 1 — Client
@@ -48,6 +49,7 @@ export default function CreateOrderScreen() {
   const [loyaltyCardError, setLoyaltyCardError] = useState('');
   const [checkingCard, setCheckingCard] = useState(false);
   const [selectedDiscountIds, setSelectedDiscountIds] = useState<number[]>([]);
+  const [selectedCardOfferIds, setSelectedCardOfferIds] = useState<number[]>([]);
   const [cardPin, setCardPin] = useState('');
   const [pinError, setPinError] = useState('');
 
@@ -104,6 +106,23 @@ export default function CreateOrderScreen() {
 
   // ─────────── Étape 1 : Client ───────────
 
+  const loadCardOffers = async (cardId: number | null) => {
+    if (!cardId) {
+      setCardOffers([]);
+      setSelectedCardOfferIds([]);
+      return;
+    }
+
+    try {
+      const { data } = await api.get(`/loyalty-cards/${cardId}/offers`);
+      setCardOffers(Array.isArray(data) ? data : []);
+      setSelectedCardOfferIds([]);
+    } catch {
+      setCardOffers([]);
+      setSelectedCardOfferIds([]);
+    }
+  };
+
   const checkLoyaltyCard = async () => {
     const number = loyaltyCardNumber.replace(/\s/g, '');
     if (!number) return;
@@ -118,8 +137,11 @@ export default function CreateOrderScreen() {
         const [fn, ...rest] = String(data.card.full_name || '').split(' ');
         if (!firstName && fn) setFirstName(fn);
         if (!lastName && rest.length) setLastName(rest.join(' '));
+        await loadCardOffers(data.card.id);
       } else {
         setLoyaltyCard(null);
+        setCardOffers([]);
+        setSelectedCardOfferIds([]);
         setLoyaltyCardError(data.message);
       }
     } catch {
@@ -136,10 +158,12 @@ export default function CreateOrderScreen() {
     setCardPin('');
     setPinError('');
     setSelectedDiscountIds([]);
+    setSelectedCardOfferIds([]);
+    setCardOffers([]);
     if (!loyaltyCard?.has_employee_benefits) setIsEmployeeOrder(false);
   };
 
-  const selectLoyaltyCard = (card: LoyaltyCard) => {
+  const selectLoyaltyCard = async (card: LoyaltyCard) => {
     setLoyaltyCard(card);
     setLoyaltyCardNumber(card.card_number);
     setLoyaltyCardError('');
@@ -151,6 +175,7 @@ export default function CreateOrderScreen() {
     setCardSearchQuery('');
     setCardSearchResults([]);
     setCardSearched(false);
+    await loadCardOffers(card.id);
   };
 
   const openCardSearch = () => {
@@ -190,8 +215,11 @@ export default function CreateOrderScreen() {
         const [fn, ...rest] = String(res.card.full_name || '').split(' ');
         if (!firstName && fn) setFirstName(fn);
         if (!lastName && rest.length) setLastName(rest.join(' '));
+        await loadCardOffers(res.card.id);
       } else {
         setLoyaltyCard(null);
+        setCardOffers([]);
+        setSelectedCardOfferIds([]);
         setLoyaltyCardError(res.message);
       }
     } catch {
@@ -233,6 +261,12 @@ export default function CreateOrderScreen() {
     setPinError('');
     setSelectedDiscountIds((prev) =>
       prev.includes(id) ? prev.filter((d) => d !== id) : [...prev, id]
+    );
+  };
+
+  const toggleCardOffer = (id: number) => {
+    setSelectedCardOfferIds((prev) =>
+      prev.includes(id) ? prev.filter((offerId) => offerId !== id) : [...prev, id]
     );
   };
 
@@ -387,13 +421,29 @@ export default function CreateOrderScreen() {
     const employeeDiscount = isEmployeeOrder ? Math.round(remaining * 0.15 * 100) / 100 : 0;
     const afterEmployee = Math.max(0, remaining - employeeDiscount);
     const voucherDiscount = voucherData ? Math.min(voucherData.amount, afterEmployee) : 0;
-    const total = Math.max(0, afterEmployee - voucherDiscount);
+    const afterVoucher = Math.max(0, afterEmployee - voucherDiscount);
+
+    let cardOfferDiscount = 0;
+    if (loyaltyCard && selectedCardOfferIds.length > 0) {
+      let remainingForOffer = afterVoucher;
+      const selectedOffers = cardOffers.filter((offer) => selectedCardOfferIds.includes(offer.id));
+      for (const offer of selectedOffers) {
+        let amount = offer.discount_type === 'percent'
+          ? remainingForOffer * (offer.discount_value / 100)
+          : Math.min(remainingForOffer, offer.discount_value);
+        if (offer.max_discount_amount) amount = Math.min(amount, offer.max_discount_amount);
+        remainingForOffer = Math.max(0, remainingForOffer - amount);
+        cardOfferDiscount += amount;
+      }
+    }
+
+    const total = Math.max(0, afterVoucher - cardOfferDiscount);
     const pointsCost = selectedDiscountIds.reduce((sum, id) => {
       const d = discounts.find((disc) => disc.id === id);
       return sum + (d?.points_cost ?? 0);
     }, 0);
-    return { subtotal, loyaltyDiscount, employeeDiscount, voucherDiscount, total, pointsCost };
-  }, [cart, loyaltyCard, selectedDiscountIds, discounts, isEmployeeOrder, voucherData]);
+    return { subtotal, loyaltyDiscount, employeeDiscount, voucherDiscount, cardOfferDiscount, total, pointsCost };
+  }, [cart, loyaltyCard, selectedDiscountIds, selectedCardOfferIds, discounts, cardOffers, isEmployeeOrder, voucherData]);
 
   const setCartQty = (uid: string, qty: number) => {
     const clamped = Math.min(250, Math.max(1, qty));
@@ -419,6 +469,9 @@ export default function CreateOrderScreen() {
     if (selectedDiscountIds.length > 0) {
       payload.loyalty_discount_ids = selectedDiscountIds;
       payload.card_pin = cardPin;
+    }
+    if (loyaltyCard && selectedCardOfferIds.length > 0) {
+      payload.card_offer_ids = selectedCardOfferIds;
     }
     if (voucherData) {
       payload.voucher_code = voucherData.code;
@@ -505,6 +558,7 @@ export default function CreateOrderScreen() {
             onOpenScanner={openQrScanner}
             discounts={discounts} selectedDiscountIds={selectedDiscountIds} onToggleDiscount={toggleDiscount}
             cardPin={cardPin} setCardPin={setCardPin} pinError={pinError}
+            cardOffers={cardOffers} selectedCardOfferIds={selectedCardOfferIds} onToggleCardOffer={toggleCardOffer}
             isEmployeeOrder={isEmployeeOrder} setIsEmployeeOrder={setIsEmployeeOrder}
           />
         ) : (
@@ -806,6 +860,7 @@ function Step1Client(props: {
   onOpenScanner: () => void;
   discounts: LoyaltyDiscount[]; selectedDiscountIds: number[]; onToggleDiscount: (id: number) => void;
   cardPin: string; setCardPin: (v: string) => void; pinError: string;
+  cardOffers: CardOffer[]; selectedCardOfferIds: number[]; onToggleCardOffer: (id: number) => void;
   isEmployeeOrder: boolean; setIsEmployeeOrder: (v: boolean) => void;
 }) {
   const {
@@ -814,6 +869,7 @@ function Step1Client(props: {
     checkingCard, onCheck, onClearCard, onOpenCardSearch, onOpenScanner,
     discounts, selectedDiscountIds, onToggleDiscount,
     cardPin, setCardPin, pinError,
+    cardOffers, selectedCardOfferIds, onToggleCardOffer,
     isEmployeeOrder, setIsEmployeeOrder,
   } = props;
 
@@ -901,9 +957,30 @@ function Step1Client(props: {
               </TouchableOpacity>
             </View>
 
+            {cardOffers.length > 0 && (
+              <>
+                <Text style={styles.subLabel}>Offres personnalisées</Text>
+                {cardOffers.map((offer) => (
+                  <TouchableOpacity
+                    key={offer.id}
+                    style={styles.discountRow}
+                    onPress={() => onToggleCardOffer(offer.id)}
+                  >
+                    <View style={[styles.checkbox, selectedCardOfferIds.includes(offer.id) && styles.checkboxChecked]}>
+                      {selectedCardOfferIds.includes(offer.id) && <Text style={styles.checkmark}>✓</Text>}
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.discountName}>{offer.label}</Text>
+                      <Text style={styles.discountDetail}>{offer.display_value}</Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </>
+            )}
+
             {discounts.length > 0 && (
               <>
-                <Text style={styles.subLabel}>Réductions disponibles</Text>
+                <Text style={[styles.subLabel, { marginTop: 12 }]}>Réductions disponibles</Text>
                 {discounts
                   .filter((d) => !d.employee_only || loyaltyCard.has_employee_benefits)
                   .filter((d) => d.points_cost <= loyaltyCard.points)

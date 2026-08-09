@@ -99,6 +99,16 @@ export interface LoyaltyDiscount {
   employee_only: boolean;
 }
 
+export interface CardOffer {
+  id: number;
+  label: string;
+  discount_type: 'fixed' | 'percent';
+  discount_value: number;
+  max_discount_amount: number | null;
+  display_value: string;
+  expires_at: string | null;
+}
+
 export interface OrderItem {
   id: number;
   drink_id: number | null;
