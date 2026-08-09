@@ -37,7 +37,7 @@ class AuthController extends Controller
             ], 403);
         }
 
-        if (! $user->isAdmin()) {
+        if (! $user->isAdmin() && ! $user->isModerator()) {
             Auth::guard('api')->logout();
             return response()->json([
                 'message' => 'Accès réservé aux salariés.',
