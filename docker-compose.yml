@@ -3,7 +3,6 @@ version: '3.8'
 services:
   app:
     build: .
-    container_name: app_web
     volumes:
       - ./storage:/var/www/html/storage
     environment:
@@ -34,10 +33,10 @@ services:
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-password}
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.app.rule=Host(`coffee.leofranz.fr`)"
-      - "traefik.http.routers.app.entrypoints=websecure"
-      - "traefik.http.routers.app.tls.certresolver=le"
-      - "traefik.http.services.app.loadbalancer.server.port=80"
+      - 'traefik.http.routers.${COMPOSE_PROJECT_NAME:-coffee_shop}.rule=Host("${APP_HOST:-coffee.leofranz.fr}")'
+      - 'traefik.http.routers.${COMPOSE_PROJECT_NAME:-coffee_shop}.entrypoints=websecure'
+      - 'traefik.http.routers.${COMPOSE_PROJECT_NAME:-coffee_shop}.tls.certresolver=le'
+      - 'traefik.http.services.${COMPOSE_PROJECT_NAME:-coffee_shop}.loadbalancer.server.port=80'
       - "traefik.docker.network=proxy"
     networks:
       - proxy
