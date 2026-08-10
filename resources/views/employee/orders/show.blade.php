@@ -240,7 +240,7 @@
                         @csrf @method('PATCH')
                         <input type="hidden" name="status" value="{{ $transition->key }}">
                         <button type="submit"
-                                class="w-full py-3 sm:py-2.5 px-4 rounded-lg text-sm font-medium transition-colors {{ $transition->button_class }}">
+                                class="w-full py-3 sm:py-2.5 px-4 rounded-lg text-sm font-medium transition-colors border border-stone-200 shadow-sm {{ $transition->button_class }}">
                             {{ $transition->label }}
                         </button>
                     </form>
