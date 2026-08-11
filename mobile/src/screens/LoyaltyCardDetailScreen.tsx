@@ -188,6 +188,12 @@ export default function LoyaltyCardDetailScreen() {
         </TouchableOpacity>
       )}
 
+          {isAdmin && (
+            <TouchableOpacity style={[styles.adjustButton, { backgroundColor: '#fff', borderWidth: 1, borderColor: '#92400e' }]} onPress={() => navigation.navigate('LoyaltyCardDiscounts', { cardId })}>
+              <Text style={[styles.adjustButtonText, { color: '#92400e' }]}>Gérer les réductions</Text>
+            </TouchableOpacity>
+          )}
+
       {/* Onglets */}
       <View style={styles.tabs}>
         <TouchableOpacity

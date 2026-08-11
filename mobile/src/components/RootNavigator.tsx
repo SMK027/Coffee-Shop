@@ -12,6 +12,9 @@ import OrderPaymentScreen from '../screens/OrderPaymentScreen';
 import CreateOrderScreen from '../screens/CreateOrderScreen';
 import LoyaltyCardsScreen from '../screens/LoyaltyCardsScreen';
 import LoyaltyCardDetailScreen from '../screens/LoyaltyCardDetailScreen';
+import LoyaltyCardDiscountsScreen from '../screens/LoyaltyCardDiscountsScreen';
+import VouchersListScreen from '../screens/VouchersListScreen';
+import VoucherDetailScreen from '../screens/VoucherDetailScreen';
 import DailyReportsScreen from '../screens/DailyReportsScreen';
 import DailyReportDetailScreen from '../screens/DailyReportDetailScreen';
 import ProfileScreen from '../screens/ProfileScreen';
@@ -52,7 +55,26 @@ function LoyaltyStackNavigator() {
     >
       <LoyaltyStack.Screen name="LoyaltyCardsList" component={LoyaltyCardsScreen} options={{ title: 'Fidélité' }} />
       <LoyaltyStack.Screen name="LoyaltyCardDetail" component={LoyaltyCardDetailScreen} options={{ title: 'Fiche fidélité' }} />
+      <LoyaltyStack.Screen name="LoyaltyCardDiscounts" component={LoyaltyCardDiscountsScreen} options={{ title: 'Réductions' }} />
     </LoyaltyStack.Navigator>
+  );
+}
+
+const VouchersStack = createNativeStackNavigator();
+
+function VouchersStackNavigator() {
+  return (
+    <VouchersStack.Navigator
+      screenOptions={{
+        headerStyle: { backgroundColor: '#78350f' },
+        headerTintColor: '#fff',
+        headerTitleStyle: { fontWeight: '700' },
+      }}
+    >
+      <VouchersStack.Screen name="VouchersList" component={VouchersListScreen} options={{ title: 'Bons' }} />
+      <VouchersStack.Screen name="VoucherDetail" component={VoucherDetailScreen} options={{ title: 'Bon' }} />
+      <VouchersStack.Screen name="CreateVoucher" component={CreateVoucherScreen} options={{ title: 'Créer un bon' }} />
+    </VouchersStack.Navigator>
   );
 }
 
@@ -109,6 +131,9 @@ function AppTabs() {
       <Tab.Screen name="Orders" component={OrdersStack} options={{ title: 'Commandes', headerShown: false }} />
       <Tab.Screen name="Menu" component={MenuScreen} options={{ title: 'Menu' }} />
       <Tab.Screen name="LoyaltyCards" component={LoyaltyStackNavigator} options={{ title: 'Fidélité', headerShown: false }} />
+      {isAdmin && (
+        <Tab.Screen name="Vouchers" component={VouchersStackNavigator} options={{ title: 'Bons' }} />
+      )}
       {isAdmin && (
         <Tab.Screen name="Reports" component={ReportsStackNavigator} options={{ title: 'Rapports', headerShown: false }} />
       )}
