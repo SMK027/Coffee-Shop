@@ -3,9 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\LoyaltyCard;
+use App\Models\Supervisor;
 use App\Models\Voucher;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 
 class VoucherController extends Controller
 {
@@ -182,7 +185,83 @@ class VoucherController extends Controller
             'issued_by' => $voucher->issued_by_name,
             'expires_at' => $voucher->expires_at?->toDateString(),
             'restricted_card_id' => $voucher->restricted_card_id,
+            'restricted_card_number' => $voucher->restrictedCard?->card_number,
             'restricted_name' => $voucher->restricted_name,
+        ]);
+    }
+
+    public function update(Request $request, Voucher $voucher): JsonResponse
+    {
+        abort_unless(auth()->user()?->isAdmin() || auth()->user()?->isModerator(), 403);
+        abort_if($voucher->is_used, 403, 'Un bon déjà utilisé ne peut pas être modifié.');
+
+        $validated = $request->validate([
+            'amount' => ['required', 'numeric', 'min:0.01', 'max:9999.99'],
+            'expires_at' => ['required', 'date', 'after:today'],
+            'restriction_type' => ['required', 'in:none,card,name'],
+        ]);
+
+        $restrictedCardId = null;
+        $restrictedName = null;
+
+        if ($validated['restriction_type'] === 'card') {
+            $cardNumber = str_replace(' ', '', trim((string) $request->input('restricted_card_number', '')));
+            if (empty($cardNumber)) {
+                return response()->json(['message' => 'Le numéro de carte est requis.'], 422);
+            }
+
+            $card = LoyaltyCard::where('card_number', $cardNumber)->first();
+            if (! $card) {
+                return response()->json(['message' => 'Aucune carte de fidélité ne correspond à ce numéro.'], 422);
+            }
+
+            $restrictedCardId = $card->id;
+        } elseif ($validated['restriction_type'] === 'name') {
+            $name = trim((string) $request->input('restricted_name', ''));
+            if (empty($name)) {
+                return response()->json(['message' => 'Le nom complet est requis.'], 422);
+            }
+
+            $restrictedName = $name;
+        }
+
+        if (! auth()->user()->isSuperAdmin()) {
+            $supervisorNumber = trim((string) $request->input('supervisor_number', ''));
+            $supervisorPin = trim((string) $request->input('supervisor_pin', ''));
+            if (! $supervisorNumber || ! $supervisorPin) {
+                return response()->json(['message' => 'Validation du superviseur requise.'], 422);
+            }
+
+            $supervisor = Supervisor::where('supervisor_number', $supervisorNumber)
+                ->where('is_active', true)
+                ->with('superadmin:id,name')
+                ->first();
+
+            if (! $supervisor?->superadmin) {
+                return response()->json(['message' => 'Superviseur invalide.'], 422);
+            }
+        }
+
+        $voucher->update([
+            'amount' => round((float) $validated['amount'], 2),
+            'expires_at' => Carbon::parse($validated['expires_at']),
+            'restricted_card_id' => $restrictedCardId,
+            'restricted_name' => $restrictedName,
+        ]);
+
+        return response()->json([
+            'message' => 'Bon mis à jour',
+            'voucher' => [
+                'id' => $voucher->id,
+                'code' => $voucher->code,
+                'amount' => (float) $voucher->amount,
+                'active' => $voucher->isValid(),
+                'is_used' => (bool) $voucher->is_used,
+                'expires_at' => $voucher->expires_at?->toDateString(),
+                'restricted_card_id' => $voucher->restricted_card_id,
+                'restricted_card_number' => $voucher->restrictedCard?->card_number,
+                'restricted_name' => $voucher->restricted_name,
+            ],
         ]);
     }
 
