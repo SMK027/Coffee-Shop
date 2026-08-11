@@ -200,9 +200,17 @@ class OrderController extends Controller
                     'card_offer_ids' => 'Les offres personnalisées nécessitent une carte de fidélité valide.',
                 ]);
             }
+
+            $uniqueCardOfferIds = array_values(array_unique($cardOfferIds));
             $cardOffers = \App\Models\CardOffer::whereIn('id', $cardOfferIds)
                 ->where('loyalty_card_id', $loyaltyCard->id)
                 ->get();
+
+            if ($cardOffers->count() !== count($uniqueCardOfferIds)) {
+                throw ValidationException::withMessages([
+                    'card_offer_ids' => 'Une ou plusieurs offres personnalisées sont introuvables ou ne correspondent pas à cette carte.',
+                ]);
+            }
 
             foreach ($cardOffers as $offer) {
                 if (! $offer->isValid()) {
@@ -389,7 +397,14 @@ class OrderController extends Controller
 
             // Marquer les offres carte comme utilisées
             foreach ($cardOfferRows as $row) {
-                $row['offer']->update([
+                $lockedOffer = \App\Models\CardOffer::whereKey($row['offer']->id)->lockForUpdate()->first();
+                if (! $lockedOffer || ! $lockedOffer->isValid()) {
+                    throw ValidationException::withMessages([
+                        'card_offer_ids' => "L'une des offres personnalisées n'est plus disponible.",
+                    ]);
+                }
+
+                $lockedOffer->update([
                     'is_used'         => true,
                     'used_at'         => now(),
                     'used_in_order_id' => $order->id,

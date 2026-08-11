@@ -713,7 +713,14 @@ class OrderController extends Controller
             }
 
             foreach ($cardOffers as $offer) {
-                $offer->forceFill([
+                $lockedOffer = \App\Models\CardOffer::whereKey($offer->id)->lockForUpdate()->first();
+                if (! $lockedOffer || ! $lockedOffer->isValid()) {
+                    throw ValidationException::withMessages([
+                        'card_offer_ids' => "L'une des offres personnalisées n'est plus disponible.",
+                    ]);
+                }
+
+                $lockedOffer->forceFill([
                     'is_used' => true,
                     'used_at' => now(),
                     'used_in_order_id' => $order->id,
