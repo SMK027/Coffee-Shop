@@ -852,9 +852,9 @@ export default function CreateOrderScreen() {
                 secureTextEntry
                 keyboardType="numeric"
               />
-              <Text style={[styles.subLabel, { marginTop: -4 }]}>ou scanner un code superviseur</Text>
+              <Text style={[styles.subLabel, { marginTop: -4 }]}>ou scanner un QR code superviseur</Text>
               <TouchableOpacity style={[styles.backBtn, { marginBottom: 10 }]} onPress={openSupervisorScanner}>
-                <Text style={[styles.backBtnText, { textAlign: 'center' }]}>Scanner le code-barres superviseur</Text>
+                <Text style={[styles.backBtnText, { textAlign: 'center' }]}>Scanner le QR code superviseur</Text>
               </TouchableOpacity>
               {supervisorToken ? <Text style={styles.successText}>Code superviseur scanné.</Text> : null}
               {supervisorError ? <Text style={styles.error}>{supervisorError}</Text> : null}

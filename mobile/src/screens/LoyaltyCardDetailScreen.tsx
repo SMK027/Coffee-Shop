@@ -108,7 +108,7 @@ export default function LoyaltyCardDetailScreen() {
     }
 
     if (!isSuperAdmin && !supervisorToken.trim() && (!supervisorNumber.trim() || !supervisorPin.trim())) {
-      setAdjustError('Saisissez un code-barres superviseur ou un identifiant + mot de passe.');
+      setAdjustError('Saisissez un QR code superviseur ou un identifiant + mot de passe.');
       return;
     }
 
@@ -316,7 +316,7 @@ export default function LoyaltyCardDetailScreen() {
                   style={styles.modalInput}
                   value={supervisorToken}
                   onChangeText={setSupervisorToken}
-                  placeholder="Code-barres superviseur (optionnel)"
+                  placeholder="QR code superviseur (optionnel)"
                   autoCapitalize="none"
                 />
                 <TextInput

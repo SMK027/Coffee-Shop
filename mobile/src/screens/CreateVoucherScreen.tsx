@@ -126,7 +126,7 @@ export default function CreateVoucherScreen() {
 
         {!user?.global_role || user.global_role !== 'superadmin' ? (
           <>
-            <Text style={styles.label}>Code-barres superviseur (optionnel)</Text>
+            <Text style={styles.label}>QR code superviseur (optionnel)</Text>
             <TextInput style={styles.input} value={supervisorToken} onChangeText={setSupervisorToken} placeholder="SUPERVISOR:..." autoCapitalize="none" />
             <Text style={styles.label}>Identifiant du superviseur</Text>
             <TextInput style={styles.input} value={supervisorNumber} onChangeText={setSupervisorNumber} />

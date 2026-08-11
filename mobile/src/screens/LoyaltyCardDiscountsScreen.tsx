@@ -246,7 +246,7 @@ export default function LoyaltyCardDiscountsScreen() {
 
             {!isSuperAdmin && (
               <>
-                <TextInput style={styles.input} placeholder="Code-barres superviseur (optionnel)" value={supervisorToken} onChangeText={setSupervisorToken} autoCapitalize="none" />
+                <TextInput style={styles.input} placeholder="QR code superviseur (optionnel)" value={supervisorToken} onChangeText={setSupervisorToken} autoCapitalize="none" />
                 <TextInput style={styles.input} placeholder="Identifiant superviseur" value={supervisorNumber} onChangeText={setSupervisorNumber} />
                 <TextInput style={styles.input} placeholder="Mot de passe superviseur" value={supervisorPin} onChangeText={setSupervisorPin} secureTextEntry keyboardType="numeric" />
               </>

@@ -525,7 +525,7 @@ export default function OrderDetailScreen() {
             {!isSuperAdmin && (
               <>
                 <TouchableOpacity style={styles.scanBtn} onPress={() => openSupervisorScanner('refund')}>
-                  <Text style={styles.scanBtnText}>Scanner le code-barres superviseur</Text>
+                  <Text style={styles.scanBtnText}>Scanner le QR code superviseur</Text>
                 </TouchableOpacity>
                 {refundSupervisorToken ? <Text style={styles.scanSuccess}>Code superviseur scanné.</Text> : null}
                 <TextInput
@@ -623,7 +623,7 @@ export default function OrderDetailScreen() {
               Cette transition nécessite l’authentification d’un superviseur.
             </Text>
             <TouchableOpacity style={styles.scanBtn} onPress={() => openSupervisorScanner('status')}>
-              <Text style={styles.scanBtnText}>Scanner le code-barres superviseur</Text>
+              <Text style={styles.scanBtnText}>Scanner le QR code superviseur</Text>
             </TouchableOpacity>
             {supervisorToken ? <Text style={styles.scanSuccess}>Code superviseur scanné.</Text> : null}
             <TextInput
@@ -681,7 +681,7 @@ export default function OrderDetailScreen() {
             <Text style={styles.modalTitle}>Supprimer la commande</Text>
             <Text style={styles.modalDescription}>Un superviseur doit autoriser cette suppression.</Text>
             <TouchableOpacity style={styles.scanBtn} onPress={() => openSupervisorScanner('delete')}>
-              <Text style={styles.scanBtnText}>Scanner le code-barres superviseur</Text>
+              <Text style={styles.scanBtnText}>Scanner le QR code superviseur</Text>
             </TouchableOpacity>
             {deleteSupervisorToken ? <Text style={styles.scanSuccess}>Code superviseur scanné.</Text> : null}
             <TextInput
