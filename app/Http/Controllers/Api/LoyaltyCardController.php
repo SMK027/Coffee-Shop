@@ -160,11 +160,19 @@ class LoyaltyCardController extends Controller
         ]);
     }
 
-    public function offers(LoyaltyCard $card): JsonResponse
+    public function offers(Request $request, LoyaltyCard $card): JsonResponse
     {
-        $offers = $card->cardOffers()
-            ->latest()
-            ->get();
+        $includeAll = filter_var($request->query('all', false), FILTER_VALIDATE_BOOL);
+
+        $query = $card->cardOffers()->latest();
+        if (! $includeAll) {
+            $query->where('is_used', false)
+                ->whereNull('used_at')
+                ->whereNull('used_in_order_id')
+                ->where('expires_at', '>', now());
+        }
+
+        $offers = $query->get();
 
         return response()->json($offers->map(fn (CardOffer $offer) => [
             'id'              => $offer->id,

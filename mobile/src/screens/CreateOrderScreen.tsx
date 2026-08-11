@@ -115,7 +115,9 @@ export default function CreateOrderScreen() {
 
     try {
       const { data } = await api.get(`/loyalty-cards/${cardId}/offers`);
-      setCardOffers(Array.isArray(data) ? data : []);
+      const offers = Array.isArray(data) ? data : [];
+      const usableOffers = offers.filter((offer: any) => !offer?.is_used && offer?.is_valid !== false);
+      setCardOffers(usableOffers);
       setSelectedCardOfferIds([]);
     } catch {
       setCardOffers([]);

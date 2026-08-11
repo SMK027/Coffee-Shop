@@ -53,7 +53,7 @@ export default function LoyaltyCardDiscountsScreen() {
   const load = async () => {
     setLoading(true);
     try {
-      const { data } = await api.get(`/loyalty-cards/${cardId}/offers`);
+      const { data } = await api.get(`/loyalty-cards/${cardId}/offers`, { params: { all: true } });
       setItems(data);
     } catch (e) { Alert.alert('Erreur', 'Impossible de charger les réductions.'); }
     finally { setLoading(false); }
