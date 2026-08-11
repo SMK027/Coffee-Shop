@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
+import * as Clipboard from 'expo-clipboard';
 import api from '../api/client';
 
 type ParamList = { VoucherDetail: { voucherId: number } };
@@ -34,6 +35,15 @@ export default function VoucherDetailScreen() {
     ]);
   };
 
+  const copyIdentifier = async () => {
+    try {
+      await Clipboard.setStringAsync(item.code);
+      Alert.alert('Copié', 'L’identifiant du bon a été copié dans le presse-papiers.');
+    } catch (e) {
+      Alert.alert('Erreur', 'Impossible de copier l’identifiant du bon.');
+    }
+  };
+
   const toggleActive = async () => {
     if (!item) return;
     setSubmitting(true);
@@ -57,6 +67,9 @@ export default function VoucherDetailScreen() {
       <TouchableOpacity style={styles.btn} onPress={() => navigation.navigate('CreateVoucher', { voucher: item })} disabled={submitting}>
         <Text style={styles.btnText}>Modifier</Text>
       </TouchableOpacity>
+      <TouchableOpacity style={[styles.btn, styles.copyBtn]} onPress={copyIdentifier} disabled={submitting}>
+        <Text style={[styles.btnText, styles.copyBtnText]}>Copier l'identifiant</Text>
+      </TouchableOpacity>
       <TouchableOpacity style={[styles.btn, { backgroundColor: '#fff', borderWidth: 1, borderColor: '#ef4444' }]} onPress={remove} disabled={submitting}>
         <Text style={[styles.btnText, { color: '#ef4444' }]}>Supprimer</Text>
       </TouchableOpacity>
@@ -78,4 +91,6 @@ const styles = StyleSheet.create({
   meta: { color: '#6b7280', marginTop: 6 },
   btn: { backgroundColor: '#92400e', padding: 12, borderRadius: 10, alignItems: 'center', marginTop: 8 },
   btnText: { color: '#fff', fontWeight: '700' },
+  copyBtn: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#92400e' },
+  copyBtnText: { color: '#92400e' },
 });
