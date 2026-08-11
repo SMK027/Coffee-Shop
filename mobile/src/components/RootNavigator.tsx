@@ -121,6 +121,7 @@ function AppTabs() {
             Orders: '📋',
             Menu: '☕',
             LoyaltyCards: '🎁',
+            Vouchers: '🎟️',
             Reports: '📊',
             Profile: '👤',
           };
