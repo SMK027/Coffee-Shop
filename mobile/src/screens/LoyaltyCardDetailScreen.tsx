@@ -12,6 +12,7 @@ import {
   Alert,
 } from 'react-native';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
+import * as Clipboard from 'expo-clipboard';
 import QRCode from 'react-native-qrcode-svg';
 import Barcode from 'react-native-barcode-svg';
 import api from '../api/client';
@@ -77,6 +78,15 @@ export default function LoyaltyCardDetailScreen() {
     setRefreshing(true);
     await load();
     setRefreshing(false);
+  };
+
+  const copyCardNumber = async () => {
+    try {
+      await Clipboard.setStringAsync(card.card_number);
+      Alert.alert('Copié', 'Le numéro de carte a été copié dans le presse-papiers.');
+    } catch {
+      Alert.alert('Erreur', 'Impossible de copier le numéro de carte.');
+    }
   };
 
   const resetAdjustmentForm = () => {
@@ -147,6 +157,9 @@ export default function LoyaltyCardDetailScreen() {
           <View style={{ flex: 1 }}>
             <Text style={styles.fullName}>{card.full_name}</Text>
             <Text style={styles.cardNumber}>{card.card_number}</Text>
+            <TouchableOpacity style={styles.copyCardButton} onPress={copyCardNumber}>
+              <Text style={styles.copyCardButtonText}>Copier le numéro de carte</Text>
+            </TouchableOpacity>
           </View>
           {card.has_employee_benefits && (
             <View style={styles.badgeEmployee}>
@@ -402,6 +415,8 @@ const styles = StyleSheet.create({
   headerTop: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 8 },
   fullName: { fontSize: 20, fontWeight: '700', color: '#1f2937' },
   cardNumber: { fontSize: 13, color: '#9ca3af', fontFamily: 'monospace', marginTop: 2 },
+  copyCardButton: { alignSelf: 'flex-start', marginTop: 8, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 999, backgroundColor: '#fff7ed', borderWidth: 1, borderColor: '#fb923c' },
+  copyCardButtonText: { color: '#b45309', fontSize: 12, fontWeight: '700' },
   badgeEmployee: { backgroundColor: '#fef3c7', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
   badgeEmployeeText: { color: '#92400e', fontSize: 12, fontWeight: '600' },
   contact: { fontSize: 14, color: '#6b7280', marginTop: 2 },
