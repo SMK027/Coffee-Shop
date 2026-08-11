@@ -20,7 +20,8 @@ abstract class Controller
 
         $tokenRaw = trim((string) $request->input('supervisor_token', ''));
         if ($tokenRaw !== '') {
-            $token = preg_replace('/^SUPERVISOR:/', '', $tokenRaw) ?? $tokenRaw;
+            $tokenCompact = preg_replace('/\s+/', '', $tokenRaw) ?? $tokenRaw;
+            $token = preg_replace('/^SUPERVISOR:/', '', $tokenCompact) ?? $tokenCompact;
 
             // Short token format: "<supervisor_number>.<signature>"
             if (preg_match('/^([A-Za-z0-9_-]{1,50})\.([A-Fa-f0-9]{20})$/', $token, $matches) === 1) {

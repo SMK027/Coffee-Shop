@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, ScrollView } from 'react-native';
 import api from '../api/client';
 import { useNavigation } from '@react-navigation/native';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useAuth } from '../context/AuthContext';
 
 export default function CreateLoyaltyDiscountScreen() {
@@ -18,6 +19,8 @@ export default function CreateLoyaltyDiscountScreen() {
   const [supervisorNumber, setSupervisorNumber] = useState('');
   const [supervisorPin, setSupervisorPin] = useState('');
   const [supervisorToken, setSupervisorToken] = useState('');
+  const [scannerVisible, setScannerVisible] = useState(false);
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const [loading, setLoading] = useState(false);
 
   const submit = async () => {
@@ -36,8 +39,9 @@ export default function CreateLoyaltyDiscountScreen() {
         employee_only: employeeOnly,
       };
       if (!user?.global_role || user.global_role !== 'superadmin') {
-        if (supervisorToken.trim()) {
-          payload.supervisor_token = supervisorToken.trim();
+        const normalizedToken = supervisorToken.replace(/\s+/g, '').trim();
+        if (normalizedToken) {
+          payload.supervisor_token = normalizedToken;
         } else {
           payload.supervisor_number = supervisorNumber;
           payload.supervisor_pin = supervisorPin;
@@ -49,6 +53,24 @@ export default function CreateLoyaltyDiscountScreen() {
     } catch (e: any) {
       Alert.alert('Erreur', e.response?.data?.message ?? 'Impossible de créer la réduction.');
     } finally { setLoading(false); }
+  };
+
+  const openScanner = async () => {
+    if (!cameraPermission?.granted) {
+      const result = await requestCameraPermission();
+      if (!result.granted) {
+        Alert.alert('Permission refusée', "L'accès à la caméra est requis pour scanner le QR code superviseur.");
+        return;
+      }
+    }
+    setScannerVisible(true);
+  };
+
+  const onScanned = ({ data }: { data: string }) => {
+    const token = data.replace(/\s+/g, '').trim();
+    if (!token) return;
+    setSupervisorToken(token);
+    setScannerVisible(false);
   };
 
   return (
@@ -84,6 +106,9 @@ export default function CreateLoyaltyDiscountScreen() {
           <>
             <Text style={styles.label}>QR code superviseur (optionnel)</Text>
             <TextInput style={styles.input} value={supervisorToken} onChangeText={setSupervisorToken} placeholder="SUPERVISOR:..." autoCapitalize="none" />
+            <TouchableOpacity style={styles.scanBtn} onPress={openScanner}>
+              <Text style={styles.scanBtnText}>Scanner le QR code superviseur</Text>
+            </TouchableOpacity>
             <Text style={styles.label}>Identifiant du superviseur</Text>
             <TextInput style={styles.input} value={supervisorNumber} onChangeText={setSupervisorNumber} />
             <Text style={styles.label}>Mot de passe du superviseur</Text>
@@ -94,6 +119,22 @@ export default function CreateLoyaltyDiscountScreen() {
         <TouchableOpacity style={styles.submit} onPress={submit} disabled={loading}>
           {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitText}>Créer</Text>}
         </TouchableOpacity>
+      </View>
+
+      <View>
+        {scannerVisible ? (
+          <View style={styles.scannerWrap}>
+            <CameraView
+              style={styles.scanner}
+              facing="back"
+              barcodeScannerSettings={{ barcodeTypes: ['qr', 'code128'] }}
+              onBarcodeScanned={onScanned}
+            />
+            <TouchableOpacity style={styles.scanCancelBtn} onPress={() => setScannerVisible(false)}>
+              <Text style={styles.scanCancelText}>Annuler le scan</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
       </View>
     </ScrollView>
   );
@@ -108,6 +149,12 @@ const styles = StyleSheet.create({
   chipActive: { backgroundColor: '#92400e' },
   chipText: { color: '#1f2937' },
   chipTextActive: { color: '#fff' },
+  scanBtn: { backgroundColor: '#fff7ed', borderColor: '#fdba74', borderWidth: 1, padding: 10, borderRadius: 8, marginBottom: 10, alignItems: 'center' },
+  scanBtnText: { color: '#9a3412', fontWeight: '700' },
+  scannerWrap: { marginTop: 12, borderRadius: 10, overflow: 'hidden', borderWidth: 1, borderColor: '#e5e7eb' },
+  scanner: { width: '100%', height: 280 },
+  scanCancelBtn: { backgroundColor: '#111827', padding: 10, alignItems: 'center' },
+  scanCancelText: { color: '#fff', fontWeight: '600' },
   submit: { backgroundColor: '#92400e', padding: 12, borderRadius: 8, alignItems: 'center', marginTop: 8 },
   submitText: { color: '#fff', fontWeight: '700' },
 });
