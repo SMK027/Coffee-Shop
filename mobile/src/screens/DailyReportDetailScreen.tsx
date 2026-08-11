@@ -114,6 +114,30 @@ export default function DailyReportDetailScreen() {
           <Text style={styles.bilanValue}>{report.net.toFixed(2).replace('.', ',')} €</Text>
         </View>
       </View>
+
+      {/* Bons émis */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Bons émis</Text>
+        {(!report.vouchers_issued || report.vouchers_issued.length === 0) ? (
+          <Text style={styles.empty}>Aucun bon émis ce jour.</Text>
+        ) : (
+          <>
+            {report.vouchers_issued.map((v, idx) => (
+              <View key={v.code + idx} style={styles.row}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.rowLabel}>{v.code} — {v.amount.toFixed(2).replace('.', ',')} €</Text>
+                  <Text style={styles.rowMeta}>{v.restricted_to ? `Restreint à : ${v.restricted_to}` : (v.expires_at ? `Expire le ${new Date(v.expires_at).toLocaleDateString('fr-FR')}` : '—')}</Text>
+                </View>
+                <Text style={[styles.rowValue, { color: v.is_used ? '#ef4444' : '#16a34a' }]}>{v.is_used ? 'Utilisé' : 'Valide'}</Text>
+              </View>
+            ))}
+            <View style={[styles.row, styles.totalRow]}>
+              <Text style={styles.totalLabel}>Total bons émis</Text>
+              <Text style={styles.totalValue}>{report.total_vouchers_issued.toFixed(2).replace('.', ',')} €</Text>
+            </View>
+          </>
+        )}
+      </View>
     </ScrollView>
   );
 }
@@ -153,6 +177,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: '#f5f5f4' },
   rowLabel: { fontSize: 14, color: '#57534e' },
   rowValue: { fontSize: 14, fontWeight: '600', color: '#1c1917' },
+  rowMeta: { fontSize: 12, color: '#9ca3af', marginTop: 4 },
   totalRow: { borderBottomWidth: 0, borderTopWidth: 2, borderTopColor: '#e7e5e4', marginTop: 4, paddingTop: 10 },
   totalLabel: { fontSize: 14, fontWeight: '700', color: '#1c1917' },
   totalValue: { fontSize: 14, fontWeight: '800' },
