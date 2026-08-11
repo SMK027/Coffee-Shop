@@ -36,7 +36,7 @@ export default function VouchersListScreen() {
               <Text style={styles.title}>{item.code}</Text>
               <Text style={styles.meta}>{item.amount} € • Expire: {item.expires_at ? new Date(item.expires_at).toLocaleDateString() : '—'}</Text>
             </View>
-            <Text style={styles.right}>{item.is_active ? 'Actif' : 'Inactif'}</Text>
+            <Text style={styles.right}>{item.active ? 'Valide' : (item.is_used ? 'Utilisé' : 'Expiré')}</Text>
           </TouchableOpacity>
         )}
         ListEmptyComponent={<Text style={styles.empty}>Aucun bon trouvé.</Text>}

@@ -154,7 +154,9 @@ class VoucherController extends Controller
                 'id' => $v->id,
                 'code' => $v->code,
                 'amount' => (float) $v->amount,
-                'is_active' => (bool) $v->is_active,
+                // 'active' is computed from DB: not used and not expired
+                'active' => $v->isValid(),
+                'is_used' => (bool) $v->is_used,
                 'issued_at' => $v->issued_at?->toDateTimeString(),
                 'expires_at' => $v->expires_at?->toDateString(),
             ];
@@ -174,7 +176,8 @@ class VoucherController extends Controller
             'id' => $voucher->id,
             'code' => $voucher->code,
             'amount' => (float) $voucher->amount,
-            'is_active' => (bool) $voucher->is_active,
+            'active' => $voucher->isValid(),
+            'is_used' => (bool) $voucher->is_used,
             'issued_at' => $voucher->issued_at?->toDateTimeString(),
             'issued_by' => $voucher->issued_by_name,
             'expires_at' => $voucher->expires_at?->toDateString(),
@@ -186,31 +189,6 @@ class VoucherController extends Controller
     /**
      * Met à jour certains champs d'un bon (ex: activation/désactivation).
      */
-    public function update(Request $request, Voucher $voucher): JsonResponse
-    {
-        abort_unless(auth()->user()?->isAdmin() || auth()->user()?->isModerator(), 403);
-
-        $validated = $request->validate([
-            'is_active' => ['sometimes', 'boolean'],
-            'amount' => ['sometimes', 'numeric', 'min:0.01', 'max:9999.99'],
-            'expires_at' => ['sometimes', 'date'],
-        ]);
-
-        if (array_key_exists('is_active', $validated)) {
-            $voucher->is_active = (bool) $validated['is_active'];
-        }
-        if (array_key_exists('amount', $validated)) {
-            $voucher->amount = round((float) $validated['amount'], 2);
-        }
-        if (array_key_exists('expires_at', $validated)) {
-            $voucher->expires_at = $validated['expires_at'];
-        }
-
-        $voucher->save();
-
-        return response()->json(['message' => 'Bon mis à jour']);
-    }
-
     /**
      * Supprime un bon d'achat.
      */

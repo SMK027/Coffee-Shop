@@ -71,7 +71,7 @@ function VouchersStackNavigator() {
         headerTitleStyle: { fontWeight: '700' },
       }}
     >
-      <VouchersStack.Screen name="VouchersList" component={VouchersListScreen} options={{ title: 'Bons' }} />
+      <VouchersStack.Screen name="VouchersList" component={VouchersListScreen} options={{ title: 'Bons', headerShown: false }} />
       <VouchersStack.Screen name="VoucherDetail" component={VoucherDetailScreen} options={{ title: 'Bon' }} />
       <VouchersStack.Screen name="CreateVoucher" component={CreateVoucherScreen} options={{ title: 'Créer un bon' }} />
     </VouchersStack.Navigator>

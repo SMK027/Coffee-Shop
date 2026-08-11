@@ -55,26 +55,26 @@ export default function CreateVoucherScreen() {
         <Text style={styles.label}>Validité (jours)</Text>
         <TextInput style={styles.input} keyboardType="numeric" value={validityDays} onChangeText={setValidityDays} />
 
-        <Text style={styles.label}>Restriction</Text>
+        <Text style={styles.label}>Restriction d'utilisation</Text>
         <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
           {(['none','card','name'] as const).map((t) => (
             <TouchableOpacity key={t} onPress={() => setRestrictionType(t)} style={[styles.chip, restrictionType === t && styles.chipActive]}>
-              <Text style={[styles.chipText, restrictionType === t && styles.chipTextActive]}>{t}</Text>
+              <Text style={[styles.chipText, restrictionType === t && styles.chipTextActive]}>{t === 'none' ? 'Aucune' : t === 'card' ? 'Carte' : 'Nom'}</Text>
             </TouchableOpacity>
           ))}
         </View>
 
         {restrictionType === 'card' && (
           <>
-            <Text style={styles.label}>Numéro de carte</Text>
-            <TextInput style={styles.input} value={restrictedCardNumber} onChangeText={setRestrictedCardNumber} />
+            <Text style={styles.label}>Numéro de carte (sans espaces)</Text>
+            <TextInput style={styles.input} value={restrictedCardNumber} onChangeText={setRestrictedCardNumber} placeholder="Ex. 1234-5678-9012" />
           </>
         )}
 
         {restrictionType === 'name' && (
           <>
-            <Text style={styles.label}>Nom complet</Text>
-            <TextInput style={styles.input} value={restrictedName} onChangeText={setRestrictedName} />
+            <Text style={styles.label}>Nom complet du bénéficiaire</Text>
+            <TextInput style={styles.input} value={restrictedName} onChangeText={setRestrictedName} placeholder="Ex. Jean Dupont" />
           </>
         )}
 

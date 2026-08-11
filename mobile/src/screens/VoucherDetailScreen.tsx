@@ -60,9 +60,12 @@ export default function VoucherDetailScreen() {
       <TouchableOpacity style={[styles.btn, { backgroundColor: '#fff', borderWidth: 1, borderColor: '#ef4444' }]} onPress={remove} disabled={submitting}>
         <Text style={[styles.btnText, { color: '#ef4444' }]}>Supprimer</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={[styles.btn, { marginTop: 8 }]} onPress={toggleActive} disabled={submitting}>
-        <Text style={styles.btnText}>{item.is_active ? 'Désactiver' : 'Activer'}</Text>
-      </TouchableOpacity>
+
+      <View style={{ marginTop: 12 }}>
+        <Text style={{ color: item.active ? '#16a34a' : '#ef4444', fontWeight: '700' }}>{item.active ? 'Valide' : (item.is_used ? 'Utilisé' : 'Expiré')}</Text>
+        {item.restricted_card_id && <Text style={styles.meta}>Restreint à la carte #{item.restricted_card_id}</Text>}
+        {item.restricted_name && <Text style={styles.meta}>Restreint à : {item.restricted_name}</Text>}
+      </View>
     </View>
   );
 }
