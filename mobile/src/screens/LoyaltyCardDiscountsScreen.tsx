@@ -40,6 +40,16 @@ export default function LoyaltyCardDiscountsScreen() {
   const [supervisorNumber, setSupervisorNumber] = useState('');
   const [supervisorPin, setSupervisorPin] = useState('');
 
+  const getOfferStatus = (offer: CardOffer) => {
+    if (offer.is_used) {
+      return { label: 'Déjà utilisée', container: styles.statusUsed, text: styles.statusUsedText };
+    }
+    if (!offer.is_valid) {
+      return { label: 'Expirée', container: styles.statusExpired, text: styles.statusExpiredText };
+    }
+    return { label: 'Disponible', container: styles.statusAvailable, text: styles.statusAvailableText };
+  };
+
   const load = async () => {
     setLoading(true);
     try {
@@ -163,9 +173,12 @@ export default function LoyaltyCardDiscountsScreen() {
             <View>
               <Text style={styles.title}>{item.label}</Text>
               <Text style={styles.meta}>{item.display_value}</Text>
-              <Text style={styles.meta}>Expire le {item.expires_at ? new Date(item.expires_at).toLocaleDateString('fr-FR') : '—'} · {item.is_used ? 'Utilisée' : (item.is_valid ? 'Valide' : 'Expirée')}</Text>
+              <Text style={styles.meta}>Expire le {item.expires_at ? new Date(item.expires_at).toLocaleDateString('fr-FR') : '—'}</Text>
             </View>
             <View style={{ alignItems: 'flex-end' }}>
+              <View style={[styles.statusBadge, getOfferStatus(item).container]}>
+                <Text style={[styles.statusBadgeText, getOfferStatus(item).text]}>{getOfferStatus(item).label}</Text>
+              </View>
               <TouchableOpacity style={styles.smallBtn} onPress={() => openEdit(item)}>
                 <Text style={styles.smallBtnText}>Modifier</Text>
               </TouchableOpacity>
@@ -270,4 +283,12 @@ const styles = StyleSheet.create({
   cancelBtnText: { color: '#374151', fontWeight: '700' },
   saveBtn: { backgroundColor: '#92400e' },
   saveBtnText: { color: '#fff', fontWeight: '700' },
+  statusBadge: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, marginBottom: 8 },
+  statusBadgeText: { fontSize: 12, fontWeight: '700' },
+  statusUsed: { backgroundColor: '#fee2e2' },
+  statusUsedText: { color: '#b91c1c' },
+  statusExpired: { backgroundColor: '#fef3c7' },
+  statusExpiredText: { color: '#92400e' },
+  statusAvailable: { backgroundColor: '#dcfce7' },
+  statusAvailableText: { color: '#166534' },
 });

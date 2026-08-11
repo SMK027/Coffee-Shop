@@ -14,6 +14,16 @@ export default function VoucherDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
+  const getVoucherStatus = (voucher: any) => {
+    if (voucher.is_used) {
+      return { label: 'Déjà utilisé', container: styles.statusUsed, text: styles.statusUsedText };
+    }
+    if (!voucher.active) {
+      return { label: 'Expiré', container: styles.statusExpired, text: styles.statusExpiredText };
+    }
+    return { label: 'Actif', container: styles.statusActive, text: styles.statusActiveText };
+  };
+
   const load = async () => {
     setLoading(true);
     try { const { data } = await api.get(`/vouchers/${voucherId}`); setItem(data); }
@@ -75,7 +85,9 @@ export default function VoucherDetailScreen() {
       </TouchableOpacity>
 
       <View style={{ marginTop: 12 }}>
-        <Text style={{ color: item.active ? '#16a34a' : '#ef4444', fontWeight: '700' }}>{item.active ? 'Valide' : (item.is_used ? 'Utilisé' : 'Expiré')}</Text>
+        <View style={[styles.statusBadge, getVoucherStatus(item).container]}>
+          <Text style={[styles.statusBadgeText, getVoucherStatus(item).text]}>{getVoucherStatus(item).label}</Text>
+        </View>
         {item.restricted_card_id && <Text style={styles.meta}>Restreint à la carte #{item.restricted_card_id}</Text>}
         {item.restricted_name && <Text style={styles.meta}>Restreint à : {item.restricted_name}</Text>}
       </View>
@@ -93,4 +105,12 @@ const styles = StyleSheet.create({
   btnText: { color: '#fff', fontWeight: '700' },
   copyBtn: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#92400e' },
   copyBtnText: { color: '#92400e' },
+  statusBadge: { alignSelf: 'flex-start', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, marginBottom: 6 },
+  statusBadgeText: { fontSize: 12, fontWeight: '700' },
+  statusUsed: { backgroundColor: '#fee2e2' },
+  statusUsedText: { color: '#b91c1c' },
+  statusExpired: { backgroundColor: '#fef3c7' },
+  statusExpiredText: { color: '#92400e' },
+  statusActive: { backgroundColor: '#dcfce7' },
+  statusActiveText: { color: '#166534' },
 });

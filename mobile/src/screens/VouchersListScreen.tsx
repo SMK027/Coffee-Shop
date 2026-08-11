@@ -8,6 +8,16 @@ export default function VouchersListScreen() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const getVoucherStatus = (voucher: any) => {
+    if (voucher.is_used) {
+      return { label: 'Déjà utilisé', container: styles.statusUsed, text: styles.statusUsedText };
+    }
+    if (!voucher.active) {
+      return { label: 'Expiré', container: styles.statusExpired, text: styles.statusExpiredText };
+    }
+    return { label: 'Actif', container: styles.statusActive, text: styles.statusActiveText };
+  };
+
   const load = async () => {
     setLoading(true);
     try {
@@ -36,7 +46,9 @@ export default function VouchersListScreen() {
               <Text style={styles.title}>{item.code}</Text>
               <Text style={styles.meta}>{item.amount} € • Expire: {item.expires_at ? new Date(item.expires_at).toLocaleDateString() : '—'}</Text>
             </View>
-            <Text style={styles.right}>{item.active ? 'Valide' : (item.is_used ? 'Utilisé' : 'Expiré')}</Text>
+            <View style={[styles.statusBadge, getVoucherStatus(item).container]}>
+              <Text style={[styles.statusBadgeText, getVoucherStatus(item).text]}>{getVoucherStatus(item).label}</Text>
+            </View>
           </TouchableOpacity>
         )}
         ListEmptyComponent={<Text style={styles.empty}>Aucun bon trouvé.</Text>}
@@ -56,8 +68,15 @@ const styles = StyleSheet.create({
   row: { backgroundColor: '#fff', padding: 12, borderRadius: 10, marginBottom: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   title: { fontWeight: '700', color: '#1f2937' },
   meta: { color: '#6b7280', marginTop: 4 },
-  right: { color: '#9ca3af', fontWeight: '700' },
   empty: { textAlign: 'center', marginTop: 24, color: '#9ca3af' },
   fab: { position: 'absolute', right: 16, bottom: 20, width: 56, height: 56, borderRadius: 28, backgroundColor: '#92400e', justifyContent: 'center', alignItems: 'center', elevation: 6 },
   fabText: { color: '#fff', fontSize: 28, lineHeight: 28 },
+  statusBadge: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
+  statusBadgeText: { fontSize: 12, fontWeight: '700' },
+  statusUsed: { backgroundColor: '#fee2e2' },
+  statusUsedText: { color: '#b91c1c' },
+  statusExpired: { backgroundColor: '#fef3c7' },
+  statusExpiredText: { color: '#92400e' },
+  statusActive: { backgroundColor: '#dcfce7' },
+  statusActiveText: { color: '#166534' },
 });
