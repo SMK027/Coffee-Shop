@@ -7,6 +7,7 @@ use App\Models\CardOffer;
 use App\Models\LoyaltyCard;
 use App\Models\LoyaltyPointAdjustment;
 use App\Models\Order;
+use App\Services\ActivityLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -162,8 +163,6 @@ class LoyaltyCardController extends Controller
     public function offers(LoyaltyCard $card): JsonResponse
     {
         $offers = $card->cardOffers()
-            ->where('is_used', false)
-            ->where('expires_at', '>', now())
             ->latest()
             ->get();
 
@@ -175,7 +174,113 @@ class LoyaltyCardController extends Controller
             'max_discount_amount' => $offer->max_discount_amount !== null ? (float) $offer->max_discount_amount : null,
             'display_value'   => $offer->display_value,
             'expires_at'      => $offer->expires_at?->toIso8601String(),
+            'is_used'         => (bool) $offer->is_used,
+            'is_valid'        => $offer->isValid(),
         ]));
+    }
+
+    public function storeOffer(Request $request, LoyaltyCard $card): JsonResponse
+    {
+        abort_unless(auth()->user()?->isAdmin() || auth()->user()?->isModerator(), 403);
+
+        if (! auth()->user()->isSuperAdmin()) {
+            $this->requireSuperAdminOrSupervisor($request);
+        }
+
+        $validated = $request->validate([
+            'label' => ['required', 'string', 'max:150'],
+            'discount_type' => ['required', Rule::in([CardOffer::TYPE_FIXED, CardOffer::TYPE_PERCENT])],
+            'discount_value' => ['required', 'numeric', 'min:0.01', 'max:9999.99'],
+            'max_discount_amount' => ['nullable', 'numeric', 'min:0.01', 'max:9999.99'],
+            'expires_at' => ['required', 'date', 'after:today'],
+        ]);
+
+        if ($validated['discount_type'] === CardOffer::TYPE_PERCENT && (float) $validated['discount_value'] > 100) {
+            return response()->json(['message' => 'Un pourcentage ne peut pas dépasser 100 %.'], 422);
+        }
+
+        $offer = $card->cardOffers()->create([
+            'label' => $validated['label'],
+            'discount_type' => $validated['discount_type'],
+            'discount_value' => round((float) $validated['discount_value'], 2),
+            'max_discount_amount' => isset($validated['max_discount_amount']) ? round((float) $validated['max_discount_amount'], 2) : null,
+            'expires_at' => $validated['expires_at'],
+            'issued_by' => auth()->id(),
+        ]);
+
+        ActivityLogger::log(
+            'card_offer.created',
+            "Offre « {$offer->label} » créée via mobile pour la carte {$card->card_number}",
+            'card_offer',
+            $offer->id,
+            ['card' => $card->card_number, 'label' => $offer->label, 'valeur' => $offer->display_value]
+        );
+
+        return response()->json(['message' => 'Offre créée.', 'offer_id' => $offer->id], 201);
+    }
+
+    public function updateOffer(Request $request, LoyaltyCard $card, CardOffer $offer): JsonResponse
+    {
+        abort_unless(auth()->user()?->isAdmin() || auth()->user()?->isModerator(), 403);
+        abort_unless($offer->loyalty_card_id === $card->id, 404);
+        abort_if($offer->is_used, 403, 'Une offre déjà utilisée ne peut pas être modifiée.');
+
+        if (! auth()->user()->isSuperAdmin()) {
+            $this->requireSuperAdminOrSupervisor($request);
+        }
+
+        $validated = $request->validate([
+            'label' => ['required', 'string', 'max:150'],
+            'discount_type' => ['required', Rule::in([CardOffer::TYPE_FIXED, CardOffer::TYPE_PERCENT])],
+            'discount_value' => ['required', 'numeric', 'min:0.01', 'max:9999.99'],
+            'max_discount_amount' => ['nullable', 'numeric', 'min:0.01', 'max:9999.99'],
+            'expires_at' => ['required', 'date', 'after:today'],
+        ]);
+
+        if ($validated['discount_type'] === CardOffer::TYPE_PERCENT && (float) $validated['discount_value'] > 100) {
+            return response()->json(['message' => 'Un pourcentage ne peut pas dépasser 100 %.'], 422);
+        }
+
+        $offer->update([
+            'label' => $validated['label'],
+            'discount_type' => $validated['discount_type'],
+            'discount_value' => round((float) $validated['discount_value'], 2),
+            'max_discount_amount' => isset($validated['max_discount_amount']) ? round((float) $validated['max_discount_amount'], 2) : null,
+            'expires_at' => $validated['expires_at'],
+        ]);
+
+        ActivityLogger::log(
+            'card_offer.updated',
+            "Offre « {$offer->label} » modifiée via mobile pour la carte {$card->card_number}",
+            'card_offer',
+            $offer->id,
+            ['card' => $card->card_number, 'label' => $offer->label, 'valeur' => $offer->display_value]
+        );
+
+        return response()->json(['message' => 'Offre mise à jour.']);
+    }
+
+    public function destroyOffer(Request $request, LoyaltyCard $card, CardOffer $offer): JsonResponse
+    {
+        abort_unless(auth()->user()?->isAdmin() || auth()->user()?->isModerator(), 403);
+        abort_unless($offer->loyalty_card_id === $card->id, 404);
+        abort_if($offer->is_used, 403, 'Une offre déjà utilisée ne peut pas être supprimée.');
+
+        if (! auth()->user()->isSuperAdmin()) {
+            $this->requireSuperAdminOrSupervisor($request);
+        }
+
+        ActivityLogger::log(
+            'card_offer.deleted',
+            "Offre « {$offer->label} » supprimée via mobile (carte {$card->card_number})",
+            'card_offer',
+            $offer->id,
+            ['card' => $card->card_number, 'label' => $offer->label]
+        );
+
+        $offer->delete();
+
+        return response()->json(['message' => 'Offre supprimée.']);
     }
 
     public function adjust(Request $request, LoyaltyCard $card): JsonResponse
