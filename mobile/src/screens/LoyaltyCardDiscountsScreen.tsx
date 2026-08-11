@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Modal, TextInput } from 'react-native';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
@@ -35,6 +36,7 @@ export default function LoyaltyCardDiscountsScreen() {
   const [discountValue, setDiscountValue] = useState('');
   const [maxDiscountAmount, setMaxDiscountAmount] = useState('');
   const [expiresAt, setExpiresAt] = useState('');
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [supervisorNumber, setSupervisorNumber] = useState('');
   const [supervisorPin, setSupervisorPin] = useState('');
 
@@ -73,6 +75,28 @@ export default function LoyaltyCardDiscountsScreen() {
     setMaxDiscountAmount(offer.max_discount_amount ? String(offer.max_discount_amount) : '');
     setExpiresAt(offer.expires_at ? offer.expires_at.slice(0, 10) : '');
     setModalVisible(true);
+  };
+
+  const formatDateFr = (date: Date) => date.toLocaleDateString('fr-FR');
+
+  const parseDateInput = (value: string): Date => {
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      return tomorrow;
+    }
+    return parsed;
+  };
+
+  const onDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+    setShowDatePicker(false);
+    if (event.type === 'dismissed' || !selectedDate) return;
+
+    const yyyy = selectedDate.getFullYear();
+    const mm = String(selectedDate.getMonth() + 1).padStart(2, '0');
+    const dd = String(selectedDate.getDate()).padStart(2, '0');
+    setExpiresAt(`${yyyy}-${mm}-${dd}`);
   };
 
   const saveOffer = async () => {
@@ -177,7 +201,23 @@ export default function LoyaltyCardDiscountsScreen() {
             {discountType === 'percent' && (
               <TextInput style={styles.input} placeholder="Plafond (€) (optionnel)" keyboardType="numeric" value={maxDiscountAmount} onChangeText={setMaxDiscountAmount} />
             )}
-            <TextInput style={styles.input} placeholder="Date d'expiration (AAAA-MM-JJ)" value={expiresAt} onChangeText={setExpiresAt} />
+            <Text style={styles.inputLabel}>Date d'expiration</Text>
+            <TouchableOpacity style={styles.datePickerBtn} onPress={() => setShowDatePicker(true)}>
+              <Text style={styles.datePickerBtnText}>{expiresAt ? formatDateFr(parseDateInput(expiresAt)) : 'Sélectionner une date'}</Text>
+            </TouchableOpacity>
+            {showDatePicker && (
+              <DateTimePicker
+                value={parseDateInput(expiresAt)}
+                mode="date"
+                display="default"
+                minimumDate={(() => {
+                  const tomorrow = new Date();
+                  tomorrow.setDate(tomorrow.getDate() + 1);
+                  return tomorrow;
+                })()}
+                onChange={onDateChange}
+              />
+            )}
 
             {!isSuperAdmin && (
               <>
@@ -216,6 +256,9 @@ const styles = StyleSheet.create({
   modalCard: { backgroundColor: '#fff', padding: 16, borderTopLeftRadius: 16, borderTopRightRadius: 16 },
   modalTitle: { fontSize: 18, fontWeight: '700', color: '#1f2937', marginBottom: 12 },
   input: { borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, padding: 10, marginBottom: 10, backgroundColor: '#f9fafb' },
+  inputLabel: { fontSize: 13, color: '#6b7280', marginBottom: 6 },
+  datePickerBtn: { borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, padding: 12, marginBottom: 10, backgroundColor: '#f9fafb' },
+  datePickerBtnText: { color: '#1f2937', fontSize: 14 },
   typeRow: { flexDirection: 'row', gap: 8, marginBottom: 10 },
   typeBtn: { flex: 1, padding: 10, borderRadius: 8, backgroundColor: '#f3f4f6', alignItems: 'center' },
   typeBtnActive: { backgroundColor: '#92400e' },
