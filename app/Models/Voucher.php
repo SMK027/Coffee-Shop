@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Str;
 
 class Voucher extends Model
 {
@@ -66,7 +67,8 @@ class Voucher extends Model
             // Découpe les deux noms en mots, normalise la casse et les trie.
             // Permet de faire correspondre "Jean Dupont" et "Dupont Jean".
             $normalize = static function (string $s): array {
-                $words = preg_split('/[\s\-]+/u', mb_strtolower(trim($s)));
+                $s = Str::ascii(mb_strtolower(trim($s)));
+                $words = preg_split('/[\s\-]+/u', $s);
                 $words = array_values(array_filter($words, fn($w) => $w !== ''));
                 sort($words);
                 return $words;
