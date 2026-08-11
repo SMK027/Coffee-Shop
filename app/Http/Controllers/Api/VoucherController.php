@@ -141,4 +141,85 @@ class VoucherController extends Controller
             'expires_at' => $voucher->expires_at->toDateString(),
         ]);
     }
+
+    /**
+     * Retourne la liste des bons d'achat pour l'API mobile.
+     */
+    public function index(): JsonResponse
+    {
+        abort_unless(auth()->user()?->isAdmin() || auth()->user()?->isModerator(), 403);
+
+        $vouchers = Voucher::orderBy('created_at', 'desc')->get()->map(function ($v) {
+            return [
+                'id' => $v->id,
+                'code' => $v->code,
+                'amount' => (float) $v->amount,
+                'is_active' => (bool) $v->is_active,
+                'issued_at' => $v->issued_at?->toDateTimeString(),
+                'expires_at' => $v->expires_at?->toDateString(),
+            ];
+        });
+
+        return response()->json($vouchers);
+    }
+
+    /**
+     * Affiche un bon d'achat.
+     */
+    public function show(Voucher $voucher): JsonResponse
+    {
+        abort_unless(auth()->user()?->isAdmin() || auth()->user()?->isModerator(), 403);
+
+        return response()->json([
+            'id' => $voucher->id,
+            'code' => $voucher->code,
+            'amount' => (float) $voucher->amount,
+            'is_active' => (bool) $voucher->is_active,
+            'issued_at' => $voucher->issued_at?->toDateTimeString(),
+            'issued_by' => $voucher->issued_by_name,
+            'expires_at' => $voucher->expires_at?->toDateString(),
+            'restricted_card_id' => $voucher->restricted_card_id,
+            'restricted_name' => $voucher->restricted_name,
+        ]);
+    }
+
+    /**
+     * Met à jour certains champs d'un bon (ex: activation/désactivation).
+     */
+    public function update(Request $request, Voucher $voucher): JsonResponse
+    {
+        abort_unless(auth()->user()?->isAdmin() || auth()->user()?->isModerator(), 403);
+
+        $validated = $request->validate([
+            'is_active' => ['sometimes', 'boolean'],
+            'amount' => ['sometimes', 'numeric', 'min:0.01', 'max:9999.99'],
+            'expires_at' => ['sometimes', 'date'],
+        ]);
+
+        if (array_key_exists('is_active', $validated)) {
+            $voucher->is_active = (bool) $validated['is_active'];
+        }
+        if (array_key_exists('amount', $validated)) {
+            $voucher->amount = round((float) $validated['amount'], 2);
+        }
+        if (array_key_exists('expires_at', $validated)) {
+            $voucher->expires_at = $validated['expires_at'];
+        }
+
+        $voucher->save();
+
+        return response()->json(['message' => 'Bon mis à jour']);
+    }
+
+    /**
+     * Supprime un bon d'achat.
+     */
+    public function destroy(Voucher $voucher): JsonResponse
+    {
+        abort_unless(auth()->user()?->isAdmin() || auth()->user()?->isModerator(), 403);
+
+        $voucher->delete();
+
+        return response()->json(['message' => 'Bon supprimé']);
+    }
 }

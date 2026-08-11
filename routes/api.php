@@ -68,5 +68,9 @@ Route::middleware('auth:api')->group(function () {
 
     // Bons d'achat
     Route::get('/vouchers/check', [VoucherController::class, 'check']);
+    Route::get('/vouchers', [VoucherController::class, 'index']);
+    Route::get('/vouchers/{voucher}', [VoucherController::class, 'show']);
     Route::post('/vouchers', [VoucherController::class, 'store']);
+    Route::put('/vouchers/{voucher}', [VoucherController::class, 'update']);
+    Route::delete('/vouchers/{voucher}', [VoucherController::class, 'destroy']);
 });
