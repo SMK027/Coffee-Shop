@@ -15,6 +15,13 @@ export const PROD_SERVER: Server = {
   readonly: true,
 };
 
+export const DEV_SERVER: Server = {
+  id: 'dev',
+  label: 'Dev',
+  url: 'https://dev-coffee.leofranz.fr',
+  readonly: true,
+};
+
 const CUSTOM_SERVERS_KEY = 'custom_servers';
 export const LAST_SERVER_KEY = 'last_server_id';
 
@@ -33,7 +40,7 @@ export async function saveCustomServers(servers: Server[]): Promise<void> {
 
 export async function loadAllServers(): Promise<Server[]> {
   const custom = await loadCustomServers();
-  return [PROD_SERVER, ...custom];
+  return [PROD_SERVER, DEV_SERVER, ...custom];
 }
 
 export async function loadLastServerId(): Promise<string | null> {

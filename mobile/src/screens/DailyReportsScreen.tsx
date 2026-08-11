@@ -229,6 +229,21 @@ export default function DailyReportsScreen() {
                 </View>
               </View>
             ) : null}
+
+            {/* Bouton Générer / Mettre à jour */}
+            {preview && (
+              <TouchableOpacity
+                style={styles.generateBtn}
+                onPress={handleGenerate}
+                disabled={generating || loadingPreview}
+              >
+                {generating ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.generateBtnText}>{preview.existing ? 'Mettre à jour' : 'Générer le récapitulatif'}</Text>
+                )}
+              </TouchableOpacity>
+            )}
           </View>
           <Text style={styles.sectionTitle}>Historique</Text>
         </>
