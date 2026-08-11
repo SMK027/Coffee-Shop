@@ -55,29 +55,36 @@ class Voucher extends Model
      */
     public function isValidFor(?int $loyaltyCardId, ?string $customerName): bool
     {
+        if ($this->restricted_name !== null) {
+            if ($this->matchesNameRestriction($customerName)) {
+                return true;
+            }
+        }
+
         if ($this->restricted_card_id !== null) {
             return $loyaltyCardId !== null && $loyaltyCardId === (int) $this->restricted_card_id;
         }
 
-        if ($this->restricted_name !== null) {
-            if (empty($customerName)) {
-                return false;
-            }
+        return true; // Aucune restriction
+    }
 
-            // Découpe les deux noms en mots, normalise la casse et les trie.
-            // Permet de faire correspondre "Jean Dupont" et "Dupont Jean".
-            $normalize = static function (string $s): array {
-                $s = Str::ascii(mb_strtolower(trim($s)));
-                $words = preg_split('/[\s\-]+/u', $s);
-                $words = array_values(array_filter($words, fn($w) => $w !== ''));
-                sort($words);
-                return $words;
-            };
-
-            return $normalize($customerName) === $normalize($this->restricted_name);
+    private function matchesNameRestriction(?string $customerName): bool
+    {
+        if (empty($customerName) || empty($this->restricted_name)) {
+            return false;
         }
 
-        return true; // Aucune restriction
+        // Normalisation tolérante : casse, accents, ponctuation, espaces et ordre des mots.
+        $normalize = static function (string $s): string {
+            $s = Str::ascii(mb_strtolower(trim($s)));
+            $words = preg_split('/[^a-z0-9]+/u', $s) ?: [];
+            $words = array_values(array_filter($words, fn ($w) => $w !== ''));
+            sort($words);
+
+            return implode(' ', $words);
+        };
+
+        return $normalize($customerName) === $normalize($this->restricted_name);
     }
 
     public function scopeValid($query)
