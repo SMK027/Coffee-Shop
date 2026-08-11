@@ -64,7 +64,9 @@ Route::middleware('auth:api')->group(function () {
 
     // Réductions fidélité
     Route::get('/loyalty-discounts', [LoyaltyDiscountController::class, 'index']);
+    Route::post('/loyalty-discounts', [LoyaltyDiscountController::class, 'store']);
 
     // Bons d'achat
     Route::get('/vouchers/check', [VoucherController::class, 'check']);
+    Route::post('/vouchers', [VoucherController::class, 'store']);
 });

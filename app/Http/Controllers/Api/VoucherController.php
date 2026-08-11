@@ -59,4 +59,86 @@ class VoucherController extends Controller
             'message' => "Bon d'achat valide",
         ]);
     }
+
+    /**
+     * Création d'un bon d'achat via l'API mobile.
+     */
+    public function store(Request $request): JsonResponse
+    {
+        abort_unless(auth()->user()?->isAdmin() || auth()->user()?->isModerator(), 403);
+
+        $validated = $request->validate([
+            'amount' => ['required', 'numeric', 'min:0.01', 'max:9999.99'],
+            'validity_days' => ['required', 'integer', 'min:3', 'max:365'],
+            'restriction_type' => ['required', 'in:none,card,name'],
+        ]);
+
+        $restrictedCardId = null;
+        $restrictedName = null;
+
+        if ($validated['restriction_type'] === 'card') {
+            $cardNumber = str_replace(' ', '', trim((string) $request->input('restricted_card_number', '')));
+            if (empty($cardNumber)) {
+                return response()->json(['message' => 'Numéro de carte requis.'], 422);
+            }
+            $card = \App\Models\LoyaltyCard::where('card_number', $cardNumber)->first();
+            if (! $card) {
+                return response()->json(['message' => 'Aucune carte de fidélité correspondante.'], 422);
+            }
+            $restrictedCardId = $card->id;
+        } elseif ($validated['restriction_type'] === 'name') {
+            $name = trim((string) $request->input('restricted_name', ''));
+            if (empty($name)) {
+                return response()->json(['message' => 'Nom complet requis.'], 422);
+            }
+            $restrictedName = $name;
+        }
+
+        // Superadmin handling or supervisor validation for regular admins/moderators
+        if (auth()->user()->isSuperAdmin()) {
+            $superadminId = auth()->id();
+            $superadminName = auth()->user()->name;
+        } else {
+            // require supervisor credentials when not superadmin
+            $supervisorNumber = trim((string) $request->input('supervisor_number', ''));
+            $supervisorPin = trim((string) $request->input('supervisor_pin', ''));
+            if (! $supervisorNumber || ! $supervisorPin) {
+                return response()->json(['message' => 'Validation du superviseur requise.'], 422);
+            }
+            $supervisor = \App\Models\Supervisor::where('supervisor_number', $supervisorNumber)
+                ->where('is_active', true)
+                ->with('superadmin:id,name')
+                ->first();
+            if (! $supervisor?->superadmin) {
+                return response()->json(['message' => 'Superviseur invalide.'], 422);
+            }
+            $superadminId = $supervisor->superadmin_id;
+            $superadminName = $supervisor->superadmin->name;
+        }
+
+        $voucher = Voucher::create([
+            'code' => Voucher::generateCode(),
+            'amount' => round((float) $validated['amount'], 2),
+            'issued_by' => $superadminId,
+            'issued_by_name' => $superadminName,
+            'issued_at' => now(),
+            'expires_at' => now()->addDays((int) $validated['validity_days']),
+            'restricted_card_id' => $restrictedCardId,
+            'restricted_name' => $restrictedName,
+        ]);
+
+        \App\Services\ActivityLogger::log(
+            'voucher.created',
+            "Bon d'achat {$voucher->code} créé via mobile",
+            'voucher', $voucher->id,
+            ['code' => $voucher->code, 'amount' => (float) $voucher->amount]
+        );
+
+        return response()->json([
+            'message' => 'Bon d\'achat créé',
+            'code' => $voucher->code,
+            'amount' => (float) $voucher->amount,
+            'expires_at' => $voucher->expires_at->toDateString(),
+        ]);
+    }
 }

@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import ServerManager from '../components/ServerManager';
 
@@ -21,6 +22,7 @@ const roleColors: Record<string, string> = {
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
+  const navigation = useNavigation<any>();
 
   if (!user) {
     return (
@@ -67,6 +69,17 @@ export default function ProfileScreen() {
         <ServerManager />
       </View>
 
+      {(user.global_role === 'admin' || user.global_role === 'superadmin' || user.global_role === 'moderator') && (
+        <>
+          <TouchableOpacity style={styles.actionBtn} onPress={() => navigation.navigate('CreateVoucher')}>
+            <Text style={styles.actionBtnText}>Créer un bon d'achat</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionBtn} onPress={() => navigation.navigate('CreateLoyaltyDiscount')}>
+            <Text style={styles.actionBtnText}>Créer une réduction</Text>
+          </TouchableOpacity>
+        </>
+      )}
+
       <TouchableOpacity style={styles.logoutBtn} onPress={confirmLogout}>
         <Text style={styles.logoutBtnText}>Se déconnecter</Text>
       </TouchableOpacity>
@@ -110,4 +123,9 @@ const styles = StyleSheet.create({
     alignItems: 'center', marginTop: 24, borderWidth: 1, borderColor: '#ef4444',
   },
   logoutBtnText: { color: '#ef4444', fontSize: 15, fontWeight: '700' },
+  actionBtn: {
+    backgroundColor: '#fff', borderRadius: 12, paddingVertical: 12,
+    alignItems: 'center', marginTop: 12, borderWidth: 1, borderColor: '#92400e',
+  },
+  actionBtnText: { color: '#92400e', fontSize: 15, fontWeight: '700' },
 });

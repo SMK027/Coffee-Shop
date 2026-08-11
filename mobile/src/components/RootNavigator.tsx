@@ -15,11 +15,14 @@ import LoyaltyCardDetailScreen from '../screens/LoyaltyCardDetailScreen';
 import DailyReportsScreen from '../screens/DailyReportsScreen';
 import DailyReportDetailScreen from '../screens/DailyReportDetailScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import CreateVoucherScreen from '../screens/CreateVoucherScreen';
+import CreateLoyaltyDiscountScreen from '../screens/CreateLoyaltyDiscountScreen';
 
 const Tab = createBottomTabNavigator();
 const OrderStack = createNativeStackNavigator();
 const LoyaltyStack = createNativeStackNavigator();
 const ReportsStack = createNativeStackNavigator();
+const ProfileStack = createNativeStackNavigator();
 
 function OrdersStack() {
   return (
@@ -109,7 +112,21 @@ function AppTabs() {
       {isAdmin && (
         <Tab.Screen name="Reports" component={ReportsStackNavigator} options={{ title: 'Rapports', headerShown: false }} />
       )}
-      <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: 'Profil' }} />
+      <Tab.Screen name="Profile" options={{ title: 'Profil', headerShown: false }}>
+        {() => (
+          <ProfileStack.Navigator
+            screenOptions={{
+              headerStyle: { backgroundColor: '#78350f' },
+              headerTintColor: '#fff',
+              headerTitleStyle: { fontWeight: '700' },
+            }}
+          >
+            <ProfileStack.Screen name="ProfileMain" component={ProfileScreen} options={{ title: 'Profil' }} />
+            <ProfileStack.Screen name="CreateVoucher" component={CreateVoucherScreen} options={{ title: 'Créer un bon' }} />
+            <ProfileStack.Screen name="CreateLoyaltyDiscount" component={CreateLoyaltyDiscountScreen} options={{ title: 'Créer une réduction' }} />
+          </ProfileStack.Navigator>
+        )}
+      </Tab.Screen>
     </Tab.Navigator>
   );
 }

@@ -31,4 +31,64 @@ class LoyaltyDiscountController extends Controller
 
         return response()->json(['discounts' => $discounts]);
     }
+
+    /**
+     * Création d'une réduction personnalisée via l'API mobile.
+     */
+    public function store(Request $request): JsonResponse
+    {
+        abort_unless(auth()->user()?->isAdmin() || auth()->user()?->isModerator(), 403);
+
+        if (! auth()->user()->isSuperAdmin()) {
+            // require supervisor credentials
+            $supervisorNumber = trim((string) $request->input('supervisor_number', ''));
+            $supervisorPin = trim((string) $request->input('supervisor_pin', ''));
+            if (! $supervisorNumber || ! $supervisorPin) {
+                return response()->json(['message' => 'Validation du superviseur requise.'], 422);
+            }
+            $supervisor = \App\Models\Supervisor::where('supervisor_number', $supervisorNumber)
+                ->where('is_active', true)
+                ->with('superadmin:id,name')
+                ->first();
+            if (! $supervisor?->superadmin) {
+                return response()->json(['message' => 'Superviseur invalide.'], 422);
+            }
+        }
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:120'],
+            'description' => ['nullable', 'string', 'max:1000'],
+            'points_cost' => ['required', 'integer', 'min:1'],
+            'discount_type' => ['required', 'in:fixed,percent'],
+            'discount_value' => ['required', 'numeric', 'gt:0'],
+            'max_discount_amount' => ['nullable', 'numeric', 'gt:0'],
+            'is_active' => ['nullable', 'boolean'],
+            'employee_only' => ['nullable', 'boolean'],
+            'is_permanent' => ['nullable', 'boolean'],
+            'starts_at' => ['nullable', 'date'],
+            'ends_at' => ['nullable', 'date', 'after_or_equal:starts_at'],
+            'quantity_limit' => ['nullable', 'integer', 'min:1'],
+        ]);
+
+        if ($validated['discount_type'] === 'percent' && (float) $validated['discount_value'] > 100) {
+            return response()->json(['message' => 'Une réduction en pourcentage ne peut pas dépasser 100 %.'], 422);
+        }
+
+        if ($validated['discount_type'] === 'fixed') {
+            $validated['max_discount_amount'] = null;
+        }
+
+        if (! empty($validated['is_permanent'])) {
+            $validated['starts_at'] = null;
+            $validated['ends_at'] = null;
+        }
+
+        $validated['is_active'] = (bool) ($validated['is_active'] ?? false);
+        $validated['is_sold_out'] = false;
+        $validated['employee_only'] = (bool) ($validated['employee_only'] ?? false);
+
+        $discount = \App\Models\LoyaltyDiscount::create($validated);
+
+        return response()->json(['message' => 'Réduction créée', 'id' => $discount->id]);
+    }
 }
