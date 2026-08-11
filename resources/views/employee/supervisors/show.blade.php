@@ -29,27 +29,15 @@
         <div class="border border-stone-200 rounded-lg p-4 bg-stone-50">
             <p class="text-sm text-stone-600 mb-3">QR code de bypass superviseur</p>
             <div class="bg-white border border-stone-200 rounded-lg p-3 overflow-x-auto flex justify-center">
-                <canvas id="supervisor-qr"></canvas>
+                <img
+                    src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=0&data={{ urlencode($barcodeValue) }}"
+                    alt="QR code superviseur"
+                    width="220"
+                    height="220"
+                    class="block"
+                >
             </div>
             <p class="text-xs text-stone-500 mt-3">Format court signé pour un affichage compact et un scan mobile plus fiable.</p>
         </div>
     </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
-    <script>
-        const value = @json($barcodeValue);
-        const canvas = document.getElementById('supervisor-qr');
-        QRCode.toCanvas(canvas, value, {
-            width: 220,
-            margin: 1,
-            color: {
-                dark: '#1f2937',
-                light: '#ffffff',
-            },
-        }, function (error) {
-            if (error) {
-                console.error('QR generation failed:', error);
-            }
-        });
-    </script>
 </x-employee-layout>
