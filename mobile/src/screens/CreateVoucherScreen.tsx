@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, ScrollView } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, ScrollView, Modal } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import api from '../api/client';
@@ -22,6 +22,7 @@ export default function CreateVoucherScreen() {
   const [supervisorToken, setSupervisorToken] = useState('');
   const [scannerVisible, setScannerVisible] = useState(false);
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+  const scannerLocked = useRef(false);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -91,12 +92,15 @@ export default function CreateVoucherScreen() {
         return;
       }
     }
+    scannerLocked.current = false;
     setScannerVisible(true);
   };
 
   const onScanned = ({ data }: { data: string }) => {
+    if (scannerLocked.current) return;
     const token = data.replace(/\s+/g, '').trim();
     if (!token) return;
+    scannerLocked.current = true;
     setSupervisorToken(token);
     setScannerVisible(false);
   };
@@ -153,6 +157,7 @@ export default function CreateVoucherScreen() {
             <TouchableOpacity style={styles.scanBtn} onPress={openScanner}>
               <Text style={styles.scanBtnText}>Scanner le QR code superviseur</Text>
             </TouchableOpacity>
+            {supervisorToken ? <Text style={styles.scanSuccess}>Code superviseur scanné.</Text> : null}
             <Text style={styles.label}>Identifiant du superviseur</Text>
             <TextInput style={styles.input} value={supervisorNumber} onChangeText={setSupervisorNumber} />
             <Text style={styles.label}>Mot de passe du superviseur</Text>
@@ -165,21 +170,28 @@ export default function CreateVoucherScreen() {
         </TouchableOpacity>
       </View>
 
-      <View>
-        {scannerVisible ? (
-          <View style={styles.scannerWrap}>
-            <CameraView
-              style={styles.scanner}
-              facing="back"
-              barcodeScannerSettings={{ barcodeTypes: ['qr', 'code128'] }}
-              onBarcodeScanned={onScanned}
-            />
-            <TouchableOpacity style={styles.scanCancelBtn} onPress={() => setScannerVisible(false)}>
-              <Text style={styles.scanCancelText}>Annuler le scan</Text>
+      <View />
+
+      <Modal visible={scannerVisible} animationType="slide" presentationStyle="fullScreen">
+        <View style={{ flex: 1, backgroundColor: '#000' }}>
+          <View style={styles.scannerHeader}>
+            <Text style={styles.scannerTitle}>Scanner le code superviseur</Text>
+            <TouchableOpacity onPress={() => setScannerVisible(false)} style={styles.scannerCloseBtn}>
+              <Text style={styles.scannerCloseText}>Annuler</Text>
             </TouchableOpacity>
           </View>
-        ) : null}
-      </View>
+          <CameraView
+            style={{ flex: 1 }}
+            facing="back"
+            barcodeScannerSettings={{ barcodeTypes: ['qr', 'code128'] }}
+            onBarcodeScanned={onScanned}
+          />
+          <View style={styles.scannerOverlay}>
+            <View style={styles.scannerFrame} />
+            <Text style={styles.scannerHint}>Pointez vers le QR code superviseur</Text>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -195,10 +207,14 @@ const styles = StyleSheet.create({
   chipTextActive: { color: '#fff' },
   scanBtn: { backgroundColor: '#fff7ed', borderColor: '#fdba74', borderWidth: 1, padding: 10, borderRadius: 8, marginBottom: 10, alignItems: 'center' },
   scanBtnText: { color: '#9a3412', fontWeight: '700' },
-  scannerWrap: { marginTop: 12, borderRadius: 10, overflow: 'hidden', borderWidth: 1, borderColor: '#e5e7eb' },
-  scanner: { width: '100%', height: 280 },
-  scanCancelBtn: { backgroundColor: '#111827', padding: 10, alignItems: 'center' },
-  scanCancelText: { color: '#fff', fontWeight: '600' },
+  scanSuccess: { color: '#15803d', fontSize: 13, marginBottom: 8 },
+  scannerHeader: { paddingTop: 52, paddingHorizontal: 20, paddingBottom: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  scannerTitle: { color: '#fff', fontSize: 18, fontWeight: '700' },
+  scannerCloseBtn: { paddingVertical: 6, paddingHorizontal: 10, borderRadius: 8, backgroundColor: 'rgba(0,0,0,0.25)' },
+  scannerCloseText: { color: '#fbbf24', fontSize: 16, fontWeight: '600' },
+  scannerOverlay: { position: 'absolute', left: 0, right: 0, bottom: 44, alignItems: 'center' },
+  scannerFrame: { width: 240, height: 240, borderWidth: 2, borderColor: '#fbbf24', borderRadius: 16, backgroundColor: 'transparent' },
+  scannerHint: { color: '#fff', marginTop: 14, fontSize: 14, fontWeight: '500' },
   submit: { backgroundColor: '#92400e', padding: 12, borderRadius: 8, alignItems: 'center', marginTop: 8 },
   submitText: { color: '#fff', fontWeight: '700' },
 });

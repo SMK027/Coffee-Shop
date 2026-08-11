@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Modal, TextInput } from 'react-native';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
@@ -40,6 +41,9 @@ export default function LoyaltyCardDiscountsScreen() {
   const [supervisorNumber, setSupervisorNumber] = useState('');
   const [supervisorPin, setSupervisorPin] = useState('');
   const [supervisorToken, setSupervisorToken] = useState('');
+  const [supervisorScannerVisible, setSupervisorScannerVisible] = useState(false);
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+  const scannerLocked = React.useRef(false);
 
   const getOfferStatus = (offer: CardOffer) => {
     if (offer.is_used) {
@@ -126,8 +130,9 @@ export default function LoyaltyCardDiscountsScreen() {
     };
 
     if (!isSuperAdmin) {
-      if (supervisorToken.trim()) {
-        payload.supervisor_token = supervisorToken.trim();
+      const normalizedToken = supervisorToken.replace(/\s+/g, '').trim();
+      if (normalizedToken) {
+        payload.supervisor_token = normalizedToken;
       } else {
         payload.supervisor_number = supervisorNumber;
         payload.supervisor_pin = supervisorPin;
@@ -158,8 +163,8 @@ export default function LoyaltyCardDiscountsScreen() {
         try {
           const payload = !isSuperAdmin
             ? {
-                data: supervisorToken.trim()
-                  ? { supervisor_token: supervisorToken.trim() }
+                data: supervisorToken.replace(/\s+/g, '').trim()
+                  ? { supervisor_token: supervisorToken.replace(/\s+/g, '').trim() }
                   : { supervisor_number: supervisorNumber, supervisor_pin: supervisorPin },
               }
             : undefined;
@@ -170,6 +175,27 @@ export default function LoyaltyCardDiscountsScreen() {
         catch { Alert.alert('Erreur', 'Impossible de supprimer.'); }
       } }
     ]);
+  };
+
+  const openSupervisorScanner = async () => {
+    if (!cameraPermission?.granted) {
+      const result = await requestCameraPermission();
+      if (!result.granted) {
+        Alert.alert('Permission refusée', "L'accès à la caméra est requis pour scanner le code superviseur.");
+        return;
+      }
+    }
+    scannerLocked.current = false;
+    setSupervisorScannerVisible(true);
+  };
+
+  const onSupervisorScanned = ({ data }: { data: string }) => {
+    if (scannerLocked.current) return;
+    const token = data.replace(/\s+/g, '').trim();
+    if (!token) return;
+    scannerLocked.current = true;
+    setSupervisorScannerVisible(false);
+    setSupervisorToken(token);
   };
 
   if (loading) return <View style={styles.center}><ActivityIndicator color="#92400e" size="large" /></View>;
@@ -247,6 +273,10 @@ export default function LoyaltyCardDiscountsScreen() {
             {!isSuperAdmin && (
               <>
                 <TextInput style={styles.input} placeholder="QR code superviseur (optionnel)" value={supervisorToken} onChangeText={setSupervisorToken} autoCapitalize="none" />
+                <TouchableOpacity style={styles.scanBtn} onPress={openSupervisorScanner}>
+                  <Text style={styles.scanBtnText}>Scanner le QR code superviseur</Text>
+                </TouchableOpacity>
+                {supervisorToken ? <Text style={styles.scanSuccess}>Code superviseur scanné.</Text> : null}
                 <TextInput style={styles.input} placeholder="Identifiant superviseur" value={supervisorNumber} onChangeText={setSupervisorNumber} />
                 <TextInput style={styles.input} placeholder="Mot de passe superviseur" value={supervisorPin} onChangeText={setSupervisorPin} secureTextEntry keyboardType="numeric" />
               </>
@@ -260,6 +290,27 @@ export default function LoyaltyCardDiscountsScreen() {
                 <Text style={styles.saveBtnText}>{saving ? 'Enregistrement...' : 'Enregistrer'}</Text>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={supervisorScannerVisible} animationType="slide" presentationStyle="fullScreen">
+        <View style={{ flex: 1, backgroundColor: '#000' }}>
+          <View style={styles.scannerHeader}>
+            <Text style={styles.scannerTitle}>Scanner le code superviseur</Text>
+            <TouchableOpacity onPress={() => setSupervisorScannerVisible(false)} style={styles.scannerCloseBtn}>
+              <Text style={styles.scannerCloseText}>Annuler</Text>
+            </TouchableOpacity>
+          </View>
+          <CameraView
+            style={{ flex: 1 }}
+            facing="back"
+            barcodeScannerSettings={{ barcodeTypes: ['qr', 'code128'] }}
+            onBarcodeScanned={onSupervisorScanned}
+          />
+          <View style={styles.scannerOverlay}>
+            <View style={styles.scannerFrame} />
+            <Text style={styles.scannerHint}>Pointez vers le QR code superviseur</Text>
           </View>
         </View>
       </Modal>
@@ -285,6 +336,9 @@ const styles = StyleSheet.create({
   inputLabel: { fontSize: 13, color: '#6b7280', marginBottom: 6 },
   datePickerBtn: { borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, padding: 12, marginBottom: 10, backgroundColor: '#f9fafb' },
   datePickerBtnText: { color: '#1f2937', fontSize: 14 },
+  scanBtn: { backgroundColor: '#fff7ed', borderColor: '#fdba74', borderWidth: 1, borderRadius: 10, paddingVertical: 10, alignItems: 'center', marginBottom: 10 },
+  scanBtnText: { color: '#b45309', fontWeight: '700' },
+  scanSuccess: { color: '#15803d', fontSize: 13, marginBottom: 10 },
   typeRow: { flexDirection: 'row', gap: 8, marginBottom: 10 },
   typeBtn: { flex: 1, padding: 10, borderRadius: 8, backgroundColor: '#f3f4f6', alignItems: 'center' },
   typeBtnActive: { backgroundColor: '#92400e' },
@@ -304,4 +358,11 @@ const styles = StyleSheet.create({
   statusExpiredText: { color: '#92400e' },
   statusAvailable: { backgroundColor: '#dcfce7' },
   statusAvailableText: { color: '#166534' },
+  scannerHeader: { paddingTop: 52, paddingHorizontal: 20, paddingBottom: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  scannerTitle: { color: '#fff', fontSize: 18, fontWeight: '700' },
+  scannerCloseBtn: { paddingVertical: 6, paddingHorizontal: 10, borderRadius: 8, backgroundColor: 'rgba(0,0,0,0.25)' },
+  scannerCloseText: { color: '#fbbf24', fontSize: 16, fontWeight: '600' },
+  scannerOverlay: { position: 'absolute', left: 0, right: 0, bottom: 44, alignItems: 'center' },
+  scannerFrame: { width: 240, height: 240, borderWidth: 2, borderColor: '#fbbf24', borderRadius: 16, backgroundColor: 'transparent' },
+  scannerHint: { color: '#fff', marginTop: 14, fontSize: 14, fontWeight: '500' },
 });

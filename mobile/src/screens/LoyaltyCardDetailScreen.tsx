@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import * as Clipboard from 'expo-clipboard';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import QRCode from 'react-native-qrcode-svg';
 import Barcode from 'react-native-barcode-svg';
 import api from '../api/client';
@@ -53,8 +54,11 @@ export default function LoyaltyCardDetailScreen() {
   const [supervisorNumber, setSupervisorNumber] = useState('');
   const [supervisorPin, setSupervisorPin] = useState('');
   const [supervisorToken, setSupervisorToken] = useState('');
+  const [supervisorScannerVisible, setSupervisorScannerVisible] = useState(false);
   const [adjustError, setAdjustError] = useState<string | null>(null);
   const [adjustSubmitting, setAdjustSubmitting] = useState(false);
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+  const scannerLocked = React.useRef(false);
   const { user } = useAuth();
   const isSuperAdmin = user?.global_role === 'superadmin';
   const isAdmin = user?.global_role === 'admin' || isSuperAdmin || user?.global_role === 'moderator';
@@ -120,8 +124,8 @@ export default function LoyaltyCardDetailScreen() {
         type: adjustType,
         points,
         reason: adjustReason.trim() || undefined,
-        ...(isSuperAdmin ? {} : supervisorToken.trim() ? {
-          supervisor_token: supervisorToken.trim(),
+        ...(isSuperAdmin ? {} : supervisorToken.replace(/\s+/g, '').trim() ? {
+          supervisor_token: supervisorToken.replace(/\s+/g, '').trim(),
         } : {
           supervisor_number: supervisorNumber,
           supervisor_pin: supervisorPin,
@@ -137,6 +141,28 @@ export default function LoyaltyCardDetailScreen() {
     } finally {
       setAdjustSubmitting(false);
     }
+  };
+
+  const openSupervisorScanner = async () => {
+    if (!cameraPermission?.granted) {
+      const result = await requestCameraPermission();
+      if (!result.granted) {
+        Alert.alert('Permission refusée', "L'accès à la caméra est requis pour scanner le code superviseur.");
+        return;
+      }
+    }
+    scannerLocked.current = false;
+    setSupervisorScannerVisible(true);
+  };
+
+  const onSupervisorScanned = ({ data }: { data: string }) => {
+    if (scannerLocked.current) return;
+    const token = data.replace(/\s+/g, '').trim();
+    if (!token) return;
+    scannerLocked.current = true;
+    setSupervisorScannerVisible(false);
+    setSupervisorToken(token);
+    setAdjustError(null);
   };
 
   if (loading || !data) {
@@ -319,6 +345,10 @@ export default function LoyaltyCardDetailScreen() {
                   placeholder="QR code superviseur (optionnel)"
                   autoCapitalize="none"
                 />
+                <TouchableOpacity style={styles.scanBtn} onPress={openSupervisorScanner}>
+                  <Text style={styles.scanBtnText}>Scanner le QR code superviseur</Text>
+                </TouchableOpacity>
+                {supervisorToken ? <Text style={styles.scanSuccess}>Code superviseur scanné.</Text> : null}
                 <TextInput
                   style={styles.modalInput}
                   value={supervisorNumber}
@@ -361,6 +391,27 @@ export default function LoyaltyCardDetailScreen() {
                 )}
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={supervisorScannerVisible} animationType="slide" presentationStyle="fullScreen">
+        <View style={{ flex: 1, backgroundColor: '#000' }}>
+          <View style={styles.scannerHeader}>
+            <Text style={styles.scannerTitle}>Scanner le code superviseur</Text>
+            <TouchableOpacity onPress={() => setSupervisorScannerVisible(false)} style={styles.scannerCloseBtn}>
+              <Text style={styles.scannerCloseText}>Annuler</Text>
+            </TouchableOpacity>
+          </View>
+          <CameraView
+            style={{ flex: 1 }}
+            facing="back"
+            barcodeScannerSettings={{ barcodeTypes: ['qr', 'code128'] }}
+            onBarcodeScanned={onSupervisorScanned}
+          />
+          <View style={styles.scannerOverlay}>
+            <View style={styles.scannerFrame} />
+            <Text style={styles.scannerHint}>Pointez vers le QR code superviseur</Text>
           </View>
         </View>
       </Modal>
@@ -456,6 +507,9 @@ const styles = StyleSheet.create({
   modalLabel: { fontSize: 13, color: '#475569', marginBottom: 6 },
   modalSectionTitle: { fontSize: 14, fontWeight: '700', color: '#1f2937', marginTop: 16, marginBottom: 8 },
   modalInput: { backgroundColor: '#f8fafc', borderRadius: 12, paddingVertical: 10, paddingHorizontal: 12, borderWidth: 1, borderColor: '#e2e8f0', marginBottom: 12, color: '#111827' },
+  scanBtn: { backgroundColor: '#fff7ed', borderColor: '#fdba74', borderWidth: 1, borderRadius: 10, paddingVertical: 10, alignItems: 'center', marginBottom: 10 },
+  scanBtnText: { color: '#b45309', fontWeight: '700' },
+  scanSuccess: { color: '#15803d', fontSize: 13, marginBottom: 10 },
   modalError: { color: '#b91c1c', fontSize: 13, marginBottom: 12 },
   modalActions: { flexDirection: 'row', justifyContent: 'space-between', gap: 10, marginTop: 8 },
   modalButton: { flex: 1, borderRadius: 12, paddingVertical: 12, alignItems: 'center', justifyContent: 'center' },
@@ -463,6 +517,13 @@ const styles = StyleSheet.create({
   modalButtonSecondary: { backgroundColor: '#f3f4f6' },
   modalButtonText: { fontSize: 14, fontWeight: '700' },
   modalButtonTextPrimary: { color: '#fff' },
+  scannerHeader: { paddingTop: 52, paddingHorizontal: 20, paddingBottom: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  scannerTitle: { color: '#fff', fontSize: 18, fontWeight: '700' },
+  scannerCloseBtn: { paddingVertical: 6, paddingHorizontal: 10, borderRadius: 8, backgroundColor: 'rgba(0,0,0,0.25)' },
+  scannerCloseText: { color: '#fbbf24', fontSize: 16, fontWeight: '600' },
+  scannerOverlay: { position: 'absolute', left: 0, right: 0, bottom: 44, alignItems: 'center' },
+  scannerFrame: { width: 240, height: 240, borderWidth: 2, borderColor: '#fbbf24', borderRadius: 16, backgroundColor: 'transparent' },
+  scannerHint: { color: '#fff', marginTop: 14, fontSize: 14, fontWeight: '500' },
 
   tabs: { flexDirection: 'row', backgroundColor: '#fff', borderRadius: 12, padding: 4, marginBottom: 12 },
   tab: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 8 },
