@@ -174,7 +174,9 @@ class LoyaltyCardController extends Controller
             'max_discount_amount' => $offer->max_discount_amount !== null ? (float) $offer->max_discount_amount : null,
             'display_value'   => $offer->display_value,
             'expires_at'      => $offer->expires_at?->toIso8601String(),
-            'is_used'         => (bool) $offer->is_used,
+            'is_used'         => $offer->isUsedState(),
+            'used_at'         => $offer->used_at?->toIso8601String(),
+            'used_in_order_id'=> $offer->used_in_order_id,
             'is_valid'        => $offer->isValid(),
         ]));
     }

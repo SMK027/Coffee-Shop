@@ -39,9 +39,25 @@ class CardOffer extends Model
         return $this->belongsTo(Order::class, 'used_in_order_id');
     }
 
+    public function isUsedState(): bool
+    {
+        return (bool) $this->is_used
+            || $this->used_at !== null
+            || $this->used_in_order_id !== null;
+    }
+
+    public function isExpiredState(): bool
+    {
+        if ($this->expires_at === null) {
+            return true;
+        }
+
+        return ! $this->expires_at->isFuture();
+    }
+
     public function isValid(): bool
     {
-        return ! $this->is_used && $this->expires_at->isFuture();
+        return ! $this->isUsedState() && ! $this->isExpiredState();
     }
 
     public function getDisplayValueAttribute(): string
