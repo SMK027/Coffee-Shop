@@ -21,6 +21,35 @@ abstract class Controller
         $tokenRaw = trim((string) $request->input('supervisor_token', ''));
         if ($tokenRaw !== '') {
             $token = preg_replace('/^SUPERVISOR:/', '', $tokenRaw) ?? $tokenRaw;
+
+            // Short token format: "<supervisor_number>.<signature>"
+            if (preg_match('/^([A-Za-z0-9_-]{1,50})\.([A-Fa-f0-9]{20})$/', $token, $matches) === 1) {
+                $number = $matches[1];
+                $signature = strtolower($matches[2]);
+
+                $supervisor = Supervisor::where('supervisor_number', $number)
+                    ->where('is_active', true)
+                    ->first();
+
+                if ($supervisor) {
+                    $payload = $supervisor->supervisor_number . '|' . $supervisor->password;
+                    $expected = substr(hash_hmac('sha256', $payload, (string) config('app.key')), 0, 20);
+
+                    if (hash_equals($expected, $signature)) {
+                        ActivityLogger::log(
+                            'auth.supervisor',
+                            'Validation superviseur #' . $supervisor->supervisor_number . ' (token court) — ' . ActivityLogger::routeLabel($request->route()?->getName()),
+                            null,
+                            null,
+                            ['supervisor_number' => $supervisor->supervisor_number, 'action' => ActivityLogger::routeLabel($request->route()?->getName(), $request->path())]
+                        );
+
+                        return $supervisor;
+                    }
+                }
+            }
+
+            // Legacy fallback (old encrypted token format)
             try {
                 $decrypted = Crypt::decryptString($token);
                 $decoded = json_decode($decrypted, true, 512, JSON_THROW_ON_ERROR);

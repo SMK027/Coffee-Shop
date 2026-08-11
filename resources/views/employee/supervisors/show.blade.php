@@ -31,7 +31,7 @@
             <div class="bg-white border border-stone-200 rounded-lg p-3 overflow-x-auto">
                 <svg id="supervisor-barcode"></svg>
             </div>
-            <p class="text-xs text-stone-500 mt-3">Ce code contient l'identifiant superviseur et un mot de passe déjà chiffré.</p>
+            <p class="text-xs text-stone-500 mt-3">Format court signé pour améliorer la lisibilité du scan mobile.</p>
         </div>
     </div>
 
