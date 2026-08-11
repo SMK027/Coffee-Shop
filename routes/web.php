@@ -198,6 +198,7 @@ Route::prefix('espace-employe')->name('employee.')->middleware(['auth', 'employe
     Route::get('/superviseurs', [SupervisorController::class, 'index'])->name('supervisors.index');
     Route::get('/superviseurs/nouveau', [SupervisorController::class, 'create'])->name('supervisors.create');
     Route::post('/superviseurs', [SupervisorController::class, 'store'])->name('supervisors.store');
+    Route::get('/superviseurs/{supervisor}', [SupervisorController::class, 'show'])->name('supervisors.show');
     Route::get('/superviseurs/{supervisor}/modifier', [SupervisorController::class, 'edit'])->name('supervisors.edit');
     Route::put('/superviseurs/{supervisor}', [SupervisorController::class, 'update'])->name('supervisors.update');
     Route::patch('/superviseurs/{supervisor}/activation', [SupervisorController::class, 'toggleActivation'])->name('supervisors.toggle-activation');

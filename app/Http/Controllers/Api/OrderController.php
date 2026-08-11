@@ -13,14 +13,12 @@ use App\Models\OrderPayment;
 use App\Models\OrderRefund;
 use App\Models\OrderStatus;
 use App\Models\PaymentMethod;
-use App\Models\Supervisor;
 use App\Models\Voucher;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use App\Services\ActivityLogger;
 
@@ -116,13 +114,16 @@ class OrderController extends Controller
         $user = Auth::guard('api')->user();
         if (!\App\Models\Setting::isWithinOpeningHours()) {
             if (!$user?->isSuperAdmin()) {
-                if (!$request->filled('supervisor_number') || !$request->filled('supervisor_pin')) {
+                $hasToken = $request->filled('supervisor_token');
+                $hasCredentials = $request->filled('supervisor_number') && $request->filled('supervisor_pin');
+                if (! $hasToken && ! $hasCredentials) {
                     return response()->json([
                         'message'    => 'La boutique est actuellement fermée. Un bypass superviseur est requis pour créer une commande.',
                         'error_code' => 'outside_hours',
                         'errors'     => [
-                            'supervisor_number' => !$request->filled('supervisor_number') ? ['La boutique est fermée. Un bypass superviseur est requis (numéro manquant).'] : [],
-                            'supervisor_pin'    => !$request->filled('supervisor_pin')    ? ['La boutique est fermée. Un bypass superviseur est requis (PIN manquant).']    : [],
+                            'supervisor_number' => !$request->filled('supervisor_number') ? ['La boutique est fermée. Un bypass superviseur est requis (identifiant manquant).'] : [],
+                            'supervisor_pin'    => !$request->filled('supervisor_pin')    ? ['La boutique est fermée. Un bypass superviseur est requis (mot de passe manquant).'] : [],
+                            'supervisor_token'  => !$request->filled('supervisor_token')  ? ['Vous pouvez aussi scanner un code-barres superviseur.'] : [],
                         ],
                     ], 422);
                 }
@@ -490,25 +491,7 @@ class OrderController extends Controller
 
         $currentStatus = $order->orderStatus;
         if ($currentStatus?->is_terminal && !Auth::user()?->isSuperAdmin()) {
-            $supervisorData = $request->only(['supervisor_number', 'supervisor_pin']);
-            $validatedSupervisor = Validator::make($supervisorData, [
-                'supervisor_number' => ['required', 'string', 'max:50'],
-                'supervisor_pin'    => ['required', 'string', 'regex:/^\d{4,6}$/'],
-            ], [
-                'supervisor_number.required' => 'Le numéro du superviseur est requis.',
-                'supervisor_pin.required'    => 'Le PIN du superviseur est requis.',
-                'supervisor_pin.regex'       => 'Le PIN du superviseur doit contenir entre 4 et 6 chiffres.',
-            ])->validate();
-
-            $supervisor = Supervisor::where('supervisor_number', $validatedSupervisor['supervisor_number'])
-                ->where('is_active', true)
-                ->first();
-
-            if (! $supervisor || ! Hash::check($validatedSupervisor['supervisor_pin'], $supervisor->password)) {
-                throw ValidationException::withMessages([
-                    'supervisor_pin' => ['Numéro de superviseur ou PIN invalide.'],
-                ]);
-            }
+            $this->requireSuperAdminOrSupervisor($request, 'Validation superviseur requise pour changer ce statut.');
         }
 
         $order->update(['status' => $validated['status']]);

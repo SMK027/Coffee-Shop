@@ -91,6 +91,9 @@ export default function CreateOrderScreen() {
   const [supervisorModalVisible, setSupervisorModalVisible] = useState(false);
   const [supervisorNumber, setSupervisorNumber] = useState('');
   const [supervisorPin, setSupervisorPin] = useState('');
+  const [supervisorToken, setSupervisorToken] = useState('');
+  const [supervisorScannerVisible, setSupervisorScannerVisible] = useState(false);
+  const supervisorScannerLocked = useRef(false);
   const [supervisorError, setSupervisorError] = useState('');
   const pendingPayloadRef = React.useRef<Record<string, any> | null>(null);
 
@@ -491,6 +494,7 @@ export default function CreateOrderScreen() {
         pendingPayloadRef.current = payload;
         setSupervisorNumber('');
         setSupervisorPin('');
+        setSupervisorToken('');
         setSupervisorError('');
         setSupervisorModalVisible(true);
         return;
@@ -513,13 +517,44 @@ export default function CreateOrderScreen() {
   };
 
   const handleSupervisorBypass = async () => {
-    if (!supervisorNumber.trim() || !supervisorPin.trim()) {
-      setSupervisorError('Veuillez renseigner le numéro et le PIN du superviseur.');
+    const token = supervisorToken.trim();
+    if (!token && (!supervisorNumber.trim() || !supervisorPin.trim())) {
+      setSupervisorError('Renseignez l’identifiant/mot de passe superviseur ou scannez un code-barres.');
       return;
     }
-    const payload = { ...pendingPayloadRef.current!, supervisor_number: supervisorNumber.trim(), supervisor_pin: supervisorPin.trim() };
+
+    const payload: Record<string, any> = { ...pendingPayloadRef.current! };
+    if (token) {
+      payload.supervisor_token = token;
+    } else {
+      payload.supervisor_number = supervisorNumber.trim();
+      payload.supervisor_pin = supervisorPin.trim();
+    }
+
     setSupervisorModalVisible(false);
     await submitOrder(payload);
+  };
+
+  const openSupervisorScanner = async () => {
+    if (!cameraPermission?.granted) {
+      const result = await requestCameraPermission();
+      if (!result.granted) {
+        Alert.alert('Permission refusée', "L'accès à la caméra est requis pour scanner le code superviseur.");
+        return;
+      }
+    }
+    supervisorScannerLocked.current = false;
+    setSupervisorScannerVisible(true);
+  };
+
+  const onSupervisorScanned = ({ data }: { data: string }) => {
+    if (supervisorScannerLocked.current) return;
+    const scanned = data.trim();
+    if (!scanned) return;
+    supervisorScannerLocked.current = true;
+    setSupervisorScannerVisible(false);
+    setSupervisorToken(scanned);
+    setSupervisorError('');
   };
 
   const filteredDrinks = drinks.filter((d) =>
@@ -800,7 +835,7 @@ export default function CreateOrderScreen() {
               <Text style={styles.subLabel}>N° superviseur</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Numéro du superviseur"
+                placeholder="Identifiant superviseur"
                 placeholderTextColor="#9ca3af"
                 value={supervisorNumber}
                 onChangeText={setSupervisorNumber}
@@ -810,18 +845,29 @@ export default function CreateOrderScreen() {
               <Text style={styles.subLabel}>PIN superviseur</Text>
               <TextInput
                 style={styles.input}
-                placeholder="PIN (4–6 chiffres)"
+                placeholder="Mot de passe superviseur"
                 placeholderTextColor="#9ca3af"
                 value={supervisorPin}
                 onChangeText={setSupervisorPin}
                 secureTextEntry
                 keyboardType="numeric"
               />
+              <Text style={[styles.subLabel, { marginTop: -4 }]}>ou scanner un code superviseur</Text>
+              <TouchableOpacity style={[styles.backBtn, { marginBottom: 10 }]} onPress={openSupervisorScanner}>
+                <Text style={[styles.backBtnText, { textAlign: 'center' }]}>Scanner le code-barres superviseur</Text>
+              </TouchableOpacity>
+              {supervisorToken ? <Text style={styles.successText}>Code superviseur scanné.</Text> : null}
               {supervisorError ? <Text style={styles.error}>{supervisorError}</Text> : null}
               <View style={{ flexDirection: 'row', gap: 10, marginTop: 8 }}>
                 <TouchableOpacity
                   style={[styles.backBtn, { flex: 1 }]}
-                  onPress={() => setSupervisorModalVisible(false)}
+                  onPress={() => {
+                    setSupervisorModalVisible(false);
+                    setSupervisorNumber('');
+                    setSupervisorPin('');
+                    setSupervisorToken('');
+                    setSupervisorError('');
+                  }}
                 >
                   <Text style={[styles.backBtnText, { textAlign: 'center' }]}>Annuler</Text>
                 </TouchableOpacity>
@@ -831,6 +877,28 @@ export default function CreateOrderScreen() {
               </View>
             </View>
           </KeyboardAvoidingView>
+        </View>
+      </Modal>
+
+      {/* ── Modal scanner code superviseur ── */}
+      <Modal visible={supervisorScannerVisible} animationType="slide" presentationStyle="fullScreen">
+        <View style={{ flex: 1, backgroundColor: '#000' }}>
+          <View style={styles.scannerHeader}>
+            <Text style={styles.scannerTitle}>Scanner le code superviseur</Text>
+            <TouchableOpacity onPress={() => setSupervisorScannerVisible(false)} style={styles.scannerCloseBtn}>
+              <Text style={styles.scannerCloseText}>Annuler</Text>
+            </TouchableOpacity>
+          </View>
+          <CameraView
+            style={{ flex: 1 }}
+            facing="back"
+            barcodeScannerSettings={{ barcodeTypes: ['qr', 'code128'] }}
+            onBarcodeScanned={onSupervisorScanned}
+          />
+          <View style={styles.scannerOverlay}>
+            <View style={styles.scannerFrame} />
+            <Text style={styles.scannerHint}>Pointez vers le code-barres du superviseur</Text>
+          </View>
         </View>
       </Modal>
     </View>
@@ -1320,6 +1388,7 @@ const styles = StyleSheet.create({
   subLabel: { fontSize: 13, fontWeight: '600', color: '#6b7280', marginBottom: 6, marginTop: 4 },
   hint: { fontSize: 12, color: '#9ca3af', marginTop: 6 },
   error: { color: '#ef4444', fontSize: 13, marginTop: 6 },
+  successText: { color: '#16a34a', fontSize: 13, marginTop: 4, marginBottom: 6 },
 
   // Carte fidélité
   cardNumberRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },

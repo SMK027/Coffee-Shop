@@ -66,8 +66,10 @@
                             <td class="px-5 py-3 text-stone-400 text-xs">{{ $supervisor->created_at->format('d/m/Y') }}</td>
                             <td class="px-5 py-3 text-right text-xs font-medium">
                                 @if($mine)
+                                                <a href="{{ route('employee.supervisors.show', $supervisor) }}"
+                                                    class="text-sky-600 hover:text-sky-800 transition-colors">Détails</a>
                                     <a href="{{ route('employee.supervisors.edit', $supervisor) }}"
-                                       class="text-stone-500 hover:text-stone-700 transition-colors">Modifier</a>
+                                                    class="text-stone-500 hover:text-stone-700 transition-colors ml-3">Modifier</a>
                                     <form action="{{ route('employee.supervisors.toggle-activation', $supervisor) }}" method="POST" class="inline-block ml-3">
                                         @csrf @method('PATCH')
                                         <button type="submit"
@@ -114,8 +116,10 @@
                         </div>
                         <div class="flex-shrink-0 flex items-center gap-3 text-xs font-medium">
                             @if($mine)
+                                          <a href="{{ route('employee.supervisors.show', $supervisor) }}"
+                                              class="text-sky-600 hover:text-sky-800 transition-colors">Détails</a>
                                 <a href="{{ route('employee.supervisors.edit', $supervisor) }}"
-                                   class="text-stone-500 hover:text-stone-700 transition-colors">Modifier</a>
+                                              class="text-stone-500 hover:text-stone-700 transition-colors">Modifier</a>
                                 <form action="{{ route('employee.supervisors.destroy', $supervisor) }}" method="POST"
                                       onsubmit="return confirm('Supprimer ce superviseur ?')">
                                     @csrf @method('DELETE')

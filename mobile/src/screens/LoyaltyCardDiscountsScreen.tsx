@@ -39,6 +39,7 @@ export default function LoyaltyCardDiscountsScreen() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [supervisorNumber, setSupervisorNumber] = useState('');
   const [supervisorPin, setSupervisorPin] = useState('');
+  const [supervisorToken, setSupervisorToken] = useState('');
 
   const getOfferStatus = (offer: CardOffer) => {
     if (offer.is_used) {
@@ -70,6 +71,7 @@ export default function LoyaltyCardDiscountsScreen() {
     setExpiresAt('');
     setSupervisorNumber('');
     setSupervisorPin('');
+    setSupervisorToken('');
   };
 
   const openCreate = () => {
@@ -124,8 +126,12 @@ export default function LoyaltyCardDiscountsScreen() {
     };
 
     if (!isSuperAdmin) {
-      payload.supervisor_number = supervisorNumber;
-      payload.supervisor_pin = supervisorPin;
+      if (supervisorToken.trim()) {
+        payload.supervisor_token = supervisorToken.trim();
+      } else {
+        payload.supervisor_number = supervisorNumber;
+        payload.supervisor_pin = supervisorPin;
+      }
     }
 
     setSaving(true);
@@ -150,7 +156,13 @@ export default function LoyaltyCardDiscountsScreen() {
       { text: 'Annuler', style: 'cancel' },
       { text: 'Supprimer', style: 'destructive', onPress: async () => {
         try {
-          const payload = !isSuperAdmin ? { data: { supervisor_number: supervisorNumber, supervisor_pin: supervisorPin } } : undefined;
+          const payload = !isSuperAdmin
+            ? {
+                data: supervisorToken.trim()
+                  ? { supervisor_token: supervisorToken.trim() }
+                  : { supervisor_number: supervisorNumber, supervisor_pin: supervisorPin },
+              }
+            : undefined;
           await api.delete(`/loyalty-cards/${cardId}/offers/${id}`, payload as any);
           Alert.alert('Supprimé');
           load();
@@ -234,8 +246,9 @@ export default function LoyaltyCardDiscountsScreen() {
 
             {!isSuperAdmin && (
               <>
-                <TextInput style={styles.input} placeholder="Numéro superviseur" value={supervisorNumber} onChangeText={setSupervisorNumber} />
-                <TextInput style={styles.input} placeholder="PIN superviseur" value={supervisorPin} onChangeText={setSupervisorPin} secureTextEntry keyboardType="numeric" />
+                <TextInput style={styles.input} placeholder="Code-barres superviseur (optionnel)" value={supervisorToken} onChangeText={setSupervisorToken} autoCapitalize="none" />
+                <TextInput style={styles.input} placeholder="Identifiant superviseur" value={supervisorNumber} onChangeText={setSupervisorNumber} />
+                <TextInput style={styles.input} placeholder="Mot de passe superviseur" value={supervisorPin} onChangeText={setSupervisorPin} secureTextEntry keyboardType="numeric" />
               </>
             )}
 

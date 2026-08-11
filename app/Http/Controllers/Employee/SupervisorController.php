@@ -41,6 +41,16 @@ class SupervisorController extends Controller
         return view('employee.supervisors.create', compact('superadmins'));
     }
 
+    public function show(Supervisor $supervisor)
+    {
+        abort_unless(auth()->user()->isSuperAdmin(), 403);
+        abort_unless($supervisor->superadmin_id === auth()->id(), 403);
+
+        $barcodeValue = $supervisor->barcodeValue();
+
+        return view('employee.supervisors.show', compact('supervisor', 'barcodeValue'));
+    }
+
     public function store(Request $request)
     {
         abort_unless(auth()->user()->isSuperAdmin(), 403);

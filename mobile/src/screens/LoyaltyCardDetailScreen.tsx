@@ -52,6 +52,7 @@ export default function LoyaltyCardDetailScreen() {
   const [adjustReason, setAdjustReason] = useState('');
   const [supervisorNumber, setSupervisorNumber] = useState('');
   const [supervisorPin, setSupervisorPin] = useState('');
+  const [supervisorToken, setSupervisorToken] = useState('');
   const [adjustError, setAdjustError] = useState<string | null>(null);
   const [adjustSubmitting, setAdjustSubmitting] = useState(false);
   const { user } = useAuth();
@@ -95,6 +96,7 @@ export default function LoyaltyCardDetailScreen() {
     setAdjustReason('');
     setSupervisorNumber('');
     setSupervisorPin('');
+    setSupervisorToken('');
     setAdjustError(null);
   };
 
@@ -105,8 +107,8 @@ export default function LoyaltyCardDetailScreen() {
       return;
     }
 
-    if (!isSuperAdmin && (!supervisorNumber.trim() || !supervisorPin.trim())) {
-      setAdjustError('Le numéro et le PIN du superviseur sont requis.');
+    if (!isSuperAdmin && !supervisorToken.trim() && (!supervisorNumber.trim() || !supervisorPin.trim())) {
+      setAdjustError('Saisissez un code-barres superviseur ou un identifiant + mot de passe.');
       return;
     }
 
@@ -118,7 +120,9 @@ export default function LoyaltyCardDetailScreen() {
         type: adjustType,
         points,
         reason: adjustReason.trim() || undefined,
-        ...(isSuperAdmin ? {} : {
+        ...(isSuperAdmin ? {} : supervisorToken.trim() ? {
+          supervisor_token: supervisorToken.trim(),
+        } : {
           supervisor_number: supervisorNumber,
           supervisor_pin: supervisorPin,
         }),
@@ -310,9 +314,16 @@ export default function LoyaltyCardDetailScreen() {
                 <Text style={styles.modalSectionTitle}>Validation superviseur</Text>
                 <TextInput
                   style={styles.modalInput}
+                  value={supervisorToken}
+                  onChangeText={setSupervisorToken}
+                  placeholder="Code-barres superviseur (optionnel)"
+                  autoCapitalize="none"
+                />
+                <TextInput
+                  style={styles.modalInput}
                   value={supervisorNumber}
                   onChangeText={setSupervisorNumber}
-                  placeholder="Numéro du superviseur"
+                  placeholder="Identifiant du superviseur"
                 />
                 <TextInput
                   style={styles.modalInput}
@@ -320,7 +331,7 @@ export default function LoyaltyCardDetailScreen() {
                   secureTextEntry
                   keyboardType="numeric"
                   onChangeText={setSupervisorPin}
-                  placeholder="PIN du superviseur"
+                  placeholder="Mot de passe du superviseur"
                 />
               </>
             )}

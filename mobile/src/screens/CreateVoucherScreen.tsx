@@ -18,6 +18,7 @@ export default function CreateVoucherScreen() {
   const [restrictedName, setRestrictedName] = useState('');
   const [supervisorNumber, setSupervisorNumber] = useState('');
   const [supervisorPin, setSupervisorPin] = useState('');
+  const [supervisorToken, setSupervisorToken] = useState('');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -57,8 +58,12 @@ export default function CreateVoucherScreen() {
       if (restrictionType === 'card') payload.restricted_card_number = restrictedCardNumber.trim();
       if (restrictionType === 'name') payload.restricted_name = restrictedName.trim();
       if (!user?.global_role || user.global_role !== 'superadmin') {
-        payload.supervisor_number = supervisorNumber;
-        payload.supervisor_pin = supervisorPin;
+        if (supervisorToken.trim()) {
+          payload.supervisor_token = supervisorToken.trim();
+        } else {
+          payload.supervisor_number = supervisorNumber;
+          payload.supervisor_pin = supervisorPin;
+        }
       }
 
       const { data } = isEditing
@@ -121,9 +126,11 @@ export default function CreateVoucherScreen() {
 
         {!user?.global_role || user.global_role !== 'superadmin' ? (
           <>
-            <Text style={styles.label}>Numéro du superviseur</Text>
+            <Text style={styles.label}>Code-barres superviseur (optionnel)</Text>
+            <TextInput style={styles.input} value={supervisorToken} onChangeText={setSupervisorToken} placeholder="SUPERVISOR:..." autoCapitalize="none" />
+            <Text style={styles.label}>Identifiant du superviseur</Text>
             <TextInput style={styles.input} value={supervisorNumber} onChangeText={setSupervisorNumber} />
-            <Text style={styles.label}>PIN du superviseur</Text>
+            <Text style={styles.label}>Mot de passe du superviseur</Text>
             <TextInput style={styles.input} value={supervisorPin} onChangeText={setSupervisorPin} secureTextEntry keyboardType="numeric" />
           </>
         ) : null}

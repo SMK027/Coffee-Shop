@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\LoyaltyDiscount;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class LoyaltyDiscountController extends Controller
 {
@@ -40,19 +41,7 @@ class LoyaltyDiscountController extends Controller
         abort_unless(auth()->user()?->isAdmin() || auth()->user()?->isModerator(), 403);
 
         if (! auth()->user()->isSuperAdmin()) {
-            // require supervisor credentials
-            $supervisorNumber = trim((string) $request->input('supervisor_number', ''));
-            $supervisorPin = trim((string) $request->input('supervisor_pin', ''));
-            if (! $supervisorNumber || ! $supervisorPin) {
-                return response()->json(['message' => 'Validation du superviseur requise.'], 422);
-            }
-            $supervisor = \App\Models\Supervisor::where('supervisor_number', $supervisorNumber)
-                ->where('is_active', true)
-                ->with('superadmin:id,name')
-                ->first();
-            if (! $supervisor?->superadmin) {
-                return response()->json(['message' => 'Superviseur invalide.'], 422);
-            }
+            $this->requireSuperAdminOrSupervisor($request, 'Validation du superviseur requise.');
         }
 
         $validated = $request->validate([

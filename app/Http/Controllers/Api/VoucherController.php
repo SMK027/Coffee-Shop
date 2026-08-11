@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\LoyaltyCard;
-use App\Models\Supervisor;
 use App\Models\Voucher;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -102,16 +101,7 @@ class VoucherController extends Controller
             $superadminId = auth()->id();
             $superadminName = auth()->user()->name;
         } else {
-            // require supervisor credentials when not superadmin
-            $supervisorNumber = trim((string) $request->input('supervisor_number', ''));
-            $supervisorPin = trim((string) $request->input('supervisor_pin', ''));
-            if (! $supervisorNumber || ! $supervisorPin) {
-                return response()->json(['message' => 'Validation du superviseur requise.'], 422);
-            }
-            $supervisor = \App\Models\Supervisor::where('supervisor_number', $supervisorNumber)
-                ->where('is_active', true)
-                ->with('superadmin:id,name')
-                ->first();
+            $supervisor = $this->requireSuperAdminOrSupervisor($request, 'Validation du superviseur requise.');
             if (! $supervisor?->superadmin) {
                 return response()->json(['message' => 'Superviseur invalide.'], 422);
             }
@@ -226,17 +216,7 @@ class VoucherController extends Controller
         }
 
         if (! auth()->user()->isSuperAdmin()) {
-            $supervisorNumber = trim((string) $request->input('supervisor_number', ''));
-            $supervisorPin = trim((string) $request->input('supervisor_pin', ''));
-            if (! $supervisorNumber || ! $supervisorPin) {
-                return response()->json(['message' => 'Validation du superviseur requise.'], 422);
-            }
-
-            $supervisor = Supervisor::where('supervisor_number', $supervisorNumber)
-                ->where('is_active', true)
-                ->with('superadmin:id,name')
-                ->first();
-
+            $supervisor = $this->requireSuperAdminOrSupervisor($request, 'Validation du superviseur requise.');
             if (! $supervisor?->superadmin) {
                 return response()->json(['message' => 'Superviseur invalide.'], 422);
             }

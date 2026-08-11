@@ -11,6 +11,7 @@ import {
   TextInput,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { Order, OrderStatus } from '../types';
@@ -34,6 +35,7 @@ export default function OrderDetailScreen() {
   const [pendingStatus, setPendingStatus] = useState<string | null>(null);
   const [supervisorNumber, setSupervisorNumber] = useState('');
   const [supervisorPin, setSupervisorPin] = useState('');
+  const [supervisorToken, setSupervisorToken] = useState('');
   const [supervisorError, setSupervisorError] = useState<string | null>(null);
   const [refundModalVisible, setRefundModalVisible] = useState(false);
   const [refundMode, setRefundMode] = useState<'partial' | 'total'>('partial');
@@ -41,14 +43,20 @@ export default function OrderDetailScreen() {
   const [refundError, setRefundError] = useState<string | null>(null);
   const [refundSupervisorNumber, setRefundSupervisorNumber] = useState('');
   const [refundSupervisorPin, setRefundSupervisorPin] = useState('');
+  const [refundSupervisorToken, setRefundSupervisorToken] = useState('');
   const [refundPaymentMethodId, setRefundPaymentMethodId] = useState<string>('');
   const [refundReason, setRefundReason] = useState('');
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [deleteSupervisorNumber, setDeleteSupervisorNumber] = useState('');
   const [deleteSupervisorPin, setDeleteSupervisorPin] = useState('');
+  const [deleteSupervisorToken, setDeleteSupervisorToken] = useState('');
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [supervisorScannerVisible, setSupervisorScannerVisible] = useState(false);
+  const [scannerTarget, setScannerTarget] = useState<'status' | 'refund' | 'delete'>('status');
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+  const scannerLocked = React.useRef(false);
 
   useEffect(() => {
     Promise.all([
@@ -61,13 +69,14 @@ export default function OrderDetailScreen() {
   const currentStatus = statuses.find((s) => s.key === order?.status);
   const requiresSupervisor = currentStatus?.is_terminal && !isSuperAdmin;
 
-  const updateStatus = async (key: string, supervisor?: { number: string; pin: string }) => {
+  const updateStatus = async (key: string, supervisor?: { number?: string; pin?: string; token?: string }) => {
     setUpdating(true);
     try {
       const payload: Record<string, any> = { status: key };
       if (supervisor) {
-        payload.supervisor_number = supervisor.number;
-        payload.supervisor_pin = supervisor.pin;
+        if (supervisor.token) payload.supervisor_token = supervisor.token;
+        if (supervisor.number) payload.supervisor_number = supervisor.number;
+        if (supervisor.pin) payload.supervisor_pin = supervisor.pin;
       }
 
       const { data } = await api.patch(`/orders/${orderId}/status`, payload);
@@ -77,6 +86,7 @@ export default function OrderDetailScreen() {
         setPendingStatus(null);
         setSupervisorNumber('');
         setSupervisorPin('');
+        setSupervisorToken('');
         setSupervisorError(null);
       }
     } catch (error: any) {
@@ -131,8 +141,12 @@ export default function OrderDetailScreen() {
     }
 
     if (!isSuperAdmin) {
-      payload.supervisor_number = refundSupervisorNumber;
-      payload.supervisor_pin = refundSupervisorPin;
+      if (refundSupervisorToken.trim()) {
+        payload.supervisor_token = refundSupervisorToken.trim();
+      } else {
+        payload.supervisor_number = refundSupervisorNumber;
+        payload.supervisor_pin = refundSupervisorPin;
+      }
     }
 
     return payload;
@@ -153,6 +167,7 @@ export default function OrderDetailScreen() {
       setRefundSelection({});
       setRefundSupervisorNumber('');
       setRefundSupervisorPin('');
+      setRefundSupervisorToken('');
       setRefundPaymentMethodId('');
       setRefundReason('');
     } catch (error: any) {
@@ -162,14 +177,15 @@ export default function OrderDetailScreen() {
     }
   };
 
-  const performDelete = async (supervisor?: { number: string; pin: string }) => {
+  const performDelete = async (supervisor?: { number?: string; pin?: string; token?: string }) => {
     setDeleting(true);
     try {
       const config: any = {};
       const payload: Record<string, any> = {};
       if (supervisor) {
-        payload.supervisor_number = supervisor.number;
-        payload.supervisor_pin = supervisor.pin;
+        if (supervisor.token) payload.supervisor_token = supervisor.token;
+        if (supervisor.number) payload.supervisor_number = supervisor.number;
+        if (supervisor.pin) payload.supervisor_pin = supervisor.pin;
         config.data = payload;
       }
 
@@ -184,6 +200,40 @@ export default function OrderDetailScreen() {
       setDeleting(false);
       setDeleteModalVisible(false);
     }
+  };
+
+  const openSupervisorScanner = async (target: 'status' | 'refund' | 'delete') => {
+    if (!cameraPermission?.granted) {
+      const result = await requestCameraPermission();
+      if (!result.granted) {
+        Alert.alert('Permission refusée', "L'accès à la caméra est requis pour scanner le code superviseur.");
+        return;
+      }
+    }
+    scannerLocked.current = false;
+    setScannerTarget(target);
+    setSupervisorScannerVisible(true);
+  };
+
+  const onSupervisorScanned = ({ data }: { data: string }) => {
+    if (scannerLocked.current) return;
+    const token = data.trim();
+    if (!token) return;
+    scannerLocked.current = true;
+    setSupervisorScannerVisible(false);
+
+    if (scannerTarget === 'status') {
+      setSupervisorToken(token);
+      setSupervisorError(null);
+      return;
+    }
+    if (scannerTarget === 'refund') {
+      setRefundSupervisorToken(token);
+      setRefundError(null);
+      return;
+    }
+    setDeleteSupervisorToken(token);
+    setDeleteError(null);
   };
 
   if (loading || !order) {
@@ -474,9 +524,13 @@ export default function OrderDetailScreen() {
 
             {!isSuperAdmin && (
               <>
+                <TouchableOpacity style={styles.scanBtn} onPress={() => openSupervisorScanner('refund')}>
+                  <Text style={styles.scanBtnText}>Scanner le code-barres superviseur</Text>
+                </TouchableOpacity>
+                {refundSupervisorToken ? <Text style={styles.scanSuccess}>Code superviseur scanné.</Text> : null}
                 <TextInput
                   style={styles.input}
-                  placeholder="Numéro du superviseur"
+                  placeholder="Identifiant du superviseur"
                   placeholderTextColor="#9ca3af"
                   value={refundSupervisorNumber}
                   onChangeText={setRefundSupervisorNumber}
@@ -485,7 +539,7 @@ export default function OrderDetailScreen() {
                 />
                 <TextInput
                   style={styles.input}
-                  placeholder="PIN du superviseur"
+                  placeholder="Mot de passe du superviseur"
                   placeholderTextColor="#9ca3af"
                   value={refundSupervisorPin}
                   onChangeText={setRefundSupervisorPin}
@@ -536,6 +590,7 @@ export default function OrderDetailScreen() {
                   setRefundSelection({});
                   setRefundSupervisorNumber('');
                   setRefundSupervisorPin('');
+                  setRefundSupervisorToken('');
                   setRefundPaymentMethodId('');
                   setRefundReason('');
                   setRefundError(null);
@@ -567,9 +622,13 @@ export default function OrderDetailScreen() {
             <Text style={styles.modalDescription}>
               Cette transition nécessite l’authentification d’un superviseur.
             </Text>
+            <TouchableOpacity style={styles.scanBtn} onPress={() => openSupervisorScanner('status')}>
+              <Text style={styles.scanBtnText}>Scanner le code-barres superviseur</Text>
+            </TouchableOpacity>
+            {supervisorToken ? <Text style={styles.scanSuccess}>Code superviseur scanné.</Text> : null}
             <TextInput
               style={styles.input}
-              placeholder="Numéro du superviseur"
+              placeholder="Identifiant du superviseur"
               placeholderTextColor="#9ca3af"
               value={supervisorNumber}
               onChangeText={setSupervisorNumber}
@@ -578,7 +637,7 @@ export default function OrderDetailScreen() {
             />
             <TextInput
               style={styles.input}
-              placeholder="PIN du superviseur"
+              placeholder="Mot de passe du superviseur"
               placeholderTextColor="#9ca3af"
               value={supervisorPin}
               onChangeText={setSupervisorPin}
@@ -594,6 +653,7 @@ export default function OrderDetailScreen() {
                   setPendingStatus(null);
                   setSupervisorNumber('');
                   setSupervisorPin('');
+                  setSupervisorToken('');
                   setSupervisorError(null);
                 }}
                 disabled={updating}
@@ -602,7 +662,7 @@ export default function OrderDetailScreen() {
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalConfirmButton]}
-                onPress={() => pendingStatus && updateStatus(pendingStatus, { number: supervisorNumber, pin: supervisorPin })}
+                onPress={() => pendingStatus && updateStatus(pendingStatus, { number: supervisorNumber, pin: supervisorPin, token: supervisorToken })}
                 disabled={updating}
               >
                 {updating ? (
@@ -620,9 +680,13 @@ export default function OrderDetailScreen() {
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Supprimer la commande</Text>
             <Text style={styles.modalDescription}>Un superviseur doit autoriser cette suppression.</Text>
+            <TouchableOpacity style={styles.scanBtn} onPress={() => openSupervisorScanner('delete')}>
+              <Text style={styles.scanBtnText}>Scanner le code-barres superviseur</Text>
+            </TouchableOpacity>
+            {deleteSupervisorToken ? <Text style={styles.scanSuccess}>Code superviseur scanné.</Text> : null}
             <TextInput
               style={styles.input}
-              placeholder="Numéro du superviseur"
+              placeholder="Identifiant du superviseur"
               placeholderTextColor="#9ca3af"
               value={deleteSupervisorNumber}
               onChangeText={setDeleteSupervisorNumber}
@@ -631,7 +695,7 @@ export default function OrderDetailScreen() {
             />
             <TextInput
               style={styles.input}
-              placeholder="PIN du superviseur"
+              placeholder="Mot de passe du superviseur"
               placeholderTextColor="#9ca3af"
               value={deleteSupervisorPin}
               onChangeText={setDeleteSupervisorPin}
@@ -646,6 +710,7 @@ export default function OrderDetailScreen() {
                   setDeleteModalVisible(false);
                   setDeleteSupervisorNumber('');
                   setDeleteSupervisorPin('');
+                  setDeleteSupervisorToken('');
                   setDeleteError(null);
                 }}
                 disabled={deleting}
@@ -654,13 +719,30 @@ export default function OrderDetailScreen() {
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalConfirmButton]}
-                onPress={() => performDelete({ number: deleteSupervisorNumber, pin: deleteSupervisorPin })}
+                onPress={() => performDelete({ number: deleteSupervisorNumber, pin: deleteSupervisorPin, token: deleteSupervisorToken })}
                 disabled={deleting}
               >
                 {deleting ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.modalConfirmText}>Supprimer</Text>}
               </TouchableOpacity>
             </View>
           </View>
+        </View>
+      </Modal>
+
+      <Modal visible={supervisorScannerVisible} animationType="slide" presentationStyle="fullScreen">
+        <View style={{ flex: 1, backgroundColor: '#000' }}>
+          <View style={{ paddingTop: 52, paddingHorizontal: 20, paddingBottom: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text style={{ color: '#fff', fontSize: 18, fontWeight: '700' }}>Scanner le code superviseur</Text>
+            <TouchableOpacity onPress={() => setSupervisorScannerVisible(false)}>
+              <Text style={{ color: '#fbbf24', fontSize: 16, fontWeight: '600' }}>Annuler</Text>
+            </TouchableOpacity>
+          </View>
+          <CameraView
+            style={{ flex: 1 }}
+            facing="back"
+            barcodeScannerSettings={{ barcodeTypes: ['qr', 'code128'] }}
+            onBarcodeScanned={onSupervisorScanned}
+          />
         </View>
       </Modal>
     </ScrollView>
@@ -736,4 +818,7 @@ const styles = StyleSheet.create({
   modalCancelText: { color: '#374151', fontWeight: '700' },
   modalConfirmButton: { backgroundColor: '#92400e' },
   modalConfirmText: { color: '#fff', fontWeight: '700' },
+  scanBtn: { backgroundColor: '#fff7ed', borderColor: '#fb923c', borderWidth: 1, borderRadius: 10, paddingVertical: 10, alignItems: 'center', marginBottom: 10 },
+  scanBtnText: { color: '#b45309', fontWeight: '700' },
+  scanSuccess: { color: '#15803d', fontSize: 13, marginBottom: 10 },
 });

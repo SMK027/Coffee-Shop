@@ -53,7 +53,7 @@ class CardOfferController extends Controller
     {
         abort_unless(auth()->user()->isAdmin(), 403);
         abort_unless($cardOffer->loyalty_card_id === $loyaltyCard->id, 404);
-        abort_if($cardOffer->is_used, 403, 'Une offre déjà utilisée ne peut pas être supprimée.');
+        abort_if($cardOffer->isUsedState(), 403, 'Une offre déjà utilisée ne peut pas être supprimée.');
 
         if (! auth()->user()->isSuperAdmin()) {
             $this->requireSuperAdminOrSupervisor(request());
