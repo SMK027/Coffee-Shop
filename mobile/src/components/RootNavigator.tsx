@@ -71,7 +71,7 @@ function VouchersStackNavigator() {
         headerTitleStyle: { fontWeight: '700' },
       }}
     >
-      <VouchersStack.Screen name="VouchersList" component={VouchersListScreen} options={{ title: 'Bons', headerShown: false }} />
+      <VouchersStack.Screen name="VouchersList" component={VouchersListScreen} options={{ title: 'Bons' }} />
       <VouchersStack.Screen name="VoucherDetail" component={VoucherDetailScreen} options={{ title: 'Bon' }} />
       <VouchersStack.Screen name="CreateVoucher" component={CreateVoucherScreen} options={{ title: 'Créer un bon' }} />
     </VouchersStack.Navigator>
@@ -132,7 +132,7 @@ function AppTabs() {
       <Tab.Screen name="Menu" component={MenuScreen} options={{ title: 'Menu' }} />
       <Tab.Screen name="LoyaltyCards" component={LoyaltyStackNavigator} options={{ title: 'Fidélité', headerShown: false }} />
       {isAdmin && (
-        <Tab.Screen name="Vouchers" component={VouchersStackNavigator} options={{ title: 'Bons' }} />
+        <Tab.Screen name="Vouchers" component={VouchersStackNavigator} options={{ title: 'Bons', headerShown: false }} />
       )}
       {isAdmin && (
         <Tab.Screen name="Reports" component={ReportsStackNavigator} options={{ title: 'Rapports', headerShown: false }} />
