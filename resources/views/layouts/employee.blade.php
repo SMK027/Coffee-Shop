@@ -226,7 +226,7 @@
                             </a>
                         </li>
                         @endif
-                        @if(auth()->user()->isSuperAdmin())
+                        @if(auth()->user()->isAdmin())
                         <li>
                             <a href="{{ route('employee.supervisors.index') }}"
                                class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium

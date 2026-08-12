@@ -13,21 +13,25 @@ class SupervisorController extends Controller
 {
     public function index(Request $request)
     {
-        abort_unless(auth()->user()->isSuperAdmin(), 403);
+        abort_unless(auth()->user()->isAdmin(), 403);
 
         $search = trim((string) $request->query('q', ''));
+        $user = auth()->user();
+        $isSuperAdmin = $user->isSuperAdmin();
+        $ownerIdForAdmin = (int) ($user->superadmin_id ?: $user->id);
 
         $supervisors = Supervisor::with('superadmin:id,name')
+            ->when(! $isSuperAdmin, fn ($query) => $query->where('superadmin_id', $ownerIdForAdmin))
             ->when($search !== '', fn($query) => $query->where(function ($q) use ($search) {
                 $q->where('supervisor_number', 'like', "%{$search}%")
                   ->orWhereHas('superadmin', fn($sq) => $sq->where('name', 'like', "%{$search}%"));
             }))
-            // Les superviseurs du compte connecté apparaissent en premier
-            ->orderByRaw('superadmin_id = ? DESC', [auth()->id()])
+            // Les superviseurs du compte de référence apparaissent en premier
+            ->orderByRaw('superadmin_id = ? DESC', [$ownerIdForAdmin])
             ->orderBy('supervisor_number')
             ->get();
 
-        return view('employee.supervisors.index', compact('supervisors', 'search'));
+        return view('employee.supervisors.index', compact('supervisors', 'search', 'isSuperAdmin'));
     }
 
     public function create()
