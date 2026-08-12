@@ -37,7 +37,8 @@
                     <thead class="bg-stone-50 border-b border-stone-100">
                         <tr>
                             <th class="px-5 py-3 text-left font-medium text-stone-600">Numéro</th>
-                            <th class="px-5 py-3 text-left font-medium text-stone-600">Propriétaire</th>
+                            <th class="px-5 py-3 text-left font-medium text-stone-600">Responsable</th>
+                            <th class="px-5 py-3 text-left font-medium text-stone-600">Détenteur</th>
                             <th class="px-5 py-3 text-left font-medium text-stone-600">Statut</th>
                             <th class="px-5 py-3 text-left font-medium text-stone-600">Créé le</th>
                             <th class="px-5 py-3 text-right font-medium text-stone-600">Actions</th>
@@ -45,17 +46,28 @@
                     </thead>
                     <tbody class="divide-y divide-stone-50">
                         @foreach($supervisors as $supervisor)
-                        @php $mine = $supervisor->superadmin_id === $ownerIdForAdmin; @endphp
+                        @php
+                            $mine = $isSuperAdmin
+                                ? ((int) $supervisor->superadmin_id === (int) $currentUserId)
+                                : ((int) ($supervisor->holder_admin_id ?? 0) === (int) $currentUserId);
+                        @endphp
                         <tr class="hover:bg-stone-50 transition-colors {{ $supervisor->is_active ? '' : 'opacity-70' }}">
                             <td class="px-5 py-3 font-mono text-xs text-stone-700">{{ $supervisor->supervisor_number }}</td>
                             <td class="px-5 py-3">
-                                @if($mine)
-                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
-                                        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/></svg>
-                                        Moi
-                                    </span>
+                                <span class="text-xs text-stone-600">{{ $supervisor->superadmin?->name ?? '—' }}</span>
+                            </td>
+                            <td class="px-5 py-3">
+                                @if($supervisor->holderAdmin)
+                                    @if((int) $supervisor->holder_admin_id === (int) $currentUserId)
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
+                                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/></svg>
+                                            Moi
+                                        </span>
+                                    @else
+                                        <span class="text-xs text-stone-500">{{ $supervisor->holderAdmin->name }}</span>
+                                    @endif
                                 @else
-                                    <span class="text-xs text-stone-500">{{ $supervisor->superadmin?->name ?? '—' }}</span>
+                                    <span class="text-xs text-stone-400">Non défini</span>
                                 @endif
                             </td>
                             <td class="px-5 py-3 text-xs">
@@ -99,16 +111,21 @@
             {{-- Vue mobile --}}
             <div class="sm:hidden divide-y divide-stone-100">
                 @foreach($supervisors as $supervisor)
-                @php $mine = $supervisor->superadmin_id === $ownerIdForAdmin; @endphp
+                @php
+                    $mine = $isSuperAdmin
+                        ? ((int) $supervisor->superadmin_id === (int) $currentUserId)
+                        : ((int) ($supervisor->holder_admin_id ?? 0) === (int) $currentUserId);
+                @endphp
                 <div class="px-4 py-3 {{ $supervisor->is_active ? '' : 'opacity-70' }}">
                     <div class="flex items-start justify-between gap-3">
                         <div class="min-w-0">
                             <p class="font-mono font-semibold text-stone-800 text-sm">{{ $supervisor->supervisor_number }}</p>
                             <div class="flex items-center gap-2 mt-1 flex-wrap">
-                                @if($mine)
-                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">Moi</span>
+                                <span class="text-xs text-stone-500">Resp. : {{ $supervisor->superadmin?->name ?? '—' }}</span>
+                                @if($supervisor->holderAdmin)
+                                    <span class="text-xs text-stone-500">Dét. : {{ (int) $supervisor->holder_admin_id === (int) $currentUserId ? 'Moi' : $supervisor->holderAdmin->name }}</span>
                                 @else
-                                    <span class="text-xs text-stone-400">{{ $supervisor->superadmin?->name ?? '—' }}</span>
+                                    <span class="text-xs text-stone-400">Dét. : non défini</span>
                                 @endif
                                 @if($supervisor->is_active)
                                     <span class="px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-700">Actif</span>

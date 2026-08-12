@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\User;
 
-#[Fillable(['supervisor_number', 'password', 'is_active', 'superadmin_id'])]
+#[Fillable(['supervisor_number', 'password', 'is_active', 'superadmin_id', 'holder_admin_id'])]
 #[Hidden(['password'])]
 class Supervisor extends Model
 {
@@ -29,6 +29,11 @@ class Supervisor extends Model
     public function superadmin(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(User::class, 'superadmin_id');
+    }
+
+    public function holderAdmin(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(User::class, 'holder_admin_id');
     }
 
     public function bypassToken(): string

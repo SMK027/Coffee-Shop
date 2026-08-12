@@ -17,16 +17,30 @@ class SupervisorController extends Controller
     {
         abort_unless(auth()->user()?->isAdmin(), 403);
 
+        $user = auth()->user();
+        $isSuperAdmin = (bool) $user?->isSuperAdmin();
         $ownerId = $this->ownerReferenceId();
+        $currentUserId = (int) ($user?->id ?? 0);
 
         $items = Supervisor::query()
-            ->where('superadmin_id', $ownerId)
+            ->when($isSuperAdmin, fn ($query) => $query->where('superadmin_id', $currentUserId))
+            ->when(! $isSuperAdmin, function ($query) use ($currentUserId, $ownerId) {
+                $query->where(function ($q) use ($currentUserId, $ownerId) {
+                    $q->where('holder_admin_id', $currentUserId)
+                        ->orWhere(function ($legacy) use ($ownerId) {
+                            $legacy->whereNull('holder_admin_id')
+                                ->where('superadmin_id', $ownerId);
+                        });
+                });
+            })
             ->orderBy('supervisor_number')
             ->get()
             ->map(fn (Supervisor $s) => [
                 'id' => $s->id,
                 'supervisor_number' => $s->supervisor_number,
                 'is_active' => (bool) $s->is_active,
+                'superadmin_id' => $s->superadmin_id,
+                'holder_admin_id' => $s->holder_admin_id,
                 'created_at' => $s->created_at?->toDateTimeString(),
             ]);
 
@@ -39,7 +53,7 @@ class SupervisorController extends Controller
     public function barcode(Request $request, Supervisor $supervisor): JsonResponse
     {
         abort_unless(auth()->user()?->isAdmin(), 403);
-        abort_unless((int) $supervisor->superadmin_id === $this->ownerReferenceId(), 403);
+        abort_unless($this->canManageSupervisor($supervisor), 403);
 
         $validated = $request->validate([
             'supervisor_pin' => ['required', 'string', 'regex:/^\d{4,6}$/'],
@@ -66,5 +80,25 @@ class SupervisorController extends Controller
         $user = auth()->user();
 
         return (int) ($user?->superadmin_id ?: $user?->id);
+    }
+
+    private function canManageSupervisor(Supervisor $supervisor): bool
+    {
+        $user = auth()->user();
+        if (! $user) {
+            return false;
+        }
+
+        if ($user->isSuperAdmin()) {
+            return (int) $supervisor->superadmin_id === (int) $user->id;
+        }
+
+        $userId = (int) $user->id;
+        if ((int) $supervisor->holder_admin_id === $userId) {
+            return true;
+        }
+
+        return $supervisor->holder_admin_id === null
+            && (int) $supervisor->superadmin_id === $this->ownerReferenceId();
     }
 }

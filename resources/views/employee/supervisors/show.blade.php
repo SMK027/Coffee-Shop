@@ -15,6 +15,14 @@
                 <dd class="font-mono text-stone-800 mt-1">{{ $supervisor->supervisor_number }}</dd>
             </div>
             <div>
+                <dt class="text-stone-500">Responsable</dt>
+                <dd class="text-stone-800 mt-1">{{ $supervisor->superadmin?->name ?? '—' }}</dd>
+            </div>
+            <div>
+                <dt class="text-stone-500">Détenteur</dt>
+                <dd class="text-stone-800 mt-1">{{ $supervisor->holderAdmin?->name ?? 'Non défini' }}</dd>
+            </div>
+            <div>
                 <dt class="text-stone-500">Statut</dt>
                 <dd class="mt-1">
                     @if($supervisor->is_active)

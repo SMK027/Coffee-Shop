@@ -20,19 +20,30 @@ class SupervisorController extends Controller
         $user = auth()->user();
         $isSuperAdmin = $user->isSuperAdmin();
         $ownerIdForAdmin = $this->ownerReferenceId();
+        $currentUserId = (int) $user->id;
 
-        $supervisors = Supervisor::with('superadmin:id,name')
-            ->when(! $isSuperAdmin, fn ($query) => $query->where('superadmin_id', $ownerIdForAdmin))
+        $supervisors = Supervisor::with(['superadmin:id,name', 'holderAdmin:id,name'])
+            ->when($isSuperAdmin, fn ($query) => $query->where('superadmin_id', $currentUserId))
+            ->when(! $isSuperAdmin, function ($query) use ($currentUserId, $ownerIdForAdmin) {
+                $query->where(function ($q) use ($currentUserId, $ownerIdForAdmin) {
+                    $q->where('holder_admin_id', $currentUserId)
+                        // Compatibilité avec les superviseurs historiques sans détenteur explicite
+                        ->orWhere(function ($legacy) use ($ownerIdForAdmin) {
+                            $legacy->whereNull('holder_admin_id')
+                                ->where('superadmin_id', $ownerIdForAdmin);
+                        });
+                });
+            })
             ->when($search !== '', fn($query) => $query->where(function ($q) use ($search) {
                 $q->where('supervisor_number', 'like', "%{$search}%")
-                  ->orWhereHas('superadmin', fn($sq) => $sq->where('name', 'like', "%{$search}%"));
+                  ->orWhereHas('superadmin', fn($sq) => $sq->where('name', 'like', "%{$search}%"))
+                  ->orWhereHas('holderAdmin', fn($sq) => $sq->where('name', 'like', "%{$search}%"));
             }))
-            // Les superviseurs du compte de référence apparaissent en premier
-            ->orderByRaw('superadmin_id = ? DESC', [$ownerIdForAdmin])
+            ->orderByRaw('superadmin_id = ? DESC', [$isSuperAdmin ? $currentUserId : $ownerIdForAdmin])
             ->orderBy('supervisor_number')
             ->get();
 
-        return view('employee.supervisors.index', compact('supervisors', 'search', 'isSuperAdmin', 'ownerIdForAdmin'));
+        return view('employee.supervisors.index', compact('supervisors', 'search', 'isSuperAdmin', 'ownerIdForAdmin', 'currentUserId'));
     }
 
     public function create()
@@ -43,16 +54,22 @@ class SupervisorController extends Controller
             ->orderBy('name')
             ->get(['id', 'name']);
 
+        $admins = User::where('global_role', 'admin')
+            ->whereNotNull('superadmin_id')
+            ->orderBy('name')
+            ->get(['id', 'name', 'superadmin_id']);
+
         $isSuperAdmin = true;
 
-        return view('employee.supervisors.create', compact('superadmins', 'isSuperAdmin'));
+        return view('employee.supervisors.create', compact('superadmins', 'admins', 'isSuperAdmin'));
     }
 
     public function show(Supervisor $supervisor)
     {
         abort_unless(auth()->user()->isAdmin(), 403);
-        abort_unless($this->canAccessSupervisor($supervisor), 403);
+        abort_unless($this->canManageSupervisor($supervisor), 403);
 
+        $supervisor->load(['superadmin:id,name', 'holderAdmin:id,name']);
         $barcodeValue = $supervisor->barcodeValue();
         $isSuperAdmin = auth()->user()->isSuperAdmin();
 
@@ -67,11 +84,14 @@ class SupervisorController extends Controller
             'supervisor_number' => ['required', 'string', 'max:50', 'alpha_dash', 'unique:supervisors,supervisor_number'],
             'supervisor_pin'    => ['required', 'string', 'regex:/^\d{4,6}$/'],
             'superadmin_id'     => ['required', 'integer', 'exists:users,id'],
+            'holder_admin_id'   => ['required', 'integer', 'exists:users,id'],
         ], [
             'supervisor_number.alpha_dash' => 'Le numéro de superviseur ne peut contenir que des lettres, chiffres, tirets et underscores.',
             'supervisor_pin.regex'         => 'Le PIN doit contenir entre 4 et 6 chiffres.',
             'superadmin_id.required'       => 'Le compte propriétaire est requis.',
             'superadmin_id.exists'         => 'Ce compte est invalide.',
+            'holder_admin_id.required'     => 'Le détenteur administrateur est requis.',
+            'holder_admin_id.exists'       => 'Ce détenteur administrateur est invalide.',
         ]);
 
         // Vérifier que le compte désigné est bien un super-administrateur
@@ -79,10 +99,22 @@ class SupervisorController extends Controller
             ->where('global_role', 'superadmin')
             ->firstOrFail();
 
+        $holder = User::where('id', $validated['holder_admin_id'])
+            ->where('global_role', 'admin')
+            ->where('superadmin_id', $owner->id)
+            ->first();
+
+        if (! $holder) {
+            throw ValidationException::withMessages([
+                'holder_admin_id' => 'Le détenteur doit être un administrateur simple rattaché au super-administrateur propriétaire.',
+            ]);
+        }
+
         Supervisor::create([
             'supervisor_number' => $validated['supervisor_number'],
             'password'          => Hash::make($validated['supervisor_pin']),
             'superadmin_id'     => $owner->id,
+            'holder_admin_id'   => $holder->id,
         ]);
 
         return redirect()->route('employee.supervisors.index')
@@ -92,7 +124,7 @@ class SupervisorController extends Controller
     public function edit(Supervisor $supervisor)
     {
         abort_unless(auth()->user()->isAdmin(), 403);
-        abort_unless($this->canAccessSupervisor($supervisor), 403);
+        abort_unless($this->canManageSupervisor($supervisor), 403);
 
         $isSuperAdmin = auth()->user()->isSuperAdmin();
 
@@ -102,7 +134,7 @@ class SupervisorController extends Controller
     public function update(Request $request, Supervisor $supervisor)
     {
         abort_unless(auth()->user()->isAdmin(), 403);
-        abort_unless($this->canAccessSupervisor($supervisor), 403);
+        abort_unless($this->canManageSupervisor($supervisor), 403);
 
         $isSuperAdmin = auth()->user()->isSuperAdmin();
 
@@ -146,7 +178,7 @@ class SupervisorController extends Controller
     public function toggleActivation(Supervisor $supervisor)
     {
         abort_unless(auth()->user()->isAdmin(), 403);
-        abort_unless($this->canAccessSupervisor($supervisor), 403);
+        abort_unless($this->canManageSupervisor($supervisor), 403);
 
         $supervisor->update(['is_active' => ! $supervisor->is_active]);
 
@@ -156,7 +188,7 @@ class SupervisorController extends Controller
     public function destroy(Supervisor $supervisor)
     {
         abort_unless(auth()->user()->isAdmin(), 403);
-        abort_unless($this->canAccessSupervisor($supervisor), 403);
+        abort_unless($this->canManageSupervisor($supervisor), 403);
 
         if (! auth()->user()->isSuperAdmin()) {
             $validatedSupervisor = $this->requireSuperAdminOrSupervisor(
@@ -184,8 +216,20 @@ class SupervisorController extends Controller
         return (int) ($user->superadmin_id ?: $user->id);
     }
 
-    private function canAccessSupervisor(Supervisor $supervisor): bool
+    private function canManageSupervisor(Supervisor $supervisor): bool
     {
-        return (int) $supervisor->superadmin_id === $this->ownerReferenceId();
+        $user = auth()->user();
+
+        if ($user->isSuperAdmin()) {
+            return (int) $supervisor->superadmin_id === (int) $user->id;
+        }
+
+        $userId = (int) $user->id;
+        if ((int) $supervisor->holder_admin_id === $userId) {
+            return true;
+        }
+
+        return $supervisor->holder_admin_id === null
+            && (int) $supervisor->superadmin_id === $this->ownerReferenceId();
     }
 }
