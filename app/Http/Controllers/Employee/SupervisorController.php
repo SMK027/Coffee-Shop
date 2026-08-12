@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class SupervisorController extends Controller
 {
@@ -18,7 +19,7 @@ class SupervisorController extends Controller
         $search = trim((string) $request->query('q', ''));
         $user = auth()->user();
         $isSuperAdmin = $user->isSuperAdmin();
-        $ownerIdForAdmin = (int) ($user->superadmin_id ?: $user->id);
+        $ownerIdForAdmin = $this->ownerReferenceId();
 
         $supervisors = Supervisor::with('superadmin:id,name')
             ->when(! $isSuperAdmin, fn ($query) => $query->where('superadmin_id', $ownerIdForAdmin))
@@ -31,7 +32,7 @@ class SupervisorController extends Controller
             ->orderBy('supervisor_number')
             ->get();
 
-        return view('employee.supervisors.index', compact('supervisors', 'search', 'isSuperAdmin'));
+        return view('employee.supervisors.index', compact('supervisors', 'search', 'isSuperAdmin', 'ownerIdForAdmin'));
     }
 
     public function create()
@@ -47,12 +48,13 @@ class SupervisorController extends Controller
 
     public function show(Supervisor $supervisor)
     {
-        abort_unless(auth()->user()->isSuperAdmin(), 403);
-        abort_unless($supervisor->superadmin_id === auth()->id(), 403);
+        abort_unless(auth()->user()->isAdmin(), 403);
+        abort_unless($this->canAccessSupervisor($supervisor), 403);
 
         $barcodeValue = $supervisor->barcodeValue();
+        $isSuperAdmin = auth()->user()->isSuperAdmin();
 
-        return view('employee.supervisors.show', compact('supervisor', 'barcodeValue'));
+        return view('employee.supervisors.show', compact('supervisor', 'barcodeValue', 'isSuperAdmin'));
     }
 
     public function store(Request $request)
@@ -87,16 +89,35 @@ class SupervisorController extends Controller
 
     public function edit(Supervisor $supervisor)
     {
-        abort_unless(auth()->user()->isSuperAdmin(), 403);
-        abort_unless($supervisor->superadmin_id === auth()->id(), 403);
+        abort_unless(auth()->user()->isAdmin(), 403);
+        abort_unless($this->canAccessSupervisor($supervisor), 403);
 
-        return view('employee.supervisors.edit', compact('supervisor'));
+        $isSuperAdmin = auth()->user()->isSuperAdmin();
+
+        return view('employee.supervisors.edit', compact('supervisor', 'isSuperAdmin'));
     }
 
     public function update(Request $request, Supervisor $supervisor)
     {
-        abort_unless(auth()->user()->isSuperAdmin(), 403);
-        abort_unless($supervisor->superadmin_id === auth()->id(), 403);
+        abort_unless(auth()->user()->isAdmin(), 403);
+        abort_unless($this->canAccessSupervisor($supervisor), 403);
+
+        $isSuperAdmin = auth()->user()->isSuperAdmin();
+
+        if (! $isSuperAdmin) {
+            $validated = $request->validate([
+                'supervisor_pin' => ['required', 'string', 'regex:/^\d{4,6}$/'],
+            ], [
+                'supervisor_pin.required' => 'Le PIN est requis pour la mise à jour.',
+                'supervisor_pin.regex'    => 'Le PIN doit contenir entre 4 et 6 chiffres.',
+            ]);
+
+            $supervisor->password = Hash::make($validated['supervisor_pin']);
+            $supervisor->save();
+
+            return redirect()->route('employee.supervisors.index')
+                ->with('success', 'Code PIN du superviseur mis à jour avec succès.');
+        }
 
         $validated = $request->validate([
             'supervisor_number' => ['required', 'string', 'max:50', 'alpha_dash', Rule::unique('supervisors', 'supervisor_number')->ignore($supervisor->id)],
@@ -122,8 +143,8 @@ class SupervisorController extends Controller
 
     public function toggleActivation(Supervisor $supervisor)
     {
-        abort_unless(auth()->user()->isSuperAdmin(), 403);
-        abort_unless($supervisor->superadmin_id === auth()->id(), 403);
+        abort_unless(auth()->user()->isAdmin(), 403);
+        abort_unless($this->canAccessSupervisor($supervisor), 403);
 
         $supervisor->update(['is_active' => ! $supervisor->is_active]);
 
@@ -132,12 +153,37 @@ class SupervisorController extends Controller
 
     public function destroy(Supervisor $supervisor)
     {
-        abort_unless(auth()->user()->isSuperAdmin(), 403);
-        abort_unless($supervisor->superadmin_id === auth()->id(), 403);
+        abort_unless(auth()->user()->isAdmin(), 403);
+        abort_unless($this->canAccessSupervisor($supervisor), 403);
+
+        if (! auth()->user()->isSuperAdmin()) {
+            $validatedSupervisor = $this->requireSuperAdminOrSupervisor(
+                request(),
+                'La suppression exige la validation d\'un superviseur externe à votre compte.'
+            );
+
+            if ((int) $validatedSupervisor->superadmin_id === $this->ownerReferenceId()) {
+                throw ValidationException::withMessages([
+                    'supervisor_number' => "La suppression exige un superviseur non rattaché à votre compte.",
+                ]);
+            }
+        }
 
         $supervisor->delete();
 
         return redirect()->route('employee.supervisors.index')
             ->with('success', 'Superviseur supprimé.');
+    }
+
+    private function ownerReferenceId(): int
+    {
+        $user = auth()->user();
+
+        return (int) ($user->superadmin_id ?: $user->id);
+    }
+
+    private function canAccessSupervisor(Supervisor $supervisor): bool
+    {
+        return (int) $supervisor->superadmin_id === $this->ownerReferenceId();
     }
 }

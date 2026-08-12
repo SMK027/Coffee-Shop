@@ -45,7 +45,7 @@
                     </thead>
                     <tbody class="divide-y divide-stone-50">
                         @foreach($supervisors as $supervisor)
-                        @php $mine = $supervisor->superadmin_id === auth()->id(); @endphp
+                        @php $mine = $supervisor->superadmin_id === $ownerIdForAdmin; @endphp
                         <tr class="hover:bg-stone-50 transition-colors {{ $supervisor->is_active ? '' : 'opacity-70' }}">
                             <td class="px-5 py-3 font-mono text-xs text-stone-700">{{ $supervisor->supervisor_number }}</td>
                             <td class="px-5 py-3">
@@ -79,11 +79,13 @@
                                             {{ $supervisor->is_active ? 'Désactiver' : 'Réactiver' }}
                                         </button>
                                     </form>
+                                    @if($isSuperAdmin)
                                     <form action="{{ route('employee.supervisors.destroy', $supervisor) }}" method="POST" class="inline-block ml-3"
                                           onsubmit="return confirm('Supprimer ce superviseur ?')">
                                         @csrf @method('DELETE')
                                         <button type="submit" class="text-red-500 hover:text-red-700 transition-colors">Supprimer</button>
                                     </form>
+                                    @endif
                                 @else
                                     <span class="text-stone-300 italic">Lecture seule</span>
                                 @endif
@@ -97,7 +99,7 @@
             {{-- Vue mobile --}}
             <div class="sm:hidden divide-y divide-stone-100">
                 @foreach($supervisors as $supervisor)
-                @php $mine = $supervisor->superadmin_id === auth()->id(); @endphp
+                @php $mine = $supervisor->superadmin_id === $ownerIdForAdmin; @endphp
                 <div class="px-4 py-3 {{ $supervisor->is_active ? '' : 'opacity-70' }}">
                     <div class="flex items-start justify-between gap-3">
                         <div class="min-w-0">
@@ -122,11 +124,13 @@
                                               class="text-sky-600 hover:text-sky-800 transition-colors">Détails</a>
                                 <a href="{{ route('employee.supervisors.edit', $supervisor) }}"
                                               class="text-stone-500 hover:text-stone-700 transition-colors">Modifier</a>
+                                @if($isSuperAdmin)
                                 <form action="{{ route('employee.supervisors.destroy', $supervisor) }}" method="POST"
                                       onsubmit="return confirm('Supprimer ce superviseur ?')">
                                     @csrf @method('DELETE')
                                     <button type="submit" class="text-red-500 hover:text-red-700 transition-colors">Supprimer</button>
                                 </form>
+                                @endif
                             @else
                                 <span class="text-stone-300 italic text-xs">Lecture seule</span>
                             @endif

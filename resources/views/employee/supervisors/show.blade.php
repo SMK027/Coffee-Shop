@@ -39,5 +39,26 @@
             </div>
             <p class="text-xs text-stone-500 mt-3">Format court signé pour un affichage compact et un scan mobile plus fiable.</p>
         </div>
+
+        @if(! $isSuperAdmin)
+            <div class="border border-red-200 rounded-lg p-4 bg-red-50 space-y-4">
+                <div>
+                    <h3 class="text-sm font-semibold text-red-800">Suppression protégée</h3>
+                    <p class="text-xs text-red-700 mt-1">
+                        La suppression nécessite l'authentification d'un autre compte superviseur non rattaché à votre compte.
+                    </p>
+                </div>
+
+                <form action="{{ route('employee.supervisors.destroy', $supervisor) }}" method="POST" class="space-y-4"
+                      onsubmit="return confirm('Confirmer la suppression de ce superviseur ?')">
+                    @csrf @method('DELETE')
+                    @include('employee.shared.supervisor-auth-fields')
+                    <button type="submit"
+                            class="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                        Supprimer ce superviseur
+                    </button>
+                </form>
+            </div>
+        @endif
     </div>
 </x-employee-layout>
