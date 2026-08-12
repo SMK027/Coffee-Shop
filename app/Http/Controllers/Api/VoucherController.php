@@ -138,11 +138,68 @@ class VoucherController extends Controller
     /**
      * Retourne la liste des bons d'achat pour l'API mobile.
      */
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
         abort_unless(auth()->user()?->isAdmin() || auth()->user()?->isModerator(), 403);
 
-        $vouchers = Voucher::orderBy('created_at', 'desc')->get()->map(function ($v) {
+        $status = (string) $request->query('status', 'all');
+        $search = trim((string) $request->query('q', ''));
+        $recipient = trim((string) $request->query('recipient', ''));
+        $issuer = trim((string) $request->query('issuer', ''));
+        $amountMin = $request->filled('amount_min') ? (float) $request->query('amount_min') : null;
+        $amountMax = $request->filled('amount_max') ? (float) $request->query('amount_max') : null;
+        $expiresFrom = trim((string) $request->query('expires_from', ''));
+        $expiresTo = trim((string) $request->query('expires_to', ''));
+
+        if (! in_array($status, ['all', 'valid', 'used', 'expired'], true)) {
+            $status = 'all';
+        }
+
+        $query = Voucher::with('restrictedCard')->orderByDesc('created_at');
+
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('code', 'like', "%{$search}%")
+                    ->orWhere('issued_by_name', 'like', "%{$search}%");
+            });
+        }
+
+        if ($recipient !== '') {
+            $recipientNormalized = str_replace(' ', '', $recipient);
+            $query->where(function ($q) use ($recipient, $recipientNormalized) {
+                $q->where('restricted_name', 'like', "%{$recipient}%")
+                    ->orWhereHas('restrictedCard', function ($cardQuery) use ($recipient, $recipientNormalized) {
+                        $cardQuery->where('card_number', 'like', "%{$recipient}%")
+                            ->orWhereRaw("REPLACE(card_number, ' ', '') LIKE ?", ["%{$recipientNormalized}%"]);
+                    });
+            });
+        }
+
+        if ($issuer !== '') {
+            $query->where('issued_by_name', 'like', "%{$issuer}%");
+        }
+
+        if ($amountMin !== null) {
+            $query->where('amount', '>=', $amountMin);
+        }
+
+        if ($amountMax !== null) {
+            $query->where('amount', '<=', $amountMax);
+        }
+
+        if ($expiresFrom !== '') {
+            $query->whereDate('expires_at', '>=', $expiresFrom);
+        }
+
+        if ($expiresTo !== '') {
+            $query->whereDate('expires_at', '<=', $expiresTo);
+        }
+
+        $query->when($status === 'valid', fn($q) => $q->valid())
+            ->when($status === 'used', fn($q) => $q->where('is_used', true))
+            ->when($status === 'expired', fn($q) => $q->expired());
+
+        $vouchers = $query->get()->map(function ($v) {
             return [
                 'id' => $v->id,
                 'code' => $v->code,
@@ -150,8 +207,11 @@ class VoucherController extends Controller
                 // 'active' is computed from DB: not used and not expired
                 'active' => $v->isValid(),
                 'is_used' => (bool) $v->is_used,
+                'issued_by_name' => $v->issued_by_name,
                 'issued_at' => $v->issued_at?->toDateTimeString(),
                 'expires_at' => $v->expires_at?->toDateString(),
+                'restricted_name' => $v->restricted_name,
+                'restricted_card_number' => $v->restrictedCard?->card_number,
             ];
         });
 
