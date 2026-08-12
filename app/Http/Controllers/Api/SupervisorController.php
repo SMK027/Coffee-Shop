@@ -22,22 +22,30 @@ class SupervisorController extends Controller
         $ownerId = $this->ownerReferenceId();
         $currentUserId = (int) ($user?->id ?? 0);
 
-        $items = Supervisor::query()
+        $items = Supervisor::with(['superadmin:id,name', 'holderAdmin:id,name'])
             ->when($isSuperAdmin, fn ($query) => $query->where('superadmin_id', $currentUserId))
             ->when(! $isSuperAdmin, function ($query) use ($currentUserId) {
-                $query->where('holder_admin_id', $currentUserId)
-                    ;
+                $query->where('holder_admin_id', $currentUserId);
             })
             ->orderBy('supervisor_number')
             ->get()
-            ->map(fn (Supervisor $s) => [
-                'id' => $s->id,
-                'supervisor_number' => $s->supervisor_number,
-                'is_active' => (bool) $s->is_active,
-                'superadmin_id' => $s->superadmin_id,
-                'holder_admin_id' => $s->holder_admin_id,
-                'created_at' => $s->created_at?->toDateTimeString(),
-            ]);
+            ->map(function (Supervisor $s) use ($currentUserId, $isSuperAdmin) {
+                $relationType = $isSuperAdmin
+                    ? 'responsible'
+                    : ((int) $s->holder_admin_id === $currentUserId ? 'holder' : 'visible');
+
+                return [
+                    'id' => $s->id,
+                    'supervisor_number' => $s->supervisor_number,
+                    'is_active' => (bool) $s->is_active,
+                    'superadmin_id' => $s->superadmin_id,
+                    'superadmin_name' => $s->superadmin?->name,
+                    'holder_admin_id' => $s->holder_admin_id,
+                    'holder_admin_name' => $s->holderAdmin?->name,
+                    'relation_type' => $relationType,
+                    'created_at' => $s->created_at?->toDateTimeString(),
+                ];
+            });
 
         return response()->json($items);
     }
@@ -66,6 +74,8 @@ class SupervisorController extends Controller
         return response()->json([
             'id' => $supervisor->id,
             'supervisor_number' => $supervisor->supervisor_number,
+            'superadmin_name' => $supervisor->superadmin?->name,
+            'holder_admin_name' => $supervisor->holderAdmin?->name,
             'barcode_value' => $supervisor->barcodeValue(),
         ]);
     }

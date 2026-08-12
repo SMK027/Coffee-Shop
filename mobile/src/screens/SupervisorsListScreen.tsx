@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { View, Text, SectionList, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import api from '../api/client';
 
@@ -7,6 +7,9 @@ type SupervisorItem = {
   id: number;
   supervisor_number: string;
   is_active: boolean;
+  superadmin_name?: string | null;
+  holder_admin_name?: string | null;
+  relation_type?: 'holder' | 'responsible' | 'visible';
   created_at?: string | null;
 };
 
@@ -15,6 +18,17 @@ export default function SupervisorsListScreen() {
   const [items, setItems] = useState<SupervisorItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  const sections = useMemo(() => {
+    const byHolder = items.filter((item) => item.relation_type === 'holder');
+    const byResponsible = items.filter((item) => item.relation_type === 'responsible');
+    const fallback = items.filter((item) => item.relation_type !== 'holder' && item.relation_type !== 'responsible');
+    return [
+      { title: 'Superviseurs dont vous etes le detenteur', data: byHolder },
+      { title: 'Superviseurs dont vous etes le responsable', data: byResponsible },
+      { title: 'Autres superviseurs accessibles', data: fallback },
+    ].filter((section) => section.data.length > 0);
+  }, [items]);
 
   const load = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
@@ -45,20 +59,31 @@ export default function SupervisorsListScreen() {
 
   return (
     <View style={styles.container}>
-      <FlatList
-        data={items}
+      <SectionList
+        sections={sections}
         keyExtractor={(item) => String(item.id)}
         contentContainerStyle={{ padding: 12 }}
+        renderSectionHeader={({ section }) => (
+          <Text style={styles.sectionTitle}>{section.title}</Text>
+        )}
         renderItem={({ item }) => (
           <TouchableOpacity
             style={[styles.row, !item.is_active && styles.rowDisabled]}
-            onPress={() => navigation.navigate('SupervisorQr', { supervisorId: item.id, supervisorNumber: item.supervisor_number })}
+            onPress={() => navigation.navigate('SupervisorQr', {
+              supervisorId: item.id,
+              supervisorNumber: item.supervisor_number,
+              superadminName: item.superadmin_name,
+              holderAdminName: item.holder_admin_name,
+              relationType: item.relation_type,
+            })}
           >
             <View style={{ flex: 1 }}>
               <Text style={styles.number}>{item.supervisor_number}</Text>
               <Text style={styles.meta}>
                 {item.created_at ? `Créé le ${new Date(item.created_at).toLocaleDateString()}` : 'Date inconnue'}
               </Text>
+              <Text style={styles.meta}>Responsable: {item.superadmin_name ?? '—'}</Text>
+              <Text style={styles.meta}>Détenteur: {item.holder_admin_name ?? 'Super administrateur'}</Text>
             </View>
             <View style={[styles.badge, item.is_active ? styles.badgeActive : styles.badgeInactive]}>
               <Text style={[styles.badgeText, item.is_active ? styles.badgeTextActive : styles.badgeTextInactive]}>
@@ -70,6 +95,7 @@ export default function SupervisorsListScreen() {
         ListEmptyComponent={<Text style={styles.empty}>Aucun superviseur rattaché.</Text>}
         onRefresh={() => load(true)}
         refreshing={refreshing}
+        stickySectionHeadersEnabled={false}
       />
     </View>
   );
@@ -78,6 +104,7 @@ export default function SupervisorsListScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fdf8f3' },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fdf8f3' },
+  sectionTitle: { color: '#78350f', fontSize: 13, fontWeight: '700', marginBottom: 8, marginTop: 6 },
   row: {
     backgroundColor: '#fff',
     borderRadius: 12,

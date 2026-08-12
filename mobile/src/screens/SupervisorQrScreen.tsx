@@ -8,15 +8,19 @@ type ParamList = {
   SupervisorQr: {
     supervisorId: number;
     supervisorNumber: string;
+    superadminName?: string | null;
+    holderAdminName?: string | null;
+    relationType?: 'holder' | 'responsible' | 'visible';
   };
 };
 
 export default function SupervisorQrScreen() {
   const route = useRoute<RouteProp<ParamList, 'SupervisorQr'>>();
-  const { supervisorId, supervisorNumber } = route.params;
+  const { supervisorId, supervisorNumber, superadminName, holderAdminName, relationType } = route.params;
 
   const [pin, setPin] = useState('');
   const [barcodeValue, setBarcodeValue] = useState<string | null>(null);
+  const [details, setDetails] = useState<{ superadminName?: string | null; holderAdminName?: string | null } | null>(null);
   const [loading, setLoading] = useState(false);
 
   const fetchBarcode = async () => {
@@ -29,6 +33,10 @@ export default function SupervisorQrScreen() {
     try {
       const { data } = await api.post(`/supervisors/${supervisorId}/barcode`, { supervisor_pin: pin.trim() });
       setBarcodeValue(data?.barcode_value ?? null);
+      setDetails({
+        superadminName: data?.superadmin_name ?? superadminName ?? null,
+        holderAdminName: data?.holder_admin_name ?? holderAdminName ?? null,
+      });
     } catch (e: any) {
       const message = e?.response?.data?.message || 'Impossible de vérifier le code superviseur.';
       Alert.alert('Accès refusé', message);
@@ -52,11 +60,24 @@ export default function SupervisorQrScreen() {
     ? `https://api.qrserver.com/v1/create-qr-code/?size=280x280&margin=0&data=${encodeURIComponent(barcodeValue)}`
     : null;
 
+  const resolvedResponsible = details?.superadminName ?? superadminName ?? '—';
+  const resolvedHolder = details?.holderAdminName ?? holderAdminName ?? 'Super administrateur';
+  const relationLabel = relationType === 'holder'
+    ? 'Vous êtes le détenteur de ce superviseur.'
+    : relationType === 'responsible'
+      ? 'Vous êtes le responsable de ce superviseur.'
+      : null;
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
       <View style={styles.card}>
         <Text style={styles.title}>Superviseur {supervisorNumber}</Text>
         <Text style={styles.subtitle}>Saisissez le code superviseur pour afficher le QR code.</Text>
+        <View style={styles.infoBlock}>
+          <Text style={styles.infoLine}>Responsable: {resolvedResponsible}</Text>
+          <Text style={styles.infoLine}>Détenteur: {resolvedHolder}</Text>
+          {relationLabel ? <Text style={styles.infoHint}>{relationLabel}</Text> : null}
+        </View>
 
         <TextInput
           style={styles.input}
@@ -107,6 +128,9 @@ const styles = StyleSheet.create({
   },
   title: { color: '#1f2937', fontSize: 18, fontWeight: '700' },
   subtitle: { color: '#6b7280', marginTop: 6, marginBottom: 12 },
+  infoBlock: { backgroundColor: '#f9fafb', borderRadius: 10, padding: 10, marginBottom: 12 },
+  infoLine: { color: '#374151', fontSize: 13, marginBottom: 4 },
+  infoHint: { color: '#9a3412', fontSize: 12, marginTop: 2 },
   input: {
     borderWidth: 1,
     borderColor: '#e5e7eb',
