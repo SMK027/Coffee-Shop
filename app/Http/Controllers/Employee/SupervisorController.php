@@ -23,7 +23,6 @@ class SupervisorController extends Controller
         $currentUserId = (int) $user->id;
 
         $supervisors = Supervisor::with(['superadmin:id,name', 'holderAdmin:id,name'])
-            ->when($isSuperAdmin, fn ($query) => $query->where('superadmin_id', $currentUserId))
             ->when(! $isSuperAdmin, function ($query) use ($currentUserId) {
                 $query->where('holder_admin_id', $currentUserId);
             })
@@ -32,6 +31,7 @@ class SupervisorController extends Controller
                   ->orWhereHas('superadmin', fn($sq) => $sq->where('name', 'like', "%{$search}%"))
                   ->orWhereHas('holderAdmin', fn($sq) => $sq->where('name', 'like', "%{$search}%"));
             }))
+            ->orderByRaw('CASE WHEN superadmin_id = ? OR holder_admin_id = ? THEN 0 ELSE 1 END', [$currentUserId, $currentUserId])
             ->orderByRaw('superadmin_id = ? DESC', [$isSuperAdmin ? $currentUserId : $ownerIdForAdmin])
             ->orderBy('supervisor_number')
             ->get();

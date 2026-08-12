@@ -47,9 +47,8 @@
                     <tbody class="divide-y divide-stone-50">
                         @foreach($supervisors as $supervisor)
                         @php
-                            $mine = $isSuperAdmin
-                                ? ((int) $supervisor->superadmin_id === (int) $currentUserId)
-                                : ((int) ($supervisor->holder_admin_id ?? 0) === (int) $currentUserId);
+                            $mine = (int) $supervisor->superadmin_id === (int) $currentUserId
+                                || (int) ($supervisor->holder_admin_id ?? 0) === (int) $currentUserId;
                         @endphp
                         <tr class="hover:bg-stone-50 transition-colors {{ $supervisor->is_active ? '' : 'opacity-70' }}">
                             <td class="px-5 py-3 font-mono text-xs text-stone-700">{{ $supervisor->supervisor_number }}</td>
@@ -112,9 +111,8 @@
             <div class="sm:hidden divide-y divide-stone-100">
                 @foreach($supervisors as $supervisor)
                 @php
-                    $mine = $isSuperAdmin
-                        ? ((int) $supervisor->superadmin_id === (int) $currentUserId)
-                        : ((int) ($supervisor->holder_admin_id ?? 0) === (int) $currentUserId);
+                    $mine = (int) $supervisor->superadmin_id === (int) $currentUserId
+                        || (int) ($supervisor->holder_admin_id ?? 0) === (int) $currentUserId;
                 @endphp
                 <div class="px-4 py-3 {{ $supervisor->is_active ? '' : 'opacity-70' }}">
                     <div class="flex items-start justify-between gap-3">
