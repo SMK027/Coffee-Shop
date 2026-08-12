@@ -229,15 +229,9 @@ function holderAdminSearch() {
         open: false,
         highlight: 0,
 
-        get ownerId() {
-            const ownerInput = document.querySelector('input[name="superadmin_id"]');
-            return ownerInput ? Number(ownerInput.value || 0) : 0;
-        },
-
         get filtered() {
             const q = this.query.toLowerCase().trim();
-            const byOwner = holders.filter(h => Number(h.superadminId) === this.ownerId);
-            return q ? byOwner.filter(h => h.label.toLowerCase().includes(q)) : byOwner;
+            return q ? holders.filter(h => h.label.toLowerCase().includes(q)) : holders;
         },
 
         pick(admin) {

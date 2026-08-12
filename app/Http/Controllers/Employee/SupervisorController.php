@@ -24,11 +24,8 @@ class SupervisorController extends Controller
 
         $supervisors = Supervisor::with(['superadmin:id,name', 'holderAdmin:id,name'])
             ->when($isSuperAdmin, fn ($query) => $query->where('superadmin_id', $currentUserId))
-            ->when(! $isSuperAdmin, function ($query) use ($currentUserId, $ownerIdForAdmin) {
-                $query->where(function ($q) use ($currentUserId, $ownerIdForAdmin) {
-                    $q->where('holder_admin_id', $currentUserId)
-                        ->where('superadmin_id', $ownerIdForAdmin);
-                });
+            ->when(! $isSuperAdmin, function ($query) use ($currentUserId) {
+                $query->where('holder_admin_id', $currentUserId);
             })
             ->when($search !== '', fn($query) => $query->where(function ($q) use ($search) {
                 $q->where('supervisor_number', 'like', "%{$search}%")
@@ -51,7 +48,6 @@ class SupervisorController extends Controller
             ->get(['id', 'name']);
 
         $admins = User::where('global_role', 'admin')
-            ->whereNotNull('superadmin_id')
             ->orderBy('name')
             ->get(['id', 'name', 'superadmin_id']);
 
@@ -98,12 +94,11 @@ class SupervisorController extends Controller
         if ($holderId !== null) {
             $holder = User::where('id', $holderId)
                 ->where('global_role', 'admin')
-                ->where('superadmin_id', $owner->id)
                 ->first();
 
             if (! $holder) {
                 throw ValidationException::withMessages([
-                    'holder_admin_id' => 'Le détenteur doit être un administrateur simple rattaché au super-administrateur propriétaire.',
+                    'holder_admin_id' => 'Le détenteur doit être un administrateur simple valide.',
                 ]);
             }
         }
@@ -194,7 +189,7 @@ class SupervisorController extends Controller
                 'La suppression exige la validation d\'un superviseur externe à votre compte.'
             );
 
-            if ((int) $validatedSupervisor->superadmin_id === $this->ownerReferenceId()) {
+            if ((int) $validatedSupervisor->superadmin_id === (int) $supervisor->superadmin_id) {
                 throw ValidationException::withMessages([
                     'supervisor_number' => "La suppression exige un superviseur non rattaché à votre compte.",
                 ]);
@@ -223,7 +218,6 @@ class SupervisorController extends Controller
         }
 
         $userId = (int) $user->id;
-        return (int) $supervisor->holder_admin_id === $userId
-            && (int) $supervisor->superadmin_id === $this->ownerReferenceId();
+        return (int) $supervisor->holder_admin_id === $userId;
     }
 }
