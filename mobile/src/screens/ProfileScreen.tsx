@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import ServerManager from '../components/ServerManager';
+import { useNavigation } from '@react-navigation/native';
 
 const roleLabels: Record<string, string> = {
   superadmin: 'Super administrateur',
@@ -21,6 +22,7 @@ const roleColors: Record<string, string> = {
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
+  const navigation = useNavigation<any>();
 
   if (!user) {
     return (
@@ -43,6 +45,7 @@ export default function ProfileScreen() {
 
   const roleLabel = roleLabels[user.global_role] ?? user.global_role;
   const roleColor = roleColors[user.global_role] ?? '#6b7280';
+  const canAccessSupervisors = user.global_role === 'admin' || user.global_role === 'superadmin';
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
@@ -66,6 +69,12 @@ export default function ProfileScreen() {
       <View style={styles.serverSection}>
         <ServerManager />
       </View>
+
+      {canAccessSupervisors && (
+        <TouchableOpacity style={styles.supervisorsBtn} onPress={() => navigation.navigate('SupervisorsList')}>
+          <Text style={styles.supervisorsBtnText}>Consulter les superviseurs raccordés</Text>
+        </TouchableOpacity>
+      )}
 
       <TouchableOpacity style={styles.logoutBtn} onPress={confirmLogout}>
         <Text style={styles.logoutBtnText}>Se déconnecter</Text>
@@ -105,6 +114,16 @@ const styles = StyleSheet.create({
   fieldLabel: { fontSize: 12, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 },
   fieldValue: { fontSize: 15, color: '#1f2937', fontWeight: '500' },
   serverSection: { marginTop: 24 },
+  supervisorsBtn: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: '#92400e',
+  },
+  supervisorsBtnText: { color: '#92400e', fontSize: 15, fontWeight: '700' },
   logoutBtn: {
     backgroundColor: '#fff', borderRadius: 12, paddingVertical: 14,
     alignItems: 'center', marginTop: 24, borderWidth: 1, borderColor: '#ef4444',

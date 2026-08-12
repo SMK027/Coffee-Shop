@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\LoyaltyCardController;
 use App\Http\Controllers\Api\LoyaltyDiscountController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\PaymentMethodController;
+use App\Http\Controllers\Api\SupervisorController;
 use App\Http\Controllers\Api\VoucherController;
 use Illuminate\Support\Facades\Route;
 
@@ -76,4 +77,8 @@ Route::middleware('auth:api')->group(function () {
     Route::post('/vouchers', [VoucherController::class, 'store']);
     Route::put('/vouchers/{voucher}', [VoucherController::class, 'update']);
     Route::delete('/vouchers/{voucher}', [VoucherController::class, 'destroy']);
+
+    // Superviseurs (compte connecté)
+    Route::get('/supervisors', [SupervisorController::class, 'index']);
+    Route::post('/supervisors/{supervisor}/barcode', [SupervisorController::class, 'barcode']);
 });
