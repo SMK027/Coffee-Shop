@@ -87,6 +87,8 @@ export default function SupervisorQrScreen() {
             if (barcodeValue) setBarcodeValue(null);
           }}
           placeholder="Code (4 à 6 chiffres)"
+          placeholderTextColor="#9ca3af"
+          selectionColor="#92400e"
           keyboardType="number-pad"
           secureTextEntry
           maxLength={6}

@@ -180,6 +180,8 @@ export default function VouchersListScreen() {
               onChangeText={setQ}
               placeholder="Code ou nom émetteur"
               style={styles.input}
+              placeholderTextColor="#9ca3af"
+              selectionColor="#92400e"
             />
 
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
@@ -207,6 +209,8 @@ export default function VouchersListScreen() {
               onChangeText={setRecipient}
               placeholder="Destinataire (nom ou carte)"
               style={styles.input}
+              placeholderTextColor="#9ca3af"
+              selectionColor="#92400e"
             />
 
             <TextInput
@@ -214,6 +218,8 @@ export default function VouchersListScreen() {
               onChangeText={setIssuer}
               placeholder="Émetteur (compte admin)"
               style={styles.input}
+              placeholderTextColor="#9ca3af"
+              selectionColor="#92400e"
             />
 
             <View style={styles.row2}>
@@ -223,6 +229,8 @@ export default function VouchersListScreen() {
                 placeholder="Montant min"
                 keyboardType="decimal-pad"
                 style={[styles.input, styles.halfInput]}
+                placeholderTextColor="#9ca3af"
+                selectionColor="#92400e"
               />
               <TextInput
                 value={amountMax}
@@ -230,6 +238,8 @@ export default function VouchersListScreen() {
                 placeholder="Montant max"
                 keyboardType="decimal-pad"
                 style={[styles.input, styles.halfInput]}
+                placeholderTextColor="#9ca3af"
+                selectionColor="#92400e"
               />
             </View>
 
