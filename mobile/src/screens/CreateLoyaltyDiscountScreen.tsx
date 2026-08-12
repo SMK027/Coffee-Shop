@@ -82,11 +82,11 @@ export default function CreateLoyaltyDiscountScreen() {
       <Text style={styles.title}>Créer une réduction personnalisée</Text>
       <View style={styles.card}>
         <Text style={styles.label}>Nom</Text>
-        <TextInput style={styles.input} value={name} onChangeText={setName} />
+        <TextInput style={styles.input} value={name} onChangeText={setName} placeholderTextColor="#9ca3af" selectionColor="#92400e" />
         <Text style={styles.label}>Description (optionnelle)</Text>
-        <TextInput style={styles.input} value={description} onChangeText={setDescription} />
+        <TextInput style={styles.input} value={description} onChangeText={setDescription} placeholderTextColor="#9ca3af" selectionColor="#92400e" />
         <Text style={styles.label}>Coût en points</Text>
-        <TextInput style={styles.input} keyboardType="numeric" value={pointsCost} onChangeText={setPointsCost} />
+        <TextInput style={styles.input} keyboardType="numeric" value={pointsCost} onChangeText={setPointsCost} placeholderTextColor="#9ca3af" selectionColor="#92400e" />
 
         <Text style={styles.label}>Type</Text>
         <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
@@ -98,26 +98,26 @@ export default function CreateLoyaltyDiscountScreen() {
         </View>
 
         <Text style={styles.label}>Valeur</Text>
-        <TextInput style={styles.input} keyboardType="numeric" value={discountValue} onChangeText={setDiscountValue} />
+        <TextInput style={styles.input} keyboardType="numeric" value={discountValue} onChangeText={setDiscountValue} placeholderTextColor="#9ca3af" selectionColor="#92400e" />
         {discountType === 'percent' && (
           <>
             <Text style={styles.label}>Plafond (€) (optionnel)</Text>
-            <TextInput style={styles.input} keyboardType="numeric" value={maxDiscountAmount} onChangeText={setMaxDiscountAmount} />
+            <TextInput style={styles.input} keyboardType="numeric" value={maxDiscountAmount} onChangeText={setMaxDiscountAmount} placeholderTextColor="#9ca3af" selectionColor="#92400e" />
           </>
         )}
 
         {!user?.global_role || user.global_role !== 'superadmin' ? (
           <>
             <Text style={styles.label}>QR code superviseur (optionnel)</Text>
-            <TextInput style={styles.input} value={supervisorToken} onChangeText={setSupervisorToken} placeholder="SUPERVISOR:..." autoCapitalize="none" />
+            <TextInput style={styles.input} value={supervisorToken} onChangeText={setSupervisorToken} placeholder="SUPERVISOR:..." placeholderTextColor="#9ca3af" selectionColor="#92400e" autoCapitalize="none" />
             <TouchableOpacity style={styles.scanBtn} onPress={openScanner}>
               <Text style={styles.scanBtnText}>Scanner le QR code superviseur</Text>
             </TouchableOpacity>
             {supervisorToken ? <Text style={styles.scanSuccess}>Code superviseur scanné.</Text> : null}
             <Text style={styles.label}>Identifiant du superviseur</Text>
-            <TextInput style={styles.input} value={supervisorNumber} onChangeText={setSupervisorNumber} />
+            <TextInput style={styles.input} value={supervisorNumber} onChangeText={setSupervisorNumber} placeholderTextColor="#9ca3af" selectionColor="#92400e" />
             <Text style={styles.label}>Mot de passe du superviseur</Text>
-            <TextInput style={styles.input} value={supervisorPin} onChangeText={setSupervisorPin} secureTextEntry keyboardType="numeric" />
+            <TextInput style={styles.input} value={supervisorPin} onChangeText={setSupervisorPin} secureTextEntry keyboardType="numeric" placeholderTextColor="#9ca3af" selectionColor="#92400e" />
           </>
         ) : null}
 
@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 20, fontWeight: '700', marginBottom: 12, color: '#1f2937' },
   card: { backgroundColor: '#fff', borderRadius: 10, padding: 12, shadowColor: '#000', shadowOpacity: 0.05, elevation: 2 },
   label: { fontSize: 13, color: '#6b7280', marginBottom: 6 },
-  input: { borderWidth: 1, borderColor: '#e5e7eb', padding: 10, borderRadius: 8, marginBottom: 10, backgroundColor: '#f9fafb' },
+  input: { borderWidth: 1, borderColor: '#e5e7eb', padding: 10, borderRadius: 8, marginBottom: 10, backgroundColor: '#f9fafb', color: '#111827' },
   chip: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, backgroundColor: '#f3f4f6' },
   chipActive: { backgroundColor: '#92400e' },
   chipText: { color: '#1f2937' },

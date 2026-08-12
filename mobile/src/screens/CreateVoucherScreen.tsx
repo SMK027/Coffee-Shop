@@ -111,19 +111,19 @@ export default function CreateVoucherScreen() {
 
       <View style={styles.card}>
         <Text style={styles.label}>Montant (€)</Text>
-        <TextInput style={styles.input} keyboardType="numeric" value={amount} onChangeText={setAmount} />
+        <TextInput style={styles.input} keyboardType="numeric" value={amount} onChangeText={setAmount} placeholderTextColor="#9ca3af" selectionColor="#92400e" />
 
         {!isEditing && (
           <>
             <Text style={styles.label}>Validité (jours)</Text>
-            <TextInput style={styles.input} keyboardType="numeric" value={validityDays} onChangeText={setValidityDays} />
+            <TextInput style={styles.input} keyboardType="numeric" value={validityDays} onChangeText={setValidityDays} placeholderTextColor="#9ca3af" selectionColor="#92400e" />
           </>
         )}
 
         {isEditing && (
           <>
             <Text style={styles.label}>Date d'expiration</Text>
-            <TextInput style={styles.input} value={expiresAt} onChangeText={setExpiresAt} placeholder="AAAA-MM-JJ" />
+            <TextInput style={styles.input} value={expiresAt} onChangeText={setExpiresAt} placeholder="AAAA-MM-JJ" placeholderTextColor="#9ca3af" selectionColor="#92400e" />
           </>
         )}
 
@@ -139,29 +139,29 @@ export default function CreateVoucherScreen() {
         {restrictionType === 'card' && (
           <>
             <Text style={styles.label}>Numéro de carte (sans espaces)</Text>
-            <TextInput style={styles.input} value={restrictedCardNumber} onChangeText={setRestrictedCardNumber} placeholder="Ex. 1234-5678-9012" />
+            <TextInput style={styles.input} value={restrictedCardNumber} onChangeText={setRestrictedCardNumber} placeholder="Ex. 1234-5678-9012" placeholderTextColor="#9ca3af" selectionColor="#92400e" />
           </>
         )}
 
         {restrictionType === 'name' && (
           <>
             <Text style={styles.label}>Nom complet du bénéficiaire</Text>
-            <TextInput style={styles.input} value={restrictedName} onChangeText={setRestrictedName} placeholder="Ex. Jean Dupont" />
+            <TextInput style={styles.input} value={restrictedName} onChangeText={setRestrictedName} placeholder="Ex. Jean Dupont" placeholderTextColor="#9ca3af" selectionColor="#92400e" />
           </>
         )}
 
         {!user?.global_role || user.global_role !== 'superadmin' ? (
           <>
             <Text style={styles.label}>QR code superviseur (optionnel)</Text>
-            <TextInput style={styles.input} value={supervisorToken} onChangeText={setSupervisorToken} placeholder="SUPERVISOR:..." autoCapitalize="none" />
+            <TextInput style={styles.input} value={supervisorToken} onChangeText={setSupervisorToken} placeholder="SUPERVISOR:..." placeholderTextColor="#9ca3af" selectionColor="#92400e" autoCapitalize="none" />
             <TouchableOpacity style={styles.scanBtn} onPress={openScanner}>
               <Text style={styles.scanBtnText}>Scanner le QR code superviseur</Text>
             </TouchableOpacity>
             {supervisorToken ? <Text style={styles.scanSuccess}>Code superviseur scanné.</Text> : null}
             <Text style={styles.label}>Identifiant du superviseur</Text>
-            <TextInput style={styles.input} value={supervisorNumber} onChangeText={setSupervisorNumber} />
+            <TextInput style={styles.input} value={supervisorNumber} onChangeText={setSupervisorNumber} placeholderTextColor="#9ca3af" selectionColor="#92400e" />
             <Text style={styles.label}>Mot de passe du superviseur</Text>
-            <TextInput style={styles.input} value={supervisorPin} onChangeText={setSupervisorPin} secureTextEntry keyboardType="numeric" />
+            <TextInput style={styles.input} value={supervisorPin} onChangeText={setSupervisorPin} secureTextEntry keyboardType="numeric" placeholderTextColor="#9ca3af" selectionColor="#92400e" />
           </>
         ) : null}
 
@@ -200,7 +200,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 20, fontWeight: '700', marginBottom: 12, color: '#1f2937' },
   card: { backgroundColor: '#fff', borderRadius: 10, padding: 12, shadowColor: '#000', shadowOpacity: 0.05, elevation: 2 },
   label: { fontSize: 13, color: '#6b7280', marginBottom: 6 },
-  input: { borderWidth: 1, borderColor: '#e5e7eb', padding: 10, borderRadius: 8, marginBottom: 10, backgroundColor: '#f9fafb' },
+  input: { borderWidth: 1, borderColor: '#e5e7eb', padding: 10, borderRadius: 8, marginBottom: 10, backgroundColor: '#f9fafb', color: '#111827' },
   chip: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, backgroundColor: '#f3f4f6' },
   chipActive: { backgroundColor: '#92400e' },
   chipText: { color: '#1f2937' },

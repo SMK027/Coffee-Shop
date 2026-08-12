@@ -237,7 +237,7 @@ export default function LoyaltyCardDiscountsScreen() {
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>{editingOffer ? 'Modifier la réduction' : 'Nouvelle réduction'}</Text>
 
-            <TextInput style={styles.input} placeholder="Libellé" value={label} onChangeText={setLabel} />
+            <TextInput style={styles.input} placeholder="Libellé" value={label} onChangeText={setLabel} placeholderTextColor="#9ca3af" selectionColor="#92400e" />
 
             <View style={styles.typeRow}>
               <TouchableOpacity style={[styles.typeBtn, discountType === 'fixed' && styles.typeBtnActive]} onPress={() => setDiscountType('fixed')}>
@@ -248,9 +248,9 @@ export default function LoyaltyCardDiscountsScreen() {
               </TouchableOpacity>
             </View>
 
-            <TextInput style={styles.input} placeholder={discountType === 'percent' ? 'Valeur (%)' : 'Valeur (€)'} keyboardType="numeric" value={discountValue} onChangeText={setDiscountValue} />
+            <TextInput style={styles.input} placeholder={discountType === 'percent' ? 'Valeur (%)' : 'Valeur (€)'} keyboardType="numeric" value={discountValue} onChangeText={setDiscountValue} placeholderTextColor="#9ca3af" selectionColor="#92400e" />
             {discountType === 'percent' && (
-              <TextInput style={styles.input} placeholder="Plafond (€) (optionnel)" keyboardType="numeric" value={maxDiscountAmount} onChangeText={setMaxDiscountAmount} />
+              <TextInput style={styles.input} placeholder="Plafond (€) (optionnel)" keyboardType="numeric" value={maxDiscountAmount} onChangeText={setMaxDiscountAmount} placeholderTextColor="#9ca3af" selectionColor="#92400e" />
             )}
             <Text style={styles.inputLabel}>Date d'expiration</Text>
             <TouchableOpacity style={styles.datePickerBtn} onPress={() => setShowDatePicker(true)}>
@@ -272,13 +272,13 @@ export default function LoyaltyCardDiscountsScreen() {
 
             {!isSuperAdmin && (
               <>
-                <TextInput style={styles.input} placeholder="QR code superviseur (optionnel)" value={supervisorToken} onChangeText={setSupervisorToken} autoCapitalize="none" />
+                <TextInput style={styles.input} placeholder="QR code superviseur (optionnel)" value={supervisorToken} onChangeText={setSupervisorToken} placeholderTextColor="#9ca3af" selectionColor="#92400e" autoCapitalize="none" />
                 <TouchableOpacity style={styles.scanBtn} onPress={openSupervisorScanner}>
                   <Text style={styles.scanBtnText}>Scanner le QR code superviseur</Text>
                 </TouchableOpacity>
                 {supervisorToken ? <Text style={styles.scanSuccess}>Code superviseur scanné.</Text> : null}
-                <TextInput style={styles.input} placeholder="Identifiant superviseur" value={supervisorNumber} onChangeText={setSupervisorNumber} />
-                <TextInput style={styles.input} placeholder="Mot de passe superviseur" value={supervisorPin} onChangeText={setSupervisorPin} secureTextEntry keyboardType="numeric" />
+                <TextInput style={styles.input} placeholder="Identifiant superviseur" value={supervisorNumber} onChangeText={setSupervisorNumber} placeholderTextColor="#9ca3af" selectionColor="#92400e" />
+                <TextInput style={styles.input} placeholder="Mot de passe superviseur" value={supervisorPin} onChangeText={setSupervisorPin} secureTextEntry keyboardType="numeric" placeholderTextColor="#9ca3af" selectionColor="#92400e" />
               </>
             )}
 
@@ -332,7 +332,7 @@ const styles = StyleSheet.create({
   modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.25)' },
   modalCard: { backgroundColor: '#fff', padding: 16, borderTopLeftRadius: 16, borderTopRightRadius: 16 },
   modalTitle: { fontSize: 18, fontWeight: '700', color: '#1f2937', marginBottom: 12 },
-  input: { borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, padding: 10, marginBottom: 10, backgroundColor: '#f9fafb' },
+  input: { borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, padding: 10, marginBottom: 10, backgroundColor: '#f9fafb', color: '#111827' },
   inputLabel: { fontSize: 13, color: '#6b7280', marginBottom: 6 },
   datePickerBtn: { borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, padding: 12, marginBottom: 10, backgroundColor: '#f9fafb' },
   datePickerBtnText: { color: '#1f2937', fontSize: 14 },

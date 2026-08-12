@@ -24,8 +24,8 @@ export default function SupervisorsListScreen() {
     const byResponsible = items.filter((item) => item.relation_type === 'responsible');
     const fallback = items.filter((item) => item.relation_type !== 'holder' && item.relation_type !== 'responsible');
     return [
-      { title: 'Superviseurs dont vous etes le detenteur', data: byHolder },
-      { title: 'Superviseurs dont vous etes le responsable', data: byResponsible },
+      { title: 'Superviseurs dont vous êtes le détenteur', data: byHolder },
+      { title: 'Superviseurs dont vous êtes le responsable', data: byResponsible },
       { title: 'Autres superviseurs accessibles', data: fallback },
     ].filter((section) => section.data.length > 0);
   }, [items]);
