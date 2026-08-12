@@ -25,13 +25,8 @@ class SupervisorController extends Controller
         $items = Supervisor::query()
             ->when($isSuperAdmin, fn ($query) => $query->where('superadmin_id', $currentUserId))
             ->when(! $isSuperAdmin, function ($query) use ($currentUserId, $ownerId) {
-                $query->where(function ($q) use ($currentUserId, $ownerId) {
-                    $q->where('holder_admin_id', $currentUserId)
-                        ->orWhere(function ($legacy) use ($ownerId) {
-                            $legacy->whereNull('holder_admin_id')
-                                ->where('superadmin_id', $ownerId);
-                        });
-                });
+                $query->where('holder_admin_id', $currentUserId)
+                    ->where('superadmin_id', $ownerId);
             })
             ->orderBy('supervisor_number')
             ->get()
@@ -94,11 +89,7 @@ class SupervisorController extends Controller
         }
 
         $userId = (int) $user->id;
-        if ((int) $supervisor->holder_admin_id === $userId) {
-            return true;
-        }
-
-        return $supervisor->holder_admin_id === null
+        return (int) $supervisor->holder_admin_id === $userId
             && (int) $supervisor->superadmin_id === $this->ownerReferenceId();
     }
 }

@@ -27,11 +27,7 @@ class SupervisorController extends Controller
             ->when(! $isSuperAdmin, function ($query) use ($currentUserId, $ownerIdForAdmin) {
                 $query->where(function ($q) use ($currentUserId, $ownerIdForAdmin) {
                     $q->where('holder_admin_id', $currentUserId)
-                        // Compatibilité avec les superviseurs historiques sans détenteur explicite
-                        ->orWhere(function ($legacy) use ($ownerIdForAdmin) {
-                            $legacy->whereNull('holder_admin_id')
-                                ->where('superadmin_id', $ownerIdForAdmin);
-                        });
+                        ->where('superadmin_id', $ownerIdForAdmin);
                 });
             })
             ->when($search !== '', fn($query) => $query->where(function ($q) use ($search) {
@@ -84,13 +80,12 @@ class SupervisorController extends Controller
             'supervisor_number' => ['required', 'string', 'max:50', 'alpha_dash', 'unique:supervisors,supervisor_number'],
             'supervisor_pin'    => ['required', 'string', 'regex:/^\d{4,6}$/'],
             'superadmin_id'     => ['required', 'integer', 'exists:users,id'],
-            'holder_admin_id'   => ['required', 'integer', 'exists:users,id'],
+            'holder_admin_id'   => ['nullable', 'integer', 'exists:users,id'],
         ], [
             'supervisor_number.alpha_dash' => 'Le numéro de superviseur ne peut contenir que des lettres, chiffres, tirets et underscores.',
             'supervisor_pin.regex'         => 'Le PIN doit contenir entre 4 et 6 chiffres.',
             'superadmin_id.required'       => 'Le compte propriétaire est requis.',
             'superadmin_id.exists'         => 'Ce compte est invalide.',
-            'holder_admin_id.required'     => 'Le détenteur administrateur est requis.',
             'holder_admin_id.exists'       => 'Ce détenteur administrateur est invalide.',
         ]);
 
@@ -99,22 +94,25 @@ class SupervisorController extends Controller
             ->where('global_role', 'superadmin')
             ->firstOrFail();
 
-        $holder = User::where('id', $validated['holder_admin_id'])
-            ->where('global_role', 'admin')
-            ->where('superadmin_id', $owner->id)
-            ->first();
+        $holderId = $validated['holder_admin_id'] ?? null;
+        if ($holderId !== null) {
+            $holder = User::where('id', $holderId)
+                ->where('global_role', 'admin')
+                ->where('superadmin_id', $owner->id)
+                ->first();
 
-        if (! $holder) {
-            throw ValidationException::withMessages([
-                'holder_admin_id' => 'Le détenteur doit être un administrateur simple rattaché au super-administrateur propriétaire.',
-            ]);
+            if (! $holder) {
+                throw ValidationException::withMessages([
+                    'holder_admin_id' => 'Le détenteur doit être un administrateur simple rattaché au super-administrateur propriétaire.',
+                ]);
+            }
         }
 
         Supervisor::create([
             'supervisor_number' => $validated['supervisor_number'],
             'password'          => Hash::make($validated['supervisor_pin']),
             'superadmin_id'     => $owner->id,
-            'holder_admin_id'   => $holder->id,
+            'holder_admin_id'   => $holderId,
         ]);
 
         return redirect()->route('employee.supervisors.index')
@@ -225,11 +223,7 @@ class SupervisorController extends Controller
         }
 
         $userId = (int) $user->id;
-        if ((int) $supervisor->holder_admin_id === $userId) {
-            return true;
-        }
-
-        return $supervisor->holder_admin_id === null
+        return (int) $supervisor->holder_admin_id === $userId
             && (int) $supervisor->superadmin_id === $this->ownerReferenceId();
     }
 }
