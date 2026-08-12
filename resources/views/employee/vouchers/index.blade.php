@@ -32,13 +32,14 @@
     @endif
 
     {{-- Recherche + filtres avancés --}}
-    <form method="GET" action="{{ route('employee.vouchers.index') }}"
+    <form method="GET" action="{{ route('employee.vouchers.index') }}" id="voucher-filters-form"
           class="bg-white rounded-xl p-3 sm:p-4 shadow-sm border border-stone-100 mb-4 space-y-3">
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             <div class="relative sm:col-span-2 lg:col-span-1">
                 <label for="q" class="block text-xs font-medium text-stone-500 mb-1">Recherche générale</label>
                 <input id="q" type="text" name="q" value="{{ $search }}"
                        placeholder="Code ou nom émetteur"
+                      oninput="clearTimeout(this._d); this._d = setTimeout(() => this.form.requestSubmit(), 300);"
                        class="w-full border border-stone-300 rounded-lg pl-9 pr-4 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
                 <svg class="absolute left-2.5 top-[35px] w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0"/>
@@ -48,6 +49,7 @@
             <div>
                 <label for="status" class="block text-xs font-medium text-stone-500 mb-1">Statut</label>
                 <select id="status" name="status"
+                    onchange="this.form.requestSubmit()"
                         class="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none bg-white">
                     <option value="all" {{ $status === 'all' ? 'selected' : '' }}>Tous</option>
                     <option value="valid" {{ $status === 'valid' ? 'selected' : '' }}>Valides</option>
@@ -59,6 +61,7 @@
             <div>
                 <label for="issuer_id" class="block text-xs font-medium text-stone-500 mb-1">Émetteur</label>
                 <select id="issuer_id" name="issuer_id"
+                    onchange="this.form.requestSubmit()"
                         class="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none bg-white">
                     <option value="">Tous les émetteurs</option>
                     @foreach($issuers as $issuer)
@@ -71,39 +74,40 @@
                 <label for="recipient" class="block text-xs font-medium text-stone-500 mb-1">Destinataire</label>
                 <input id="recipient" type="text" name="recipient" value="{{ $recipient }}"
                        placeholder="Nom ou numéro de carte"
+                      oninput="clearTimeout(this._d); this._d = setTimeout(() => this.form.requestSubmit(), 300);"
                        class="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
             </div>
 
             <div>
                 <label for="amount_min" class="block text-xs font-medium text-stone-500 mb-1">Montant min (€)</label>
                 <input id="amount_min" type="number" step="0.01" min="0" name="amount_min" value="{{ $amountMin ?? '' }}"
+                      oninput="clearTimeout(this._d); this._d = setTimeout(() => this.form.requestSubmit(), 300);"
                        class="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
             </div>
 
             <div>
                 <label for="amount_max" class="block text-xs font-medium text-stone-500 mb-1">Montant max (€)</label>
                 <input id="amount_max" type="number" step="0.01" min="0" name="amount_max" value="{{ $amountMax ?? '' }}"
+                      oninput="clearTimeout(this._d); this._d = setTimeout(() => this.form.requestSubmit(), 300);"
                        class="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
             </div>
 
             <div>
                 <label for="expires_from" class="block text-xs font-medium text-stone-500 mb-1">Expiration du</label>
                 <input id="expires_from" type="date" name="expires_from" value="{{ $expiresFrom }}"
+                      onchange="this.form.requestSubmit()"
                        class="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
             </div>
 
             <div>
                 <label for="expires_to" class="block text-xs font-medium text-stone-500 mb-1">Expiration au</label>
                 <input id="expires_to" type="date" name="expires_to" value="{{ $expiresTo }}"
+                      onchange="this.form.requestSubmit()"
                        class="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
             </div>
         </div>
 
         <div class="flex items-center gap-2">
-            <button type="submit"
-                    class="bg-amber-700 hover:bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-                Appliquer les filtres
-            </button>
             <a href="{{ route('employee.vouchers.index') }}"
                class="bg-stone-100 hover:bg-stone-200 text-stone-600 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
                 Réinitialiser
