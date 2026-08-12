@@ -38,6 +38,15 @@ class ActivityLogger
         'employee.loyalty-discounts.store'     => "Création d'une réduction fidélité",
         'employee.loyalty-discounts.update'    => "Modification d'une réduction fidélité",
         'employee.loyalty-discounts.destroy'   => "Suppression d'une réduction fidélité",
+        // Superviseurs
+        'employee.supervisors.index'           => 'Consultation des superviseurs',
+        'employee.supervisors.create'          => 'Ouverture du formulaire de création d\'un superviseur',
+        'employee.supervisors.store'           => "Création d'un superviseur",
+        'employee.supervisors.show'            => "Consultation d'un superviseur",
+        'employee.supervisors.edit'            => "Ouverture du formulaire de modification d'un superviseur",
+        'employee.supervisors.update'          => "Modification d'un superviseur",
+        'employee.supervisors.toggle-activation' => "Activation/désactivation d'un superviseur",
+        'employee.supervisors.destroy'         => "Suppression d'un superviseur",
         // Paramètres boutique
         'employee.shop-settings.index'         => "Mise à jour des paramètres boutique",
     ];
@@ -55,6 +64,8 @@ class ActivityLogger
         'api/loyalty-cards/*/adjust'     => 'Ajustement de points fidélité (application mobile)',
         'api/loyalty-cards/*/delete'     => 'Suppression d\'une carte fidélité (application mobile)',
         'api/daily-reports'              => 'Récapitulatif journalier (application mobile)',
+        'api/supervisors'                => 'Consultation des superviseurs (application mobile)',
+        'api/supervisors/*/barcode'      => 'Consultation du QR superviseur (application mobile)',
     ];
 
     /** Traduit un nom de route en libellé lisible. */
