@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Employee;
 use App\Http\Controllers\Controller;
 use App\Models\LoyaltyCard;
 use App\Models\Supervisor;
+use App\Models\User;
 use App\Models\Voucher;
 use App\Services\ActivityLogger;
 use Carbon\Carbon;
@@ -18,9 +19,19 @@ class VoucherController extends Controller
         abort_unless(auth()->user()->isAdmin(), 403);
 
         $search = trim((string) $request->query('q', ''));
-        $filter = $request->query('filter', 'all'); // all | valid | used | expired
+        $status = (string) $request->query('status', $request->query('filter', 'all'));
+        $amountMin = $request->filled('amount_min') ? (float) $request->query('amount_min') : null;
+        $amountMax = $request->filled('amount_max') ? (float) $request->query('amount_max') : null;
+        $recipient = trim((string) $request->query('recipient', ''));
+        $issuerId = $request->filled('issuer_id') ? (int) $request->query('issuer_id') : null;
+        $expiresFrom = trim((string) $request->query('expires_from', ''));
+        $expiresTo = trim((string) $request->query('expires_to', ''));
 
-        $query = Voucher::with('issuedBy')
+        if (! in_array($status, ['all', 'valid', 'used', 'expired'], true)) {
+            $status = 'all';
+        }
+
+        $query = Voucher::with(['issuedBy', 'restrictedCard'])
             ->orderByDesc('issued_at');
 
         if ($search !== '') {
@@ -30,13 +41,68 @@ class VoucherController extends Controller
             });
         }
 
-        $query->when($filter === 'valid',   fn($q) => $q->valid())
-              ->when($filter === 'used',    fn($q) => $q->where('is_used', true))
-              ->when($filter === 'expired', fn($q) => $q->expired());
+        if ($recipient !== '') {
+            $recipientNormalized = str_replace(' ', '', $recipient);
+            $query->where(function ($q) use ($recipient, $recipientNormalized) {
+                $q->where('restricted_name', 'like', "%{$recipient}%")
+                    ->orWhereHas('restrictedCard', function ($cardQuery) use ($recipient, $recipientNormalized) {
+                        $cardQuery->where('card_number', 'like', "%{$recipient}%")
+                            ->orWhereRaw("REPLACE(card_number, ' ', '') LIKE ?", ["%{$recipientNormalized}%"]);
+                    });
+            });
+        }
+
+        if ($issuerId !== null) {
+            $query->where('issued_by', $issuerId);
+        }
+
+        if ($amountMin !== null) {
+            $query->where('amount', '>=', $amountMin);
+        }
+
+        if ($amountMax !== null) {
+            $query->where('amount', '<=', $amountMax);
+        }
+
+        if ($expiresFrom !== '') {
+            $query->whereDate('expires_at', '>=', $expiresFrom);
+        }
+
+        if ($expiresTo !== '') {
+            $query->whereDate('expires_at', '<=', $expiresTo);
+        }
+
+        $query->when($status === 'valid',   fn($q) => $q->valid())
+              ->when($status === 'used',    fn($q) => $q->where('is_used', true))
+              ->when($status === 'expired', fn($q) => $q->expired());
 
         $vouchers = $query->paginate(20)->withQueryString();
 
-        return view('employee.vouchers.index', compact('vouchers', 'search', 'filter'));
+        $issuerIds = Voucher::query()
+            ->whereNotNull('issued_by')
+            ->distinct()
+            ->pluck('issued_by')
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->values();
+
+        $issuers = User::query()
+            ->whereIn('id', $issuerIds)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        return view('employee.vouchers.index', compact(
+            'vouchers',
+            'search',
+            'status',
+            'amountMin',
+            'amountMax',
+            'recipient',
+            'issuerId',
+            'issuers',
+            'expiresFrom',
+            'expiresTo'
+        ));
     }
 
     public function show(Voucher $voucher)

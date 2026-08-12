@@ -31,36 +31,85 @@
         </div>
     @endif
 
-    {{-- Recherche + filtres --}}
+    {{-- Recherche + filtres avancés --}}
     <form method="GET" action="{{ route('employee.vouchers.index') }}"
-          class="bg-white rounded-xl p-3 sm:p-4 shadow-sm border border-stone-100 mb-4 flex flex-wrap gap-2 items-center">
-        <div class="flex-1 min-w-[220px] relative">
-            <input type="text" name="q" value="{{ $search }}"
-                   placeholder="Rechercher par code ou compte…"
-                   oninput="clearTimeout(this._d); this._d = setTimeout(() => this.form.submit(), 300);"
-                   class="w-full border border-stone-300 rounded-lg pl-9 pr-4 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
-            <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0"/>
-            </svg>
-        </div>
-        @if($search !== '')
-            <input type="hidden" name="filter" value="{{ $filter }}">
-            <a href="{{ route('employee.vouchers.index', ['filter' => $filter]) }}"
-               class="bg-stone-100 hover:bg-stone-200 text-stone-600 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-                Effacer
-            </a>
-        @endif
-    </form>
+          class="bg-white rounded-xl p-3 sm:p-4 shadow-sm border border-stone-100 mb-4 space-y-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div class="relative sm:col-span-2 lg:col-span-1">
+                <label for="q" class="block text-xs font-medium text-stone-500 mb-1">Recherche générale</label>
+                <input id="q" type="text" name="q" value="{{ $search }}"
+                       placeholder="Code ou nom émetteur"
+                       class="w-full border border-stone-300 rounded-lg pl-9 pr-4 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
+                <svg class="absolute left-2.5 top-[35px] w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0"/>
+                </svg>
+            </div>
 
-    <div class="bg-white rounded-xl shadow-sm border border-stone-100 mb-4 p-3 flex flex-wrap gap-2">
-        @foreach(['all' => 'Tous', 'valid' => 'Valides', 'used' => 'Utilisés', 'expired' => 'Expirés'] as $key => $label)
-            <a href="{{ route('employee.vouchers.index', array_filter(['q' => $search, 'filter' => $key])) }}"
-               class="px-4 py-1.5 rounded-full text-sm font-medium transition-colors
-                      {{ $filter === $key ? 'bg-amber-700 text-white' : 'bg-stone-100 text-stone-600 hover:bg-stone-200' }}">
-                {{ $label }}
+            <div>
+                <label for="status" class="block text-xs font-medium text-stone-500 mb-1">Statut</label>
+                <select id="status" name="status"
+                        class="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none bg-white">
+                    <option value="all" {{ $status === 'all' ? 'selected' : '' }}>Tous</option>
+                    <option value="valid" {{ $status === 'valid' ? 'selected' : '' }}>Valides</option>
+                    <option value="used" {{ $status === 'used' ? 'selected' : '' }}>Utilisés</option>
+                    <option value="expired" {{ $status === 'expired' ? 'selected' : '' }}>Expirés</option>
+                </select>
+            </div>
+
+            <div>
+                <label for="issuer_id" class="block text-xs font-medium text-stone-500 mb-1">Émetteur</label>
+                <select id="issuer_id" name="issuer_id"
+                        class="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none bg-white">
+                    <option value="">Tous les émetteurs</option>
+                    @foreach($issuers as $issuer)
+                        <option value="{{ $issuer->id }}" {{ $issuerId === $issuer->id ? 'selected' : '' }}>{{ $issuer->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div>
+                <label for="recipient" class="block text-xs font-medium text-stone-500 mb-1">Destinataire</label>
+                <input id="recipient" type="text" name="recipient" value="{{ $recipient }}"
+                       placeholder="Nom ou numéro de carte"
+                       class="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
+            </div>
+
+            <div>
+                <label for="amount_min" class="block text-xs font-medium text-stone-500 mb-1">Montant min (€)</label>
+                <input id="amount_min" type="number" step="0.01" min="0" name="amount_min" value="{{ $amountMin ?? '' }}"
+                       class="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
+            </div>
+
+            <div>
+                <label for="amount_max" class="block text-xs font-medium text-stone-500 mb-1">Montant max (€)</label>
+                <input id="amount_max" type="number" step="0.01" min="0" name="amount_max" value="{{ $amountMax ?? '' }}"
+                       class="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
+            </div>
+
+            <div>
+                <label for="expires_from" class="block text-xs font-medium text-stone-500 mb-1">Expiration du</label>
+                <input id="expires_from" type="date" name="expires_from" value="{{ $expiresFrom }}"
+                       class="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
+            </div>
+
+            <div>
+                <label for="expires_to" class="block text-xs font-medium text-stone-500 mb-1">Expiration au</label>
+                <input id="expires_to" type="date" name="expires_to" value="{{ $expiresTo }}"
+                       class="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <button type="submit"
+                    class="bg-amber-700 hover:bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                Appliquer les filtres
+            </button>
+            <a href="{{ route('employee.vouchers.index') }}"
+               class="bg-stone-100 hover:bg-stone-200 text-stone-600 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                Réinitialiser
             </a>
-        @endforeach
-    </div>
+        </div>
+    </form>
 
     <div class="bg-white rounded-xl shadow-sm border border-stone-100 overflow-hidden">
         @if($vouchers->isEmpty())
@@ -73,6 +122,7 @@
                         <tr>
                             <th class="px-5 py-3 text-left font-medium text-stone-600">Code</th>
                             <th class="px-5 py-3 text-left font-medium text-stone-600">Montant</th>
+                            <th class="px-5 py-3 text-left font-medium text-stone-600">Destinataire</th>
                             <th class="px-5 py-3 text-left font-medium text-stone-600">Émis par</th>
                             <th class="px-5 py-3 text-left font-medium text-stone-600">Émission</th>
                             <th class="px-5 py-3 text-left font-medium text-stone-600">Expiration</th>
@@ -93,6 +143,15 @@
                             </td>
                             <td class="px-5 py-3 font-semibold text-amber-700">
                                 {{ number_format($voucher->amount, 2, ',', ' ') }} €
+                            </td>
+                            <td class="px-5 py-3 text-stone-600 text-xs">
+                                @if($voucher->restricted_name)
+                                    {{ $voucher->restricted_name }}
+                                @elseif($voucher->restrictedCard)
+                                    Carte {{ chunk_split($voucher->restrictedCard->card_number, 4, ' ') }}
+                                @else
+                                    <span class="text-stone-400">Tous clients</span>
+                                @endif
                             </td>
                             <td class="px-5 py-3 text-stone-600">{{ $voucher->issued_by_name }}</td>
                             <td class="px-5 py-3 text-stone-500 text-xs">{{ $voucher->issued_at->format('d/m/Y') }}</td>
@@ -148,6 +207,13 @@
                             </a>
                             <p class="text-stone-700 font-semibold text-sm mt-0.5">{{ number_format($voucher->amount, 2, ',', ' ') }} €</p>
                             <p class="text-xs text-stone-500 mt-0.5">{{ $voucher->issued_by_name }} · exp. {{ $voucher->expires_at->format('d/m/Y') }}</p>
+                            @if($voucher->restricted_name)
+                                <p class="text-xs text-stone-500 mt-0.5">Dest. : {{ $voucher->restricted_name }}</p>
+                            @elseif($voucher->restrictedCard)
+                                <p class="text-xs text-stone-500 mt-0.5">Dest. : carte {{ chunk_split($voucher->restrictedCard->card_number, 4, ' ') }}</p>
+                            @else
+                                <p class="text-xs text-stone-400 mt-0.5">Dest. : tous clients</p>
+                            @endif
                         </div>
                         <div class="flex-shrink-0 mt-0.5">
                             @if($isUsed)
