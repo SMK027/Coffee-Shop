@@ -37,28 +37,15 @@ class SupervisorController extends Controller
 
     public function create()
     {
-        abort_unless(auth()->user()->isAdmin(), 403);
+        abort_unless(auth()->user()->isSuperAdmin(), 403);
 
-        $user = auth()->user();
-        $isSuperAdmin = $user->isSuperAdmin();
+        $superadmins = User::where('global_role', 'superadmin')
+            ->orderBy('name')
+            ->get(['id', 'name']);
 
-        if ($isSuperAdmin) {
-            $superadmins = User::where('global_role', 'superadmin')
-                ->orderBy('name')
-                ->get(['id', 'name']);
+        $isSuperAdmin = true;
 
-            return view('employee.supervisors.create', compact('superadmins', 'isSuperAdmin'));
-        }
-
-        $responsibleSuperadmin = User::where('id', $user->superadmin_id)
-            ->where('global_role', 'superadmin')
-            ->first();
-
-        abort_unless($responsibleSuperadmin !== null, 403);
-
-        $superadmins = collect([$responsibleSuperadmin]);
-
-        return view('employee.supervisors.create', compact('superadmins', 'isSuperAdmin', 'responsibleSuperadmin'));
+        return view('employee.supervisors.create', compact('superadmins', 'isSuperAdmin'));
     }
 
     public function show(Supervisor $supervisor)
@@ -74,43 +61,23 @@ class SupervisorController extends Controller
 
     public function store(Request $request)
     {
-        abort_unless(auth()->user()->isAdmin(), 403);
+        abort_unless(auth()->user()->isSuperAdmin(), 403);
 
-        $user = auth()->user();
-        $isSuperAdmin = $user->isSuperAdmin();
-
-        $rules = [
+        $validated = $request->validate([
             'supervisor_number' => ['required', 'string', 'max:50', 'alpha_dash', 'unique:supervisors,supervisor_number'],
             'supervisor_pin'    => ['required', 'string', 'regex:/^\d{4,6}$/'],
-        ];
-
-        if ($isSuperAdmin) {
-            $rules['superadmin_id'] = ['required', 'integer', 'exists:users,id'];
-        }
-
-        $validated = $request->validate($rules, [
+            'superadmin_id'     => ['required', 'integer', 'exists:users,id'],
+        ], [
             'supervisor_number.alpha_dash' => 'Le numéro de superviseur ne peut contenir que des lettres, chiffres, tirets et underscores.',
             'supervisor_pin.regex'         => 'Le PIN doit contenir entre 4 et 6 chiffres.',
             'superadmin_id.required'       => 'Le compte propriétaire est requis.',
             'superadmin_id.exists'         => 'Ce compte est invalide.',
         ]);
 
-        if ($isSuperAdmin) {
-            // Vérifier que le compte désigné est bien un super-administrateur
-            $owner = User::where('id', $validated['superadmin_id'])
-                ->where('global_role', 'superadmin')
-                ->firstOrFail();
-        } else {
-            $owner = User::where('id', $user->superadmin_id)
-                ->where('global_role', 'superadmin')
-                ->first();
-
-            if (! $owner) {
-                throw ValidationException::withMessages([
-                    'superadmin_id' => 'Aucun super-administrateur responsable n\'est configuré pour votre compte.',
-                ]);
-            }
-        }
+        // Vérifier que le compte désigné est bien un super-administrateur
+        $owner = User::where('id', $validated['superadmin_id'])
+            ->where('global_role', 'superadmin')
+            ->firstOrFail();
 
         Supervisor::create([
             'supervisor_number' => $validated['supervisor_number'],
