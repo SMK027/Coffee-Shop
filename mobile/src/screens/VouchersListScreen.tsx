@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -45,6 +45,7 @@ export default function VouchersListScreen() {
   const [expiresTo, setExpiresTo] = useState('');
   const [datePickerTarget, setDatePickerTarget] = useState<'from' | 'to' | null>(null);
   const [datePickerValue, setDatePickerValue] = useState<Date>(new Date());
+  const hasLoadedOnce = useRef(false);
 
   const getVoucherStatus = (voucher: VoucherItem) => {
     if (voucher.is_used) {
@@ -147,9 +148,16 @@ export default function VouchersListScreen() {
   };
 
   useEffect(() => {
+    if (!hasLoadedOnce.current) {
+      hasLoadedOnce.current = true;
+      load(false);
+      return;
+    }
+
     const timer = setTimeout(() => {
       load(false);
-    }, 300);
+    }, 3000);
+
     return () => clearTimeout(timer);
   }, [load]);
 
