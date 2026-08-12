@@ -13,7 +13,18 @@
             <label for="superadmin_id" class="block text-sm font-medium text-stone-700 mb-1.5">
                 Compte propriétaire <span class="text-red-500">*</span>
             </label>
-            @if($superadmins->count() === 1)
+            @if(! $isSuperAdmin)
+                <input type="hidden" name="superadmin_id" value="{{ $responsibleSuperadmin->id }}">
+                <div class="flex items-center gap-2 px-4 py-2.5 bg-stone-50 border border-stone-200 rounded-lg text-sm text-stone-700">
+                    <svg class="w-4 h-4 text-amber-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/>
+                    </svg>
+                    {{ $responsibleSuperadmin->name }}
+                    <span class="text-stone-400 text-xs">(super-administrateur responsable)</span>
+                </div>
+                <p class="text-xs text-stone-400 mt-1">Le superviseur sera géré par vous et par ce super-administrateur.</p>
+                @error('superadmin_id')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+            @elseif($superadmins->count() === 1)
                 {{-- Un seul superadmin : sélection automatique, affichage informatif --}}
                 <input type="hidden" name="superadmin_id" value="{{ $superadmins->first()->id }}">
                 <div class="flex items-center gap-2 px-4 py-2.5 bg-stone-50 border border-stone-200 rounded-lg text-sm text-stone-700">
@@ -96,6 +107,7 @@
     </form>
 </x-employee-layout>
 
+@if($isSuperAdmin)
 @php
     $adminsJson = $superadmins->map(fn($a) => [
         'id'    => $a->id,
@@ -152,3 +164,4 @@ function superadminSearch() {
     };
 }
 </script>
+@endif
