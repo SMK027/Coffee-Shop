@@ -42,6 +42,8 @@ class ActivityLogger
         'employee.password.reset'            => 'Réinitialisation du mot de passe employé',
         // Tableau de bord / navigation back-office
         'employee.dashboard'                 => 'Consultation du tableau de bord employé',
+        'employee.supervision.challenge'     => 'Consultation de la demande de validation superviseur',
+        'employee.supervision.approve'       => 'Validation superviseur pour exécution différée',
         'employee.profile.edit'              => 'Consultation du profil',
         'employee.profile.update'            => 'Mise à jour du profil',
         'employee.profile.destroy'           => 'Suppression du profil',

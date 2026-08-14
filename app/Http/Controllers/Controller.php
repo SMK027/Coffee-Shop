@@ -5,14 +5,42 @@ namespace App\Http\Controllers;
 use App\Models\Supervisor;
 use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Validation\ValidationException;
 
 abstract class Controller
 {
+    private const SUPERVISION_PENDING_KEY = 'supervision.pending';
+    private const SUPERVISION_BYPASSES_KEY = 'supervision.bypasses';
+    private const SUPERVISION_BYPASS_TTL_SECONDS = 300;
+
     protected function requireSuperAdminOrSupervisor(Request $request, string $message = 'Numéro de superviseur ou PIN incorrect.'): ?Supervisor
+    {
+        if (auth()->user()->isSuperAdmin()) {
+            return null;
+        }
+
+        $bypassSupervisor = $this->consumeSupervisionBypass($request);
+        if ($bypassSupervisor !== null) {
+            return $bypassSupervisor;
+        }
+
+        if (! $this->requestHasSupervisorCredentials($request) && ! $request->expectsJson()) {
+            $this->storePendingSupervision($request, $message);
+
+            throw new HttpResponseException(
+                redirect()->route('employee.supervision.challenge')
+            );
+        }
+
+        return $this->validateSupervisorCredentials($request, $message);
+    }
+
+    protected function validateSupervisorCredentials(Request $request, string $message = 'Numéro de superviseur ou PIN incorrect.'): ?Supervisor
     {
         if (auth()->user()->isSuperAdmin()) {
             return null;
@@ -126,6 +154,149 @@ abstract class Controller
             null, null,
             ['supervisor_number' => $supervisor->supervisor_number, 'action' => ActivityLogger::routeLabel($request->route()?->getName(), $request->path())]
         );
+
+        return $supervisor;
+    }
+
+    protected function pendingSupervision(Request $request): ?array
+    {
+        $pending = $request->session()->get(self::SUPERVISION_PENDING_KEY);
+
+        return is_array($pending) ? $pending : null;
+    }
+
+    protected function clearPendingSupervision(Request $request): void
+    {
+        $request->session()->forget(self::SUPERVISION_PENDING_KEY);
+    }
+
+    protected function grantSupervisionBypass(Request $request, Supervisor $supervisor, array $pending): string
+    {
+        $nonce = (string) Str::uuid();
+        $bypasses = $request->session()->get(self::SUPERVISION_BYPASSES_KEY, []);
+
+        if (! is_array($bypasses)) {
+            $bypasses = [];
+        }
+
+        $bypasses[$nonce] = [
+            'supervisor_id' => $supervisor->id,
+            'route_name'    => $pending['route_name'] ?? null,
+            'path'          => $pending['path'] ?? null,
+            'expires_at'    => time() + self::SUPERVISION_BYPASS_TTL_SECONDS,
+        ];
+
+        $request->session()->put(self::SUPERVISION_BYPASSES_KEY, $bypasses);
+
+        return $nonce;
+    }
+
+    protected function replayPendingSupervision(Request $request, array $pending, array $payload)
+    {
+        $method = strtoupper((string) ($pending['method'] ?? 'POST'));
+        $path = '/' . ltrim((string) ($pending['path'] ?? ''), '/');
+        $server = $request->server->all();
+        $server['REQUEST_METHOD'] = $method;
+        $server['HTTP_REFERER'] = (string) ($pending['referer'] ?? route('employee.dashboard'));
+
+        $replayRequest = Request::create(
+            $path,
+            $method,
+            $payload,
+            $request->cookies->all(),
+            [],
+            $server
+        );
+
+        $replayRequest->setLaravelSession($request->session());
+        $replayRequest->setUserResolver(fn () => auth()->user());
+
+        return app()->handle($replayRequest);
+    }
+
+    private function requestHasSupervisorCredentials(Request $request): bool
+    {
+        return $request->filled('supervisor_token')
+            || $request->filled('supervisor_number')
+            || $request->filled('supervisor_username')
+            || $request->filled('supervisor_pin')
+            || $request->filled('supervisor_password');
+    }
+
+    private function storePendingSupervision(Request $request, string $message): void
+    {
+        $payload = $request->except([
+            'supervisor_token',
+            'supervisor_number',
+            'supervisor_username',
+            'supervisor_pin',
+            'supervisor_password',
+            '__supervision_bypass_nonce',
+        ]);
+
+        $request->session()->put(self::SUPERVISION_PENDING_KEY, [
+            'id'         => (string) Str::uuid(),
+            'route_name' => $request->route()?->getName(),
+            'method'     => strtoupper($request->method()),
+            'path'       => ltrim($request->path(), '/'),
+            'referer'    => $request->headers->get('referer'),
+            'message'    => $message,
+            'input'      => $payload,
+            'created_at' => time(),
+        ]);
+    }
+
+    private function consumeSupervisionBypass(Request $request): ?Supervisor
+    {
+        $nonce = trim((string) $request->input('__supervision_bypass_nonce', ''));
+        if ($nonce === '') {
+            return null;
+        }
+
+        $bypasses = $request->session()->get(self::SUPERVISION_BYPASSES_KEY, []);
+        if (! is_array($bypasses) || ! isset($bypasses[$nonce]) || ! is_array($bypasses[$nonce])) {
+            return null;
+        }
+
+        $entry = $bypasses[$nonce];
+        $expiresAt = (int) ($entry['expires_at'] ?? 0);
+        if ($expiresAt > 0 && $expiresAt < time()) {
+            unset($bypasses[$nonce]);
+            $request->session()->put(self::SUPERVISION_BYPASSES_KEY, $bypasses);
+
+            return null;
+        }
+
+        $currentRoute = $request->route()?->getName();
+        if (($entry['route_name'] ?? null) !== null && $currentRoute !== $entry['route_name']) {
+            return null;
+        }
+
+        $currentPath = ltrim($request->path(), '/');
+        if (($entry['path'] ?? null) !== null && $currentPath !== $entry['path']) {
+            return null;
+        }
+
+        unset($bypasses[$nonce]);
+        $request->session()->put(self::SUPERVISION_BYPASSES_KEY, $bypasses);
+
+        $supervisor = Supervisor::query()
+            ->whereKey((int) ($entry['supervisor_id'] ?? 0))
+            ->where('is_active', true)
+            ->first();
+
+        if ($supervisor !== null) {
+            ActivityLogger::log(
+                'auth.supervisor_bypass',
+                'Bypass superviseur ponctuel accordé pour ' . ActivityLogger::routeLabel($request->route()?->getName(), $request->path()),
+                null,
+                null,
+                [
+                    'supervisor_number' => $supervisor->supervisor_number,
+                    'action'            => ActivityLogger::routeLabel($request->route()?->getName(), $request->path()),
+                ]
+            );
+        }
 
         return $supervisor;
     }

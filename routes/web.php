@@ -12,6 +12,7 @@ use App\Http\Controllers\Employee\RefundController;
 use App\Http\Controllers\Employee\StatsController;
 use App\Http\Controllers\Employee\HomeImageController;
 use App\Http\Controllers\Employee\ShopSettingsController;
+use App\Http\Controllers\Employee\SupervisionController;
 use App\Http\Controllers\Employee\SupervisorController;
 use App\Http\Controllers\Employee\UserController;
 use App\Http\Controllers\Employee\LoyaltyController as EmployeeLoyaltyController;
@@ -58,6 +59,9 @@ Route::post('/fidelite/reinitialiser-pin/{token}', [LoyaltyController::class, 'r
 |--------------------------------------------------------------------------
 */
 Route::prefix('espace-employe')->name('employee.')->middleware(['auth', 'employee'])->group(function () {
+
+    Route::get('/supervision/verrouillee', [SupervisionController::class, 'challenge'])->name('supervision.challenge');
+    Route::post('/supervision/verrouillee', [SupervisionController::class, 'approve'])->name('supervision.approve');
 
     Route::get('/tableau-de-bord', [DashboardController::class, 'index'])->name('dashboard');
 
