@@ -13,7 +13,6 @@ class CaptchaService
         $expectedAction = $this->actionName($formKey);
 
         return [
-            'required',
             'string',
             function (string $attribute, mixed $value, Closure $fail) use ($request, $expectedAction): void {
                 $siteKey = (string) config('services.recaptcha.site_key', '');
@@ -27,7 +26,7 @@ class CaptchaService
 
                 $token = trim((string) $value);
                 if ($token === '') {
-                    $fail('La validation reCAPTCHA est requise.');
+                    $fail('Le token reCAPTCHA est manquant. Vérifiez le chargement du script Google et réessayez.');
                     return;
                 }
 

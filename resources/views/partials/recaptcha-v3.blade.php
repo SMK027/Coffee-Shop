@@ -6,12 +6,14 @@
 @endphp
 
 <input type="hidden" name="{{ $inputName }}" value="{{ old($inputName, '') }}">
+<p id="{{ $formId }}-recaptcha-error" class="text-red-500 text-xs mt-1 hidden"></p>
 
 @if($siteKey !== '' && $formId !== '')
     <script src="https://www.google.com/recaptcha/api.js?render={{ $siteKey }}"></script>
     <script>
         (function () {
             const form = document.getElementById('{{ $formId }}');
+            const errorEl = document.getElementById('{{ $formId }}-recaptcha-error');
             if (!form) {
                 return;
             }
@@ -23,7 +25,17 @@
                     return;
                 }
 
+                if (errorEl) {
+                    errorEl.classList.add('hidden');
+                    errorEl.textContent = '';
+                }
+
                 if (typeof grecaptcha === 'undefined') {
+                    event.preventDefault();
+                    if (errorEl) {
+                        errorEl.textContent = 'Impossible de charger Google reCAPTCHA. Vérifiez la connexion réseau, le domaine autorisé et vos bloqueurs de scripts.';
+                        errorEl.classList.remove('hidden');
+                    }
                     return;
                 }
 
@@ -41,11 +53,17 @@
                             form.submit();
                         })
                         .catch(function () {
-                            isSubmitting = true;
-                            form.submit();
+                            if (errorEl) {
+                                errorEl.textContent = 'La génération du token reCAPTCHA a échoué. Veuillez réessayer.';
+                                errorEl.classList.remove('hidden');
+                            }
                         });
                 });
             });
         })();
     </script>
+@else
+    @if($formId !== '')
+        <p class="text-red-500 text-xs mt-1">reCAPTCHA n'est pas configuré sur le serveur (RECAPTCHA_SITE_KEY manquante).</p>
+    @endif
 @endif
