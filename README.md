@@ -1,67 +1,114 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Coffee Shop
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Application complète de gestion pour coffee shop avec:
 
-## About Laravel
+- un site web public (menu, contact, fidélité)
+- un back-office salarié (commandes, remboursements, bons, superviseurs, logs)
+- une application mobile React Native connectée à l'API
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Sommaire
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+- Présentation
+- Stack technique
+- Architecture du projet
+- Démarrage rapide (Docker développement)
+- Configuration reCAPTCHA v3
+- Démarrage production (Docker)
+- Application mobile
+- Commandes utiles
+- Tests et qualité
+- Dépannage
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Présentation
 
-## Learning Laravel
+Le projet couvre les besoins métier suivants:
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+- gestion du menu et des boissons
+- prise de commandes et suivi de statuts
+- remboursements et moyens de paiement
+- gestion des bons d'achat
+- fidélité (cartes, PIN, points, offres, réductions)
+- gestion des salariés et superviseurs
+- historisation des actions (journal d'activité)
+- flux de supervision des opérations sensibles
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+## Stack technique
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+- Backend: Laravel 13, PHP 8.3
+- Auth API mobile: JWT (php-open-source-saver/jwt-auth)
+- Front web: Blade, Tailwind CSS, Vite, Alpine.js
+- Base de données: MariaDB/MySQL
+- Mobile: Expo / React Native (TypeScript)
+- Déploiement: Docker, Docker Compose, Traefik (prod)
 
-## Agentic Development
+## Architecture du projet
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+- `app/Http/Controllers`: contrôleurs web et API
+- `app/Models`: modèles Eloquent
+- `app/Services`: services applicatifs (logs, captcha, etc.)
+- `resources/views`: vues Blade (visiteur + employé)
+- `routes/web.php`: routes web
+- `routes/api.php`: routes API mobile
+- `mobile/`: application mobile Expo
+- `docker-compose.dev.yml`: stack locale de développement
+- `docker-compose.yml`: stack de production
+
+## Démarrage rapide (Docker développement)
+
+### Prérequis
+
+- Docker + Docker Compose v2
+
+### Étapes
+
+1. Copier l'environnement:
 
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+cp .env.example .env
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+2. Renseigner les variables importantes dans `.env`:
 
-## Google reCAPTCHA v3
+- base de données
+- SMTP
+- reCAPTCHA v3 (voir section dédiée)
+
+3. Lancer la stack locale:
+
+```bash
+docker compose -f docker-compose.dev.yml up -d --build
+```
+
+4. Accéder aux services:
+
+- App web: http://localhost:8099
+- phpMyAdmin: http://localhost:8100
+- Mailpit UI: http://localhost:8026
+- Mailpit SMTP: localhost:1026
+
+### Notes importantes
+
+- Le conteneur app exécute les migrations au démarrage.
+- Les caches Laravel sont reconstruits automatiquement via l'entrypoint.
+
+## Configuration reCAPTCHA v3
 
 Le projet utilise Google reCAPTCHA v3 pour les formulaires publics et la connexion salarié.
 
 ### Générer les clés API Google reCAPTCHA v3
 
-1. Ouvrez la console Google reCAPTCHA: https://www.google.com/recaptcha/admin/create
-2. Connectez-vous avec le compte Google qui gérera le site.
-3. Saisissez un nom explicite pour la clé (ex: `Coffee Shop Production`).
-4. Sélectionnez `Challenge type` puis `Score based (v3)`.
-5. Ajoutez les domaines autorisés:
-	- Exemple local: `localhost`
-	- Exemple prod: `votre-domaine.com`
-6. Validez la création.
-7. Récupérez:
-	- `Site key` (clé publique)
-	- `Secret key` (clé privée)
+1. Ouvrir la console Google reCAPTCHA: https://www.google.com/recaptcha/admin/create
+2. Se connecter avec le compte Google de gestion.
+3. Donner un nom explicite à la clé (exemple: Coffee Shop Dev).
+4. Choisir `Score based (v3)`.
+5. Ajouter les domaines autorisés:
+	- local: `localhost`
+	- dev/prod: vos domaines réels
+6. Créer la clé et récupérer:
+	- `Site key` (publique)
+	- `Secret key` (privée)
 
-La `Site key` est utilisée côté navigateur, la `Secret key` reste côté serveur uniquement.
-
-Renseignez les variables suivantes dans votre fichier `.env` :
+### Variables d'environnement
 
 ```env
 RECAPTCHA_SITE_KEY=...
@@ -69,20 +116,126 @@ RECAPTCHA_SECRET_KEY=...
 RECAPTCHA_MIN_SCORE=0.5
 ```
 
-`RECAPTCHA_MIN_SCORE` peut être ajusté selon votre tolérance au spam (0.0 à 1.0).
+`RECAPTCHA_MIN_SCORE` est ajustable entre 0.0 et 1.0.
 
-## Contributing
+### Point Docker important
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Le fichier `.env` est exclu de l'image via `.dockerignore`.
+Les variables reCAPTCHA doivent être injectées au runtime (déjà prévu dans les fichiers compose).
 
-## Code of Conduct
+Après modification des variables, redémarrer/rebuilder les services puis régénérer le cache config:
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+```bash
+php artisan optimize:clear
+php artisan config:cache
+```
 
-## Security Vulnerabilities
+## Démarrage production (Docker)
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+Le fichier `docker-compose.yml` est prévu pour un déploiement derrière Traefik.
 
-## License
+### Prérequis réseau
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+- réseau Docker `proxy` existant
+- réseau Docker `db_internal` existant
+
+### Lancement
+
+```bash
+docker compose up -d --build
+```
+
+### Variables clés à définir
+
+- `APP_URL`, `APP_HOST`
+- `APP_KEY`
+- `DB_*`
+- `SMTP_*`
+- `RECAPTCHA_*`
+- `JWT_SECRET` (optionnel, auto-généré si absent et persistance via storage)
+
+## Application mobile
+
+Le dossier `mobile/` contient l'app Expo / React Native.
+
+### Démarrage en dev mobile
+
+```bash
+cd mobile
+npm install
+npm run start
+```
+
+### Build APK local
+
+Script fourni:
+
+```bash
+cd mobile
+./build-apk.sh
+```
+
+L'APK final est copié vers:
+
+- `mobile/CoffeeShop-release.apk`
+
+## Commandes utiles
+
+### Stack locale Docker
+
+```bash
+docker compose -f docker-compose.dev.yml up -d
+docker compose -f docker-compose.dev.yml down
+docker compose -f docker-compose.dev.yml logs -f app
+```
+
+### Laravel (dans le conteneur app local)
+
+```bash
+docker exec -it app_web php artisan migrate --force
+docker exec -it app_web php artisan db:seed --force
+docker exec -it app_web php artisan route:list
+docker exec -it app_web php artisan test
+```
+
+### Front web
+
+```bash
+npm install
+npm run dev
+npm run build
+```
+
+## Tests et qualité
+
+- Tests backend: `php artisan test`
+- Lint syntaxe PHP: `php -l <fichier>`
+- Build front: `npm run build`
+
+## Dépannage
+
+### Message: reCAPTCHA_SITE_KEY manquante
+
+Vérifier:
+
+- présence des variables `RECAPTCHA_*` dans l'environnement du conteneur
+- cache config Laravel à jour
+- domaine autorisé dans Google reCAPTCHA
+
+Commande de diagnostic:
+
+```bash
+printenv | grep RECAPTCHA
+php artisan tinker --execute="dump(config('services.recaptcha'))"
+```
+
+### Erreurs de permissions storage/logs
+
+Si des erreurs d'écriture apparaissent, vérifier les permissions sur:
+
+- `storage/`
+- `bootstrap/cache/`
+
+## Licence
+
+Projet interne Coffee Shop.
