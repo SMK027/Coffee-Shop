@@ -45,6 +45,22 @@ Boost provides your agent 15+ tools and skills that help agents build Laravel ap
 
 Le projet utilise Google reCAPTCHA v3 pour les formulaires publics et la connexion salarié.
 
+### Générer les clés API Google reCAPTCHA v3
+
+1. Ouvrez la console Google reCAPTCHA: https://www.google.com/recaptcha/admin/create
+2. Connectez-vous avec le compte Google qui gérera le site.
+3. Saisissez un nom explicite pour la clé (ex: `Coffee Shop Production`).
+4. Sélectionnez `Challenge type` puis `Score based (v3)`.
+5. Ajoutez les domaines autorisés:
+	- Exemple local: `localhost`
+	- Exemple prod: `votre-domaine.com`
+6. Validez la création.
+7. Récupérez:
+	- `Site key` (clé publique)
+	- `Secret key` (clé privée)
+
+La `Site key` est utilisée côté navigateur, la `Secret key` reste côté serveur uniquement.
+
 Renseignez les variables suivantes dans votre fichier `.env` :
 
 ```env
