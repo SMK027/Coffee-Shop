@@ -33,7 +33,7 @@ class LoginRequest extends FormRequest
         return [
             'email' => ['required', 'string', 'email'],
             'password' => ['required', 'string'],
-            'captcha' => $captcha->validationRules($this, 'employee_login_form'),
+            'recaptcha_token' => $captcha->validationRules($this, 'employee_login_form'),
         ];
     }
 
@@ -54,7 +54,10 @@ class LoginRequest extends FormRequest
             ]);
         }
 
-        if (! Auth::user()->isActive()) {
+        /** @var \App\Models\User|null $user */
+        $user = Auth::user();
+
+        if (! $user || ! $user->isActive()) {
             Auth::logout();
 
             throw ValidationException::withMessages([

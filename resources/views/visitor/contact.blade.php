@@ -100,7 +100,7 @@
             {{-- Formulaire --}}
             <div class="md:col-span-2">
                 <h2 class="text-xl font-bold text-stone-800 mb-6">Envoyer un message</h2>
-                <form action="{{ route('contact.submit') }}" method="POST" class="space-y-5">
+                <form id="contact-form" action="{{ route('contact.submit') }}" method="POST" class="space-y-5">
                     @csrf
                     <div class="grid sm:grid-cols-2 gap-5">
                         <div>
@@ -133,12 +133,9 @@
                         @error('message')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
                     </div>
                     <div>
-                        <label for="captcha" class="block text-sm font-medium text-stone-700 mb-1.5">Captcha *</label>
-                        <p class="text-xs text-stone-500 mb-2">{{ $captchaQuestion }}</p>
-                        <input type="text" name="captcha" id="captcha" required
-                               value="{{ old('captcha') }}" placeholder="Votre reponse"
-                               class="w-full sm:w-64 border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-colors">
-                        @error('captcha')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                        <p class="text-xs text-stone-500">Protection Google reCAPTCHA v3 active sur ce formulaire.</p>
+                        @include('partials.recaptcha-v3', ['formId' => 'contact-form', 'action' => 'contact_form'])
+                        @error('recaptcha_token')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
                     </div>
                     <div>
                         <button type="submit"

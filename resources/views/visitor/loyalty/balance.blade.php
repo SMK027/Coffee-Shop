@@ -120,7 +120,7 @@
                 @endif
 
                 <div class="bg-white rounded-2xl shadow-sm border border-stone-100 p-6 sm:p-8">
-                    <form action="{{ route('loyalty.balance') }}" method="POST" class="space-y-5">
+                    <form id="loyalty-balance-form" action="{{ route('loyalty.balance') }}" method="POST" class="space-y-5">
                         @csrf
                         <div>
                             <label for="card_number" class="block text-sm font-medium text-stone-700 mb-1.5">Numéro de carte *</label>
@@ -135,12 +135,9 @@
                                    class="w-full border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none tracking-widest">
                         </div>
                         <div>
-                            <label for="captcha" class="block text-sm font-medium text-stone-700 mb-1.5">Captcha *</label>
-                            <p class="text-xs text-stone-500 mb-2">{{ $captchaQuestion }}</p>
-                            <input type="text" name="captcha" id="captcha" required
-                                   value="{{ old('captcha') }}" placeholder="Votre reponse"
-                                   class="w-full sm:w-64 border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
-                            @error('captcha')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                            <p class="text-xs text-stone-500">Protection Google reCAPTCHA v3 active sur ce formulaire.</p>
+                            @include('partials.recaptcha-v3', ['formId' => 'loyalty-balance-form', 'action' => 'loyalty_balance_form'])
+                            @error('recaptcha_token')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
                         </div>
                         <button type="submit" class="w-full bg-amber-700 hover:bg-amber-600 text-white px-6 py-3 rounded-lg font-semibold transition-colors">
                             Consulter mes points

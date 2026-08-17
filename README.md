@@ -41,6 +41,20 @@ php artisan boost:install
 
 Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
 
+## Google reCAPTCHA v3
+
+Le projet utilise Google reCAPTCHA v3 pour les formulaires publics et la connexion salarié.
+
+Renseignez les variables suivantes dans votre fichier `.env` :
+
+```env
+RECAPTCHA_SITE_KEY=...
+RECAPTCHA_SECRET_KEY=...
+RECAPTCHA_MIN_SCORE=0.5
+```
+
+`RECAPTCHA_MIN_SCORE` peut être ajusté selon votre tolérance au spam (0.0 à 1.0).
+
 ## Contributing
 
 Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).

@@ -4,63 +4,72 @@ namespace App\Services;
 
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 
 class CaptchaService
 {
-    public function ensureChallenge(Request $request, string $formKey): string
-    {
-        $payload = $request->session()->get($this->sessionKey($formKey));
-
-        if (!is_array($payload) || !isset($payload['question'], $payload['answer'])) {
-            return $this->refreshChallenge($request, $formKey);
-        }
-
-        return (string) $payload['question'];
-    }
-
-    public function refreshChallenge(Request $request, string $formKey): string
-    {
-        $left = random_int(1, 9);
-        $right = random_int(1, 9);
-
-        if (random_int(0, 1) === 1) {
-            $question = "Combien font {$left} + {$right} ?";
-            $answer = (string) ($left + $right);
-        } else {
-            if ($left < $right) {
-                [$left, $right] = [$right, $left];
-            }
-
-            $question = "Combien font {$left} - {$right} ?";
-            $answer = (string) ($left - $right);
-        }
-
-        $request->session()->put($this->sessionKey($formKey), [
-            'question' => $question,
-            'answer' => $answer,
-        ]);
-
-        return $question;
-    }
-
     public function validationRules(Request $request, string $formKey): array
     {
+        $expectedAction = $this->actionName($formKey);
+
         return [
             'required',
             'string',
-            function (string $attribute, mixed $value, Closure $fail) use ($request, $formKey): void {
-                $payload = $request->session()->get($this->sessionKey($formKey));
-                $expected = is_array($payload) ? ($payload['answer'] ?? null) : null;
+            function (string $attribute, mixed $value, Closure $fail) use ($request, $expectedAction): void {
+                $siteKey = (string) config('services.recaptcha.site_key', '');
+                $secretKey = (string) config('services.recaptcha.secret_key', '');
+                $minScore = (float) config('services.recaptcha.min_score', 0.5);
 
-                if ((string) trim((string) $value) !== (string) $expected) {
-                    $fail('Le captcha est incorrect.');
+                if ($siteKey === '' || $secretKey === '') {
+                    $fail('Le service reCAPTCHA est indisponible.');
+                    return;
+                }
+
+                $token = trim((string) $value);
+                if ($token === '') {
+                    $fail('La validation reCAPTCHA est requise.');
+                    return;
+                }
+
+                try {
+                    $response = Http::asForm()
+                        ->timeout(8)
+                        ->post('https://www.google.com/recaptcha/api/siteverify', [
+                            'secret' => $secretKey,
+                            'response' => $token,
+                            'remoteip' => $request->ip(),
+                        ]);
+                } catch (\Throwable) {
+                    $fail('La validation reCAPTCHA a échoué. Veuillez réessayer.');
+                    return;
+                }
+
+                $payload = $response->json();
+                if (! is_array($payload) || ! ($payload['success'] ?? false)) {
+                    $fail('La validation reCAPTCHA a échoué. Veuillez réessayer.');
+                    return;
+                }
+
+                if (($payload['action'] ?? null) !== $expectedAction) {
+                    $fail('La validation reCAPTCHA est invalide.');
+                    return;
+                }
+
+                $score = (float) ($payload['score'] ?? 0.0);
+                if ($score < $minScore) {
+                    $fail('La validation reCAPTCHA a été rejetée. Veuillez réessayer.');
                 }
             },
         ];
     }
 
-    private function sessionKey(string $formKey): string
+    public function siteKey(): string
     {
-        return "captcha.{$formKey}";
+        return (string) config('services.recaptcha.site_key', '');
+    }
+
+    private function actionName(string $formKey): string
+    {
+        return preg_replace('/[^a-z0-9_]/', '_', strtolower($formKey)) ?: 'form_submit';
     }
 }

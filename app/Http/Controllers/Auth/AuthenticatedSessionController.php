@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Services\ActivityLogger;
-use App\Services\CaptchaService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -16,11 +15,9 @@ class AuthenticatedSessionController extends Controller
     /**
      * Display the login view.
      */
-    public function create(Request $request, CaptchaService $captcha): View
+    public function create(): View
     {
-        return view('auth.login', [
-            'captchaQuestion' => $captcha->refreshChallenge($request, 'employee_login_form'),
-        ]);
+        return view('auth.login');
     }
 
     /**

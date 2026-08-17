@@ -37,12 +37,11 @@ class HomeController extends Controller
         return view('visitor.menu', compact('categories'));
     }
 
-    public function contact(Request $request, CaptchaService $captcha)
+    public function contact()
     {
         $hours = Setting::getHours();
 
         return view('visitor.contact', [
-            'captchaQuestion'     => $captcha->refreshChallenge($request, 'contact_form'),
             'shopAddress'         => Setting::get(Setting::KEY_SHOP_ADDRESS, Setting::DEFAULTS[Setting::KEY_SHOP_ADDRESS]),
             'shopPhone'           => Setting::get(Setting::KEY_SHOP_PHONE,   Setting::DEFAULTS[Setting::KEY_SHOP_PHONE]),
             'shopEmail'           => Setting::get(Setting::KEY_SHOP_EMAIL,   Setting::DEFAULTS[Setting::KEY_SHOP_EMAIL]),
@@ -58,10 +57,10 @@ class HomeController extends Controller
             'email'   => ['required', 'email', 'max:150'],
             'subject' => ['required', 'string', 'max:200'],
             'message' => ['required', 'string', 'min:20', 'max:2000'],
-            'captcha' => $captcha->validationRules($request, 'contact_form'),
+            'recaptcha_token' => $captcha->validationRules($request, 'contact_form'),
         ]);
 
-        unset($validated['captcha']);
+        unset($validated['recaptcha_token']);
 
         \App\Models\Contact::create($validated);
 

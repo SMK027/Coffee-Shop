@@ -20,7 +20,7 @@
         <div class="bg-white rounded-2xl p-8 shadow-2xl">
             <x-auth-session-status class="mb-4" :status="session('status')" />
 
-            <form method="POST" action="{{ route('login') }}" class="space-y-5">
+            <form id="employee-login-form" method="POST" action="{{ route('login') }}" class="space-y-5">
                 @csrf
                 <div>
                     <label for="email" class="block text-sm font-medium text-stone-700 mb-1.5">Adresse email</label>
@@ -35,11 +35,9 @@
                     @error('password')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
                 </div>
                 <div>
-                    <label for="captcha" class="block text-sm font-medium text-stone-700 mb-1.5">Captcha</label>
-                    <p class="text-xs text-stone-500 mb-2">{{ $captchaQuestion }}</p>
-                    <input id="captcha" type="text" name="captcha" required value="{{ old('captcha') }}"
-                           class="w-full border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-colors">
-                    @error('captcha')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                    <p class="text-xs text-stone-500">Protection Google reCAPTCHA v3 active sur ce formulaire.</p>
+                    @include('partials.recaptcha-v3', ['formId' => 'employee-login-form', 'action' => 'employee_login_form'])
+                    @error('recaptcha_token')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
                 </div>
                 <div class="flex items-center justify-between">
                     <label class="flex items-center gap-2 text-sm text-stone-600">
