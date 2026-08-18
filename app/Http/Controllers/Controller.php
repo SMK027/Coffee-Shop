@@ -40,9 +40,13 @@ abstract class Controller
         return $this->validateSupervisorCredentials($request, $message);
     }
 
-    protected function validateSupervisorCredentials(Request $request, string $message = 'Numéro de superviseur ou PIN incorrect.'): ?Supervisor
+    protected function validateSupervisorCredentials(
+        Request $request,
+        string $message = 'Numéro de superviseur ou PIN incorrect.',
+        bool $allowSuperAdminBypass = true
+    ): ?Supervisor
     {
-        if (auth()->user()->isSuperAdmin()) {
+        if ($allowSuperAdminBypass && auth()->user()->isSuperAdmin()) {
             return null;
         }
 
@@ -154,6 +158,21 @@ abstract class Controller
             null, null,
             ['supervisor_number' => $supervisor->supervisor_number, 'action' => ActivityLogger::routeLabel($request->route()?->getName(), $request->path())]
         );
+
+        return $supervisor;
+    }
+
+    protected function requireStrictSupervisorValidation(
+        Request $request,
+        string $message = 'Validation superviseur requise.'
+    ): Supervisor {
+        $supervisor = $this->validateSupervisorCredentials($request, $message, false);
+
+        if (! $supervisor) {
+            throw ValidationException::withMessages([
+                'supervisor_pin' => $message,
+            ]);
+        }
 
         return $supervisor;
     }

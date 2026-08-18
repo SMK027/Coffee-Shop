@@ -156,4 +156,107 @@
             </div>
         @endif
     </div>
+
+    @if($isSuperAdmin && $supervisors->isNotEmpty())
+        <form action="{{ route('employee.supervisors.pdf-board') }}" method="POST" class="mt-6 bg-white rounded-xl shadow-sm border border-stone-100 p-5 space-y-5">
+            @csrf
+
+            <div>
+                <h2 class="text-base font-semibold text-stone-800">Générer une planche PDF de QR superviseurs</h2>
+                <p class="text-xs text-stone-500 mt-1">
+                    Sélectionnez les superviseurs à inclure. Vous pouvez personnaliser le nom du détenteur affiché et le poste occupé.
+                    Chaque carte est générée au format maximum 5 cm x 8,5 cm.
+                </p>
+                @error('selected_supervisors')<p class="text-red-500 text-xs mt-2">{{ $message }}</p>@enderror
+            </div>
+
+            <div class="overflow-x-auto border border-stone-100 rounded-lg">
+                <table class="w-full text-sm">
+                    <thead class="bg-stone-50 border-b border-stone-100">
+                        <tr>
+                            <th class="px-4 py-2.5 text-left font-medium text-stone-600">Inclure</th>
+                            <th class="px-4 py-2.5 text-left font-medium text-stone-600">Superviseur</th>
+                            <th class="px-4 py-2.5 text-left font-medium text-stone-600">Détenteur affiché (optionnel)</th>
+                            <th class="px-4 py-2.5 text-left font-medium text-stone-600">Poste occupé (optionnel)</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-stone-50">
+                        @foreach($supervisors as $supervisor)
+                            @php
+                                $defaultHolder = $supervisor->holderAdmin?->name ?? $supervisor->superadmin?->name ?? 'Non défini';
+                            @endphp
+                            <tr>
+                                <td class="px-4 py-3 align-top">
+                                    <input type="checkbox"
+                                           name="selected_supervisors[]"
+                                           value="{{ $supervisor->id }}"
+                                           {{ in_array((string) $supervisor->id, array_map('strval', old('selected_supervisors', [])), true) ? 'checked' : '' }}
+                                           class="rounded border-stone-300 text-amber-600 focus:ring-amber-500">
+                                </td>
+                                <td class="px-4 py-3 align-top">
+                                    <p class="font-mono text-xs text-stone-700">{{ $supervisor->supervisor_number }}</p>
+                                    <p class="text-xs text-stone-500 mt-1">Responsable : {{ $supervisor->superadmin?->name ?? '—' }}</p>
+                                </td>
+                                <td class="px-4 py-3 align-top">
+                                    <input type="text"
+                                           name="cards[{{ $supervisor->id }}][holder_label]"
+                                           value="{{ old('cards.' . $supervisor->id . '.holder_label', $defaultHolder) }}"
+                                           maxlength="120"
+                                           class="w-full min-w-[220px] border border-stone-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
+                                </td>
+                                <td class="px-4 py-3 align-top">
+                                    <input type="text"
+                                           name="cards[{{ $supervisor->id }}][position_label]"
+                                           value="{{ old('cards.' . $supervisor->id . '.position_label') }}"
+                                           maxlength="120"
+                                           placeholder="Ex: Manager, Responsable ouverture"
+                                           class="w-full min-w-[220px] border border-stone-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-4">
+                <div class="space-y-1">
+                    <p class="text-sm font-semibold text-amber-800">Validation superviseur obligatoire</p>
+                    <p class="text-xs text-amber-700">Cette action est réservée aux super administrateurs et exige une authentification superviseur supplémentaire.</p>
+                </div>
+
+                <div>
+                    <label for="pdf_supervisor_token" class="block text-sm font-medium text-amber-900 mb-1">QR code superviseur (optionnel)</label>
+                    <input type="text" name="supervisor_token" id="pdf_supervisor_token"
+                           value="{{ old('supervisor_token') }}"
+                           class="w-full border border-amber-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+                           placeholder="SUPERVISOR:...">
+                    @error('supervisor_token')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                </div>
+
+                <div class="grid sm:grid-cols-2 gap-4">
+                    <div>
+                        <label for="pdf_supervisor_number" class="block text-sm font-medium text-amber-900 mb-1">Identifiant superviseur</label>
+                        <input type="text" name="supervisor_number" id="pdf_supervisor_number"
+                               value="{{ old('supervisor_number') }}"
+                               class="w-full border border-amber-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
+                        @error('supervisor_number')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                    </div>
+
+                    <div>
+                        <label for="pdf_supervisor_pin" class="block text-sm font-medium text-amber-900 mb-1">PIN superviseur</label>
+                        <input type="password" name="supervisor_pin" id="pdf_supervisor_pin" maxlength="6" minlength="4" inputmode="numeric" pattern="\d{4,6}"
+                               class="w-full border border-amber-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
+                        @error('supervisor_pin')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end">
+                <button type="submit"
+                        class="bg-amber-700 hover:bg-amber-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium transition-colors">
+                    Générer le PDF
+                </button>
+            </div>
+        </form>
+    @endif
 </x-employee-layout>

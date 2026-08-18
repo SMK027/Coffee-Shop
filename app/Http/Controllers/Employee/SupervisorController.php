@@ -5,6 +5,13 @@ namespace App\Http\Controllers\Employee;
 use App\Http\Controllers\Controller;
 use App\Models\Supervisor;
 use App\Models\User;
+use App\Services\ActivityLogger;
+use BaconQrCode\Renderer\Image\SvgImageBackEnd;
+use BaconQrCode\Renderer\ImageRenderer;
+use BaconQrCode\Renderer\RendererStyle\RendererStyle;
+use BaconQrCode\Writer;
+use Dompdf\Dompdf;
+use Dompdf\Options;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
@@ -200,6 +207,105 @@ class SupervisorController extends Controller
 
         return redirect()->route('employee.supervisors.index')
             ->with('success', 'Superviseur supprimé.');
+    }
+
+    public function generatePdfBoard(Request $request)
+    {
+        abort_unless(auth()->user()->isSuperAdmin(), 403);
+
+        $validated = $request->validate([
+            'selected_supervisors'   => ['required', 'array', 'min:1'],
+            'selected_supervisors.*' => ['integer', 'distinct', 'exists:supervisors,id'],
+            'cards'                  => ['nullable', 'array'],
+            'cards.*.holder_label'   => ['nullable', 'string', 'max:120'],
+            'cards.*.position_label' => ['nullable', 'string', 'max:120'],
+        ], [
+            'selected_supervisors.required' => 'Sélectionnez au moins un superviseur.',
+            'selected_supervisors.min'      => 'Sélectionnez au moins un superviseur.',
+        ]);
+
+        $validatedSupervisor = $this->requireStrictSupervisorValidation(
+            $request,
+            'La génération de la planche PDF exige une validation superviseur.'
+        );
+
+        $selectedIds = array_map('intval', $validated['selected_supervisors']);
+
+        $supervisors = Supervisor::with(['superadmin:id,name', 'holderAdmin:id,name'])
+            ->whereIn('id', $selectedIds)
+            ->orderBy('supervisor_number')
+            ->get();
+
+        if ($supervisors->count() !== count($selectedIds)) {
+            throw ValidationException::withMessages([
+                'selected_supervisors' => 'Certains superviseurs sélectionnés sont introuvables.',
+            ]);
+        }
+
+        foreach ($supervisors as $supervisor) {
+            if (! $this->canManageSupervisor($supervisor)) {
+                abort(403);
+            }
+        }
+
+        $cardsInput = is_array($validated['cards'] ?? null) ? $validated['cards'] : [];
+        $qrWriter = new Writer(
+            new ImageRenderer(
+                new RendererStyle(220, 1),
+                new SvgImageBackEnd()
+            )
+        );
+
+        $cards = $supervisors->map(function (Supervisor $supervisor) use ($cardsInput, $qrWriter): array {
+            $cardInput = $cardsInput[$supervisor->id] ?? [];
+            $holderLabel = trim((string) ($cardInput['holder_label'] ?? ''));
+            $positionLabel = trim((string) ($cardInput['position_label'] ?? ''));
+
+            $holderDefault = $supervisor->holderAdmin?->name
+                ?? $supervisor->superadmin?->name
+                ?? 'Non défini';
+
+            return [
+                'id'               => $supervisor->id,
+                'supervisor_number'=> $supervisor->supervisor_number,
+                'holder_label'     => $holderLabel !== '' ? $holderLabel : $holderDefault,
+                'position_label'   => $positionLabel,
+                'owner_name'       => $supervisor->superadmin?->name ?? '—',
+                'qr_svg'           => $qrWriter->writeString($supervisor->barcodeValue()),
+            ];
+        })->values();
+
+        ActivityLogger::log(
+            'supervisor.pdf_board_created',
+            'Création d\'une planche PDF de superviseurs (' . $cards->count() . ' sélectionné(s))',
+            'supervisor',
+            null,
+            [
+                'validated_by_supervisor' => $validatedSupervisor->supervisor_number,
+                'selected_supervisor_ids' => $cards->pluck('id')->all(),
+                'selected_supervisor_numbers' => $cards->pluck('supervisor_number')->all(),
+            ]
+        );
+
+        $html = view('employee.supervisors.pdf-board', [
+            'cards' => $cards,
+            'generatedAt' => now(),
+            'generatedBy' => auth()->user()?->name,
+        ])->render();
+
+        $options = new Options();
+        $options->set('isHtml5ParserEnabled', true);
+        $dompdf = new Dompdf($options);
+        $dompdf->loadHtml($html, 'UTF-8');
+        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->render();
+
+        $filename = 'planche-superviseurs-' . now()->format('Ymd-His') . '.pdf';
+
+        return response($dompdf->output(), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
     }
 
     private function ownerReferenceId(): int

@@ -163,6 +163,7 @@ class ActivityLogger
         'employee.supervisors.update'          => "Modification d'un superviseur",
         'employee.supervisors.toggle-activation' => "Activation/désactivation d'un superviseur",
         'employee.supervisors.destroy'         => "Suppression d'un superviseur",
+        'employee.supervisors.pdf-board'       => "Génération d'une planche PDF de superviseurs",
         // Paramètres boutique
         'employee.shop-settings.index'         => 'Consultation des paramètres boutique',
         'employee.shop-settings.update'        => 'Mise à jour des paramètres boutique',
