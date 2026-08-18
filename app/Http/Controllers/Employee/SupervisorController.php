@@ -242,12 +242,6 @@ class SupervisorController extends Controller
             ]);
         }
 
-        foreach ($supervisors as $supervisor) {
-            if (! $this->canManageSupervisor($supervisor)) {
-                abort(403);
-            }
-        }
-
         $cardsInput = is_array($validated['cards'] ?? null) ? $validated['cards'] : [];
         $qrWriter = new Writer(
             new ImageRenderer(
