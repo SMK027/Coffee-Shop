@@ -259,13 +259,17 @@ class SupervisorController extends Controller
                 ?? $supervisor->superadmin?->name
                 ?? 'Non défini';
 
+            $svg = $qrWriter->writeString($supervisor->barcodeValue());
+            $svg = preg_replace('/<\?xml[^>]*\?>/i', '', (string) $svg) ?? (string) $svg;
+            $svg = trim($svg);
+
             return [
                 'id'               => $supervisor->id,
                 'supervisor_number'=> $supervisor->supervisor_number,
                 'holder_label'     => $holderLabel !== '' ? $holderLabel : $holderDefault,
                 'position_label'   => $positionLabel,
                 'owner_name'       => $supervisor->superadmin?->name ?? '—',
-                'qr_svg'           => $qrWriter->writeString($supervisor->barcodeValue()),
+                'qr_data_uri'      => 'data:image/svg+xml;base64,' . base64_encode($svg),
             ];
         })->values();
 

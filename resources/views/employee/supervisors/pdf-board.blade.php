@@ -63,6 +63,12 @@
             height: 30mm;
         }
 
+        .qr img {
+            width: 30mm;
+            height: 30mm;
+            display: inline-block;
+        }
+
         .number {
             font-family: monospace;
             font-size: 9px;
@@ -97,7 +103,7 @@
                     <p class="muted">Poste: {{ $card['position_label'] }}</p>
                 @endif
 
-                <div class="qr">{!! $card['qr_svg'] !!}</div>
+                <div class="qr"><img src="{{ $card['qr_data_uri'] }}" alt="QR superviseur"></div>
 
                 <p class="number">{{ $card['supervisor_number'] }}</p>
 
