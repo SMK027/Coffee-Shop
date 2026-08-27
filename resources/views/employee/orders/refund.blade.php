@@ -60,10 +60,10 @@
                         <label for="item-{{ $item->id }}" class="flex-1 min-w-0 cursor-pointer">
                             <p class="font-medium text-stone-800 text-sm">{{ $item->display_name }}</p>
                             <p class="text-xs text-stone-500">
-                                {{ number_format($item->unit_price, 2, ',', ' ') }} €
+                                {{ number_format($item->refund_unit_price, 2, ',', ' ') }} €
                                 × <span x-text="items[{{ $item->id }}].qty"></span>
                                 = <span class="text-red-600 font-medium"
-                                        x-text="'−' + ({{ (float) $item->unit_price }} * items[{{ $item->id }}].qty).toFixed(2).replace('.', ',') + ' €'"></span>
+                                        x-text="'−' + ({{ $item->refund_unit_price }} * items[{{ $item->id }}].qty).toFixed(2).replace('.', ',') + ' €'"></span>
                             </p>
                         </label>
                         {{-- Stepper quantité --}}
@@ -204,7 +204,7 @@
     $itemDefsJson = json_encode($refundableItems->map(fn($i) => [
         'id'     => $i->id,
         'maxQty' => $i->refundable_qty,
-        'price'  => (float) $i->unit_price,
+        'price'  => $i->refund_unit_price,
         'points' => $i->drink?->loyalty_points ?? 0,
     ])->values());
 @endphp
