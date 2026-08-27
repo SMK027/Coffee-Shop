@@ -36,4 +36,10 @@ class OrderItem extends Model
     {
         return $this->quantity * $this->unit_price;
     }
+
+    /** Prix de remboursement partiel: les remises globales de la commande ne s'appliquent pas à l'article. */
+    public function getRefundUnitPriceAttribute(): float
+    {
+        return round(abs((float) $this->unit_price), 2);
+    }
 }

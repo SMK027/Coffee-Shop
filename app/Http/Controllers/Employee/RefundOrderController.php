@@ -199,7 +199,7 @@ class RefundOrderController extends Controller
                     continue;
                 }
 
-                $unitPrice    = (float) $originalItem->unit_price;
+                $unitPrice    = $originalItem->refund_unit_price;
                 $refundAmount = round($unitPrice * $requestQty, 2);
                 $label        = 'Remboursement – ' . $originalItem->display_name;
 

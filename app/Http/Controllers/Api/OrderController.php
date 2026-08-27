@@ -629,7 +629,7 @@ class OrderController extends Controller
                     continue;
                 }
 
-                $unitPrice    = (float) $originalItem->unit_price;
+                $unitPrice    = $originalItem->refund_unit_price;
                 $refundAmount = round($unitPrice * $requestQty, 2);
 
                 OrderItem::create([

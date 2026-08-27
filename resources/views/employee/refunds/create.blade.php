@@ -49,6 +49,7 @@
         {{-- Sélection des articles --}}
         <div class="bg-white rounded-xl shadow-sm border border-stone-100 p-5">
             <h2 class="font-semibold text-stone-800 mb-4">Articles à rembourser</h2>
+            <p class="text-xs text-stone-500 mb-4">Pour une sélection individuelle, le remboursement est calculé sur le prix de l'article, hors réduction salariée.</p>
 
             @if($refundableItems->isEmpty())
                 <p class="text-sm text-stone-500 text-center py-4">Tous les articles ont déjà été remboursés.</p>
