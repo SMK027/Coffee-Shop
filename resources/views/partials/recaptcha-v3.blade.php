@@ -1,4 +1,5 @@
 @php
+    $isEnabled = (bool) config('services.recaptcha.enabled', true);
     $siteKey = (string) config('services.recaptcha.site_key', '');
     $formId = (string) ($formId ?? '');
     $action = (string) ($action ?? 'form_submit');
@@ -8,7 +9,7 @@
 <input type="hidden" name="{{ $inputName }}" value="{{ old($inputName, '') }}">
 <p id="{{ $formId }}-recaptcha-error" class="text-red-500 text-xs mt-1 hidden"></p>
 
-@if($siteKey !== '' && $formId !== '')
+@if($isEnabled && $siteKey !== '' && $formId !== '')
     <script src="https://www.google.com/recaptcha/api.js?render={{ $siteKey }}"></script>
     <script>
         (function () {
@@ -62,8 +63,6 @@
             });
         })();
     </script>
-@else
-    @if($formId !== '')
-        <p class="text-red-500 text-xs mt-1">reCAPTCHA n'est pas configuré sur le serveur (RECAPTCHA_SITE_KEY manquante).</p>
-    @endif
+@elseif($isEnabled && $formId !== '')
+    <p class="text-red-500 text-xs mt-1">reCAPTCHA n'est pas configuré sur le serveur (RECAPTCHA_SITE_KEY manquante).</p>
 @endif

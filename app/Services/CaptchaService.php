@@ -15,6 +15,10 @@ class CaptchaService
         return [
             'string',
             function (string $attribute, mixed $value, Closure $fail) use ($request, $expectedAction): void {
+                if (! config('services.recaptcha.enabled', true)) {
+                    return;
+                }
+
                 $siteKey = (string) config('services.recaptcha.site_key', '');
                 $secretKey = (string) config('services.recaptcha.secret_key', '');
                 $minScore = (float) config('services.recaptcha.min_score', 0.5);

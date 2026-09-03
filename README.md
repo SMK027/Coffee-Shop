@@ -113,10 +113,12 @@ Le projet utilise Google reCAPTCHA v3 pour les formulaires publics et la connexi
 ```env
 RECAPTCHA_SITE_KEY=...
 RECAPTCHA_SECRET_KEY=...
+RECAPTCHA_ENABLED=true
 RECAPTCHA_MIN_SCORE=0.5
 ```
 
 `RECAPTCHA_MIN_SCORE` est ajustable entre 0.0 et 1.0.
+Pour le développement local, définissez `RECAPTCHA_ENABLED=false` afin de désactiver la vérification côté navigateur et serveur. Ne désactivez pas cette option en production.
 
 ### Point Docker important
 
