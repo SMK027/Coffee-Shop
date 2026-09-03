@@ -63,6 +63,11 @@ class UserController extends Controller
             'username.alpha_dash' => 'Le nom d\'utilisateur ne peut contenir que des lettres, chiffres, tirets et underscores.',
         ]);
 
+        $this->requireSuperAdminOrSupervisor(
+            $request,
+            'La création d’un compte salarié nécessite une authentification superviseur.'
+        );
+
         // Mot de passe aléatoire — l'utilisateur le définira via le lien envoyé par email
         $validated['password'] = Hash::make(Str::random(32));
         $validated['is_active'] = true;
