@@ -109,6 +109,28 @@
             </div>
         </form>
 
+        @if(auth()->user()->isSuperAdmin())
+            <form action="{{ route('employee.shop-settings.supervisor-ips.update') }}" method="POST">
+                @csrf
+                @method('PUT')
+                <div class="bg-white rounded-xl shadow-sm border border-stone-100 p-6 space-y-4">
+                    <div>
+                        <h2 class="font-semibold text-stone-800">Accès à la gestion des superviseurs</h2>
+                        <p class="text-sm text-stone-500 mt-1">Seules les adresses IP indiquées peuvent ouvrir ou modifier le panel des superviseurs. Saisissez une adresse par ligne.</p>
+                    </div>
+                    <div>
+                        <label for="allowed_ips" class="block text-sm font-medium text-stone-700 mb-1.5">Adresses IP autorisées</label>
+                        <textarea name="allowed_ips" id="allowed_ips" rows="5" maxlength="4000"
+                                  class="w-full border {{ $errors->has('allowed_ips') ? 'border-red-400 bg-red-50' : 'border-stone-300' }} rounded-lg px-4 py-2.5 text-sm font-mono focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none resize-y">{{ old('allowed_ips', $supervisorManagementAllowedIps) }}</textarea>
+                        @error('allowed_ips')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                    </div>
+                    <button type="submit" class="bg-amber-700 hover:bg-amber-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium transition-colors">
+                        Enregistrer les adresses IP
+                    </button>
+                </div>
+            </form>
+        @endif
+
         {{-- ── Fermetures / Ouvertures exceptionnelles ─────── --}}
         <div class="bg-white rounded-xl shadow-sm border border-stone-100 p-6">
             <h2 class="font-semibold text-stone-800 mb-1">Fermetures et ouvertures exceptionnelles</h2>

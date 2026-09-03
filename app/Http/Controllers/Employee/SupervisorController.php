@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Employee;
 
 use App\Http\Controllers\Controller;
+use App\Models\Setting;
 use App\Models\Supervisor;
 use App\Models\User;
 use App\Services\ActivityLogger;
@@ -22,6 +23,7 @@ class SupervisorController extends Controller
     public function index(Request $request)
     {
         abort_unless(auth()->user()->isAdmin(), 403);
+        $this->ensureSupervisorManagementIpIsAllowed($request);
 
         $search = trim((string) $request->query('q', ''));
         $user = auth()->user();
@@ -46,9 +48,10 @@ class SupervisorController extends Controller
         return view('employee.supervisors.index', compact('supervisors', 'search', 'isSuperAdmin', 'ownerIdForAdmin', 'currentUserId'));
     }
 
-    public function create()
+    public function create(Request $request)
     {
         abort_unless(auth()->user()->isSuperAdmin(), 403);
+        $this->ensureSupervisorManagementIpIsAllowed($request);
 
         $superadmins = User::where('global_role', 'superadmin')
             ->orderBy('name')
@@ -66,6 +69,7 @@ class SupervisorController extends Controller
     public function show(Supervisor $supervisor)
     {
         abort_unless(auth()->user()->isAdmin(), 403);
+        $this->ensureSupervisorManagementIpIsAllowed(request());
         abort_unless($this->canManageSupervisor($supervisor), 403);
 
         $supervisor->load(['superadmin:id,name', 'holderAdmin:id,name']);
@@ -78,6 +82,7 @@ class SupervisorController extends Controller
     public function store(Request $request)
     {
         abort_unless(auth()->user()->isSuperAdmin(), 403);
+        $this->ensureSupervisorManagementIpIsAllowed($request);
 
         $validated = $request->validate([
             'supervisor_number' => ['required', 'string', 'max:50', 'alpha_dash', 'unique:supervisors,supervisor_number'],
@@ -124,6 +129,7 @@ class SupervisorController extends Controller
     public function edit(Supervisor $supervisor)
     {
         abort_unless(auth()->user()->isAdmin(), 403);
+        $this->ensureSupervisorManagementIpIsAllowed(request());
         abort_unless($this->canManageSupervisor($supervisor), 403);
 
         $isSuperAdmin = auth()->user()->isSuperAdmin();
@@ -134,6 +140,7 @@ class SupervisorController extends Controller
     public function update(Request $request, Supervisor $supervisor)
     {
         abort_unless(auth()->user()->isAdmin(), 403);
+        $this->ensureSupervisorManagementIpIsAllowed($request);
         abort_unless($this->canManageSupervisor($supervisor), 403);
 
         $isSuperAdmin = auth()->user()->isSuperAdmin();
@@ -175,9 +182,10 @@ class SupervisorController extends Controller
             ->with('success', 'Superviseur mis à jour avec succès.');
     }
 
-    public function toggleActivation(Supervisor $supervisor)
+    public function toggleActivation(Request $request, Supervisor $supervisor)
     {
         abort_unless(auth()->user()->isAdmin(), 403);
+        $this->ensureSupervisorManagementIpIsAllowed($request);
         abort_unless($this->canManageSupervisor($supervisor), 403);
 
         $supervisor->update(['is_active' => ! $supervisor->is_active]);
@@ -185,13 +193,14 @@ class SupervisorController extends Controller
         return back()->with('success', $supervisor->is_active ? 'Superviseur réactivé.' : 'Superviseur désactivé.');
     }
 
-    public function destroy(Supervisor $supervisor)
+    public function destroy(Request $request, Supervisor $supervisor)
     {
         abort_unless(auth()->user()->isAdmin(), 403);
+        $this->ensureSupervisorManagementIpIsAllowed($request);
         abort_unless($this->canManageSupervisor($supervisor), 403);
 
         $validatedSupervisor = $this->requireSuperAdminOrSupervisor(
-            request(),
+            $request,
             'La suppression exige la validation d\'un superviseur externe à votre compte.'
         );
 
@@ -210,6 +219,7 @@ class SupervisorController extends Controller
     public function generatePdfBoard(Request $request)
     {
         abort_unless(auth()->user()->isSuperAdmin(), 403);
+        $this->ensureSupervisorManagementIpIsAllowed($request);
 
         $validated = $request->validate([
             'selected_supervisors'   => ['required', 'array', 'min:1'],
@@ -321,5 +331,29 @@ class SupervisorController extends Controller
 
         $userId = (int) $user->id;
         return (int) $supervisor->holder_admin_id === $userId;
+    }
+
+    private function ensureSupervisorManagementIpIsAllowed(Request $request): void
+    {
+        $allowedIps = preg_split(
+            '/[\s,;]+/',
+            trim((string) Setting::get(Setting::KEY_SUPERVISOR_MANAGEMENT_ALLOWED_IPS, '')),
+            -1,
+            PREG_SPLIT_NO_EMPTY
+        ) ?: [];
+
+        if (in_array($request->ip(), $allowedIps, true)) {
+            return;
+        }
+
+        ActivityLogger::log(
+            'auth.supervisor_management_ip_denied',
+            'Accès refusé à la gestion des superviseurs depuis l’adresse IP ' . $request->ip(),
+            null,
+            null,
+            ['ip' => $request->ip(), 'route' => $request->route()?->getName()]
+        );
+
+        abort(403, 'Cette adresse IP n’est pas autorisée à gérer les superviseurs.');
     }
 }

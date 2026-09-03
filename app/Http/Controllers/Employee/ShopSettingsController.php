@@ -20,7 +20,37 @@ class ShopSettingsController extends Controller
             'phone'   => Setting::get(Setting::KEY_SHOP_PHONE,   Setting::DEFAULTS[Setting::KEY_SHOP_PHONE]),
             'email'   => Setting::get(Setting::KEY_SHOP_EMAIL,   Setting::DEFAULTS[Setting::KEY_SHOP_EMAIL]),
             'hours'   => Setting::getHours(),
+            'supervisorManagementAllowedIps' => Setting::get(Setting::KEY_SUPERVISOR_MANAGEMENT_ALLOWED_IPS, ''),
         ]);
+    }
+
+    public function updateSupervisorManagementAllowedIps(Request $request)
+    {
+        abort_unless(auth()->user()->isSuperAdmin(), 403);
+
+        $request->validate([
+            'allowed_ips' => [
+                'nullable',
+                'string',
+                'max:4000',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    $ips = preg_split('/[\s,;]+/', trim((string) $value), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+                    foreach ($ips as $ip) {
+                        if (filter_var($ip, FILTER_VALIDATE_IP) === false) {
+                            $fail("L’adresse IP « {$ip} » n’est pas valide.");
+                        }
+                    }
+                },
+            ],
+        ]);
+
+        $ips = preg_split('/[\s,;]+/', trim((string) $request->input('allowed_ips', '')), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        Setting::set(Setting::KEY_SUPERVISOR_MANAGEMENT_ALLOWED_IPS, implode("\n", array_values(array_unique($ips))));
+
+        ActivityLogger::log('settings.supervisor_management_ips_updated', 'Liste blanche IP de gestion des superviseurs mise à jour.', null, null, ['allowed_ips' => $ips]);
+
+        return back()->with('success', 'Adresses IP autorisées à gérer les superviseurs mises à jour.');
     }
 
     public function update(Request $request)

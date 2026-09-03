@@ -30,6 +30,7 @@ class Setting extends Model
     public const KEY_SHOP_PHONE   = 'shop_phone';
     public const KEY_SHOP_EMAIL   = 'shop_email';
     public const KEY_SHOP_HOURS   = 'shop_hours';
+    public const KEY_SUPERVISOR_MANAGEMENT_ALLOWED_IPS = 'supervisor_management_allowed_ips';
 
     public const DEFAULTS = [
         self::KEY_POINTS_PER_EURO => '5',
@@ -37,6 +38,7 @@ class Setting extends Model
         self::KEY_SHOP_PHONE      => '01 23 45 67 89',
         self::KEY_SHOP_EMAIL      => 'contact@lecoffeeshop.fr',
         self::KEY_SHOP_HOURS      => '{"regular":{"monday":{"open":true,"from":"07:00","to":"19:00"},"tuesday":{"open":true,"from":"07:00","to":"19:00"},"wednesday":{"open":true,"from":"07:00","to":"19:00"},"thursday":{"open":true,"from":"07:00","to":"19:00"},"friday":{"open":true,"from":"07:00","to":"19:00"},"saturday":{"open":true,"from":"08:00","to":"20:00"},"sunday":{"open":true,"from":"09:00","to":"18:00"}},"exceptions":[]}',
+        self::KEY_SUPERVISOR_MANAGEMENT_ALLOWED_IPS => "127.0.0.1\n::1",
     ];
 
     /**
