@@ -6,7 +6,6 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": false,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "fr.leofranz.coffeeshop",
@@ -24,15 +23,7 @@
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#EFE4D2"
       },
-      "predictiveBackGestureEnabled": false,
-      "statusBar": {
-        "hidden": true,
-        "translucent": true
-      },
-      "navigationBar": {
-        "visible": "immersive",
-        "backgroundColor": "#00000000"
-      }
+      "predictiveBackGestureEnabled": false
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -44,7 +35,9 @@
     },
     "owner": "smk_9119",
     "plugins": [
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      "expo-secure-store",
+      "expo-status-bar"
     ]
   }
 }
