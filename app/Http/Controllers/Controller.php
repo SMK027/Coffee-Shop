@@ -7,6 +7,7 @@ use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -17,6 +18,8 @@ abstract class Controller
     private const SUPERVISION_PENDING_KEY = 'supervision.pending';
     private const SUPERVISION_BYPASSES_KEY = 'supervision.bypasses';
     private const PERMANENT_SUPERVISION_KEY = 'supervision.permanent';
+    private const MOBILE_PERMANENT_SUPERVISION_HEADER = 'X-Supervisor-Permanent-Token';
+    private const MOBILE_PERMANENT_SUPERVISION_TTL_HOURS = 8;
     private const SUPERVISION_BYPASS_TTL_SECONDS = 300;
 
     protected function requireSuperAdminOrSupervisor(Request $request, string $message = 'Numéro de superviseur ou PIN incorrect.'): ?Supervisor
@@ -165,11 +168,19 @@ abstract class Controller
 
     protected function hasPermanentSupervision(Request $request): bool
     {
-        $sessionValue = $request->session()->get(self::PERMANENT_SUPERVISION_KEY);
+        if (! auth()->user()?->isSuperAdmin()) {
+            return false;
+        }
 
-        return auth()->user()?->isSuperAdmin()
-            && is_array($sessionValue)
-            && (int) ($sessionValue['user_id'] ?? 0) === (int) auth()->id();
+        $sessionValue = $request->hasSession()
+            ? $request->session()->get(self::PERMANENT_SUPERVISION_KEY)
+            : null;
+
+        if (is_array($sessionValue) && (int) ($sessionValue['user_id'] ?? 0) === (int) auth()->id()) {
+            return true;
+        }
+
+        return $this->hasMobilePermanentSupervision($request);
     }
 
     protected function enablePermanentSupervision(Request $request, Supervisor $supervisor): void
@@ -184,6 +195,27 @@ abstract class Controller
     protected function disablePermanentSupervision(Request $request): void
     {
         $request->session()->forget(self::PERMANENT_SUPERVISION_KEY);
+    }
+
+    protected function createMobilePermanentSupervisionToken(Supervisor $supervisor): string
+    {
+        $token = bin2hex(random_bytes(32));
+
+        Cache::put($this->mobilePermanentSupervisionCacheKey($token), [
+            'user_id' => auth()->id(),
+            'supervisor_id' => $supervisor->id,
+        ], now()->addHours(self::MOBILE_PERMANENT_SUPERVISION_TTL_HOURS));
+
+        return $token;
+    }
+
+    protected function disableMobilePermanentSupervision(Request $request): void
+    {
+        $token = trim((string) $request->header(self::MOBILE_PERMANENT_SUPERVISION_HEADER, ''));
+
+        if ($token !== '') {
+            Cache::forget($this->mobilePermanentSupervisionCacheKey($token));
+        }
     }
 
     protected function requireStrictSupervisorValidation(
@@ -264,6 +296,29 @@ abstract class Controller
             || $request->filled('supervisor_username')
             || $request->filled('supervisor_pin')
             || $request->filled('supervisor_password');
+    }
+
+    private function hasMobilePermanentSupervision(Request $request): bool
+    {
+        $token = trim((string) $request->header(self::MOBILE_PERMANENT_SUPERVISION_HEADER, ''));
+        if (! preg_match('/^[a-f0-9]{64}$/', $token)) {
+            return false;
+        }
+
+        $authorization = Cache::get($this->mobilePermanentSupervisionCacheKey($token));
+        if (! is_array($authorization) || (int) ($authorization['user_id'] ?? 0) !== (int) auth()->id()) {
+            return false;
+        }
+
+        return Supervisor::query()
+            ->whereKey((int) ($authorization['supervisor_id'] ?? 0))
+            ->where('is_active', true)
+            ->exists();
+    }
+
+    private function mobilePermanentSupervisionCacheKey(string $token): string
+    {
+        return 'supervision:mobile-permanent:' . hash('sha256', $token);
     }
 
     private function storePendingSupervision(Request $request, string $message): void

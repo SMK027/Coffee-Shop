@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext';
 
 export default function CreateLoyaltyDiscountScreen() {
   const navigation = useNavigation<any>();
-  const { user } = useAuth();
+  const { isPermanentSupervisionEnabled } = useAuth();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [pointsCost, setPointsCost] = useState('');
@@ -39,7 +39,7 @@ export default function CreateLoyaltyDiscountScreen() {
         is_active: isActive,
         employee_only: employeeOnly,
       };
-      if (!user?.global_role || user.global_role !== 'superadmin') {
+      if (!isPermanentSupervisionEnabled) {
         const normalizedToken = supervisorToken.replace(/\s+/g, '').trim();
         if (normalizedToken) {
           payload.supervisor_token = normalizedToken;

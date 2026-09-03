@@ -22,6 +22,7 @@ import CreateVoucherScreen from '../screens/CreateVoucherScreen';
 import CreateLoyaltyDiscountScreen from '../screens/CreateLoyaltyDiscountScreen';
 import SupervisorsListScreen from '../screens/SupervisorsListScreen';
 import SupervisorQrScreen from '../screens/SupervisorQrScreen';
+import PermanentSupervisionScreen from '../screens/PermanentSupervisionScreen';
 
 const Tab = createBottomTabNavigator();
 const OrderStack = createNativeStackNavigator();
@@ -150,6 +151,7 @@ function AppTabs() {
             }}
           >
             <ProfileStack.Screen name="ProfileMain" component={ProfileScreen} options={{ title: 'Profil' }} />
+            <ProfileStack.Screen name="PermanentSupervision" component={PermanentSupervisionScreen} options={{ title: 'Mode superviseur permanent' }} />
             <ProfileStack.Screen name="SupervisorsList" component={SupervisorsListScreen} options={{ title: 'Superviseurs raccordés' }} />
             <ProfileStack.Screen name="SupervisorQr" component={SupervisorQrScreen} options={{ title: 'QR superviseur' }} />
             <ProfileStack.Screen name="CreateVoucher" component={CreateVoucherScreen} options={{ title: 'Créer un bon' }} />

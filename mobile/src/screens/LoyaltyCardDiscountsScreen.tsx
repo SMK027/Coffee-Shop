@@ -24,7 +24,7 @@ export default function LoyaltyCardDiscountsScreen() {
   const route = useRoute<RouteProp<ParamList, 'LoyaltyCardDiscounts'>>();
   const navigation = useNavigation<any>();
   const { cardId } = route.params;
-  const { user } = useAuth();
+  const { user, isPermanentSupervisionEnabled } = useAuth();
   const isSuperAdmin = user?.global_role === 'superadmin';
 
   const [items, setItems] = useState<CardOffer[]>([]);
@@ -129,7 +129,7 @@ export default function LoyaltyCardDiscountsScreen() {
       expires_at: expiresAt,
     };
 
-    if (!isSuperAdmin) {
+    if (!isPermanentSupervisionEnabled) {
       const normalizedToken = supervisorToken.replace(/\s+/g, '').trim();
       if (normalizedToken) {
         payload.supervisor_token = normalizedToken;
@@ -161,7 +161,7 @@ export default function LoyaltyCardDiscountsScreen() {
       { text: 'Annuler', style: 'cancel' },
       { text: 'Supprimer', style: 'destructive', onPress: async () => {
         try {
-          const payload = !isSuperAdmin
+          const payload = !isPermanentSupervisionEnabled
             ? {
                 data: supervisorToken.replace(/\s+/g, '').trim()
                   ? { supervisor_token: supervisorToken.replace(/\s+/g, '').trim() }

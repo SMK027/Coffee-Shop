@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\LoyaltyDiscountController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\PaymentMethodController;
 use App\Http\Controllers\Api\SupervisorController;
+use App\Http\Controllers\Api\SupervisionController;
 use App\Http\Controllers\Api\VoucherController;
 use Illuminate\Support\Facades\Route;
 
@@ -81,4 +82,9 @@ Route::middleware('auth:api')->group(function () {
     // Superviseurs (compte connecté)
     Route::get('/supervisors', [SupervisorController::class, 'index']);
     Route::post('/supervisors/{supervisor}/barcode', [SupervisorController::class, 'barcode']);
+
+    // Mode superviseur permanent (super administrateurs)
+    Route::get('/supervision/permanent', [SupervisionController::class, 'status']);
+    Route::post('/supervision/permanent', [SupervisionController::class, 'enable']);
+    Route::delete('/supervision/permanent', [SupervisionController::class, 'disable']);
 });

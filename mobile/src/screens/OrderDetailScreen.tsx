@@ -21,7 +21,7 @@ export default function OrderDetailScreen() {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
   const { orderId } = route.params;
-  const { user } = useAuth();
+  const { user, isPermanentSupervisionEnabled } = useAuth();
   const isSuperAdmin = user?.global_role === 'superadmin';
   const isAdmin = user?.global_role === 'admin' || isSuperAdmin;
   const isModerator = user?.global_role === 'moderator';
@@ -67,7 +67,7 @@ export default function OrderDetailScreen() {
   }, [orderId]);
 
   const currentStatus = statuses.find((s) => s.key === order?.status);
-  const requiresSupervisor = currentStatus?.is_terminal && !isSuperAdmin;
+  const requiresSupervisor = Boolean(currentStatus?.is_terminal) && !isPermanentSupervisionEnabled;
 
   const updateStatus = async (key: string, supervisor?: { number?: string; pin?: string; token?: string }) => {
     setUpdating(true);
@@ -140,7 +140,7 @@ export default function OrderDetailScreen() {
         .map((item) => ({ item_id: item.id, qty: refundSelection[item.id] }));
     }
 
-    if (!isSuperAdmin) {
+    if (!isPermanentSupervisionEnabled) {
       if (refundSupervisorToken.trim()) {
         payload.supervisor_token = refundSupervisorToken.trim();
       } else {
@@ -415,7 +415,7 @@ export default function OrderDetailScreen() {
                   Alert.alert('Impossibilité', "La commande doit être au statut 'Annulée' pour être supprimée.");
                   return;
                 }
-                if (isSuperAdmin) {
+                if (isPermanentSupervisionEnabled) {
                   Alert.alert('Supprimer la commande', 'Supprimer définitivement cette commande ?', [
                     { text: 'Annuler', style: 'cancel' },
                     { text: 'Supprimer', style: 'destructive', onPress: () => performDelete() },
@@ -522,7 +522,7 @@ export default function OrderDetailScreen() {
               </ScrollView>
             )}
 
-            {!isSuperAdmin && (
+            {!isPermanentSupervisionEnabled && (
               <>
                 <TouchableOpacity style={styles.scanBtn} onPress={() => openSupervisorScanner('refund')}>
                   <Text style={styles.scanBtnText}>Scanner le QR code superviseur</Text>

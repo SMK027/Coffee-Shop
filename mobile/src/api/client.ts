@@ -3,6 +3,7 @@ import * as SecureStore from 'expo-secure-store';
 
 export const ACCESS_TOKEN_KEY = 'access_token';
 export const REFRESH_TOKEN_KEY = 'refresh_token';
+export const PERMANENT_SUPERVISION_TOKEN_KEY = 'permanent_supervision_token';
 
 const api = axios.create({
   baseURL: '', // injectée dynamiquement par ServerContext
@@ -19,6 +20,12 @@ api.interceptors.request.use(async (config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+
+  const supervisionToken = await SecureStore.getItemAsync(PERMANENT_SUPERVISION_TOKEN_KEY);
+  if (supervisionToken) {
+    config.headers['X-Supervisor-Permanent-Token'] = supervisionToken;
+  }
+
   return config;
 });
 

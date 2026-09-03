@@ -59,7 +59,7 @@ export default function LoyaltyCardDetailScreen() {
   const [adjustSubmitting, setAdjustSubmitting] = useState(false);
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const scannerLocked = React.useRef(false);
-  const { user } = useAuth();
+  const { user, isPermanentSupervisionEnabled } = useAuth();
   const isSuperAdmin = user?.global_role === 'superadmin';
   const isAdmin = user?.global_role === 'admin' || isSuperAdmin || user?.global_role === 'moderator';
 
@@ -111,7 +111,7 @@ export default function LoyaltyCardDetailScreen() {
       return;
     }
 
-    if (!isSuperAdmin && !supervisorToken.trim() && (!supervisorNumber.trim() || !supervisorPin.trim())) {
+    if (!isPermanentSupervisionEnabled && !supervisorToken.trim() && (!supervisorNumber.trim() || !supervisorPin.trim())) {
       setAdjustError('Saisissez un QR code superviseur ou un identifiant + mot de passe.');
       return;
     }
@@ -124,7 +124,7 @@ export default function LoyaltyCardDetailScreen() {
         type: adjustType,
         points,
         reason: adjustReason.trim() || undefined,
-        ...(isSuperAdmin ? {} : supervisorToken.replace(/\s+/g, '').trim() ? {
+        ...(isPermanentSupervisionEnabled ? {} : supervisorToken.replace(/\s+/g, '').trim() ? {
           supervisor_token: supervisorToken.replace(/\s+/g, '').trim(),
         } : {
           supervisor_number: supervisorNumber,

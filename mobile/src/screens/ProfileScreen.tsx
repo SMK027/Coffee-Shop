@@ -21,7 +21,7 @@ const roleColors: Record<string, string> = {
 };
 
 export default function ProfileScreen() {
-  const { user, logout } = useAuth();
+  const { user, logout, isPermanentSupervisionEnabled } = useAuth();
   const navigation = useNavigation<any>();
 
   if (!user) {
@@ -70,6 +70,18 @@ export default function ProfileScreen() {
         <ServerManager />
       </View>
 
+      {user.global_role === 'superadmin' && (
+        <TouchableOpacity style={styles.supervisionBtn} onPress={() => navigation.navigate('PermanentSupervision')}>
+          <View>
+            <Text style={styles.supervisionBtnTitle}>Mode superviseur permanent</Text>
+            <Text style={styles.supervisionBtnSubtitle}>{isPermanentSupervisionEnabled ? 'Actif pour cette session' : 'Inactif'}</Text>
+          </View>
+          <Text style={[styles.supervisionStatus, isPermanentSupervisionEnabled ? styles.supervisionStatusActive : styles.supervisionStatusInactive]}>
+            {isPermanentSupervisionEnabled ? 'Actif' : 'Gérer'}
+          </Text>
+        </TouchableOpacity>
+      )}
+
       {canAccessSupervisors && (
         <TouchableOpacity style={styles.supervisorsBtn} onPress={() => navigation.navigate('SupervisorsList')}>
           <Text style={styles.supervisorsBtnText}>Consulter les superviseurs raccordés</Text>
@@ -114,6 +126,12 @@ const styles = StyleSheet.create({
   fieldLabel: { fontSize: 12, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 },
   fieldValue: { fontSize: 15, color: '#1f2937', fontWeight: '500' },
   serverSection: { marginTop: 24 },
+  supervisionBtn: { backgroundColor: '#fff', borderRadius: 8, padding: 14, marginTop: 16, borderWidth: 1, borderColor: '#d1d5db', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  supervisionBtnTitle: { color: '#1f2937', fontSize: 15, fontWeight: '700' },
+  supervisionBtnSubtitle: { color: '#6b7280', fontSize: 13, marginTop: 3 },
+  supervisionStatus: { fontSize: 13, fontWeight: '700' },
+  supervisionStatusActive: { color: '#15803d' },
+  supervisionStatusInactive: { color: '#92400e' },
   supervisorsBtn: {
     backgroundColor: '#fff',
     borderRadius: 12,

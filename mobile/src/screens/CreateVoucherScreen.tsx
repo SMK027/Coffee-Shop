@@ -8,7 +8,7 @@ import { useAuth } from '../context/AuthContext';
 export default function CreateVoucherScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const { user } = useAuth();
+  const { isPermanentSupervisionEnabled } = useAuth();
   const voucher = route.params?.voucher ?? null;
   const isEditing = !!voucher?.id;
   const [amount, setAmount] = useState('');
@@ -61,7 +61,7 @@ export default function CreateVoucherScreen() {
 
       if (restrictionType === 'card') payload.restricted_card_number = restrictedCardNumber.trim();
       if (restrictionType === 'name') payload.restricted_name = restrictedName.trim();
-      if (!user?.global_role || user.global_role !== 'superadmin') {
+      if (!isPermanentSupervisionEnabled) {
         const normalizedToken = supervisorToken.replace(/\s+/g, '').trim();
         if (normalizedToken) {
           payload.supervisor_token = normalizedToken;
