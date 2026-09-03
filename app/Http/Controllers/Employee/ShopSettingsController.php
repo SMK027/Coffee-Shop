@@ -27,6 +27,10 @@ class ShopSettingsController extends Controller
     public function updateSupervisorManagementAllowedIps(Request $request)
     {
         abort_unless(auth()->user()->isSuperAdmin(), 403);
+        $this->requireSuperAdminOrSupervisor(
+            $request,
+            'La modification des adresses IP autorisées nécessite une authentification superviseur.'
+        );
 
         $request->validate([
             'allowed_ips' => [
