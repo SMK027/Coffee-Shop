@@ -26,9 +26,7 @@ class CardOfferController extends Controller
             return back()->withInput()->withErrors(['discount_value' => 'Un pourcentage ne peut pas dépasser 100 %.']);
         }
 
-        if (! auth()->user()->isSuperAdmin()) {
-            $this->requireSuperAdminOrSupervisor($request);
-        }
+        $this->requireSuperAdminOrSupervisor($request);
 
         $offer = $loyaltyCard->cardOffers()->create([
             'label'               => $validated['label'],
@@ -55,9 +53,7 @@ class CardOfferController extends Controller
         abort_unless($cardOffer->loyalty_card_id === $loyaltyCard->id, 404);
         abort_if($cardOffer->isUsedState(), 403, 'Une offre déjà utilisée ne peut pas être supprimée.');
 
-        if (! auth()->user()->isSuperAdmin()) {
-            $this->requireSuperAdminOrSupervisor(request());
-        }
+        $this->requireSuperAdminOrSupervisor(request());
 
         ActivityLogger::log(
             'card_offer.deleted',

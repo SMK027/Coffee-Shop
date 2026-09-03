@@ -27,9 +27,7 @@ class LoyaltyDiscountController extends Controller
     public function store(Request $request)
     {
         abort_unless(auth()->user()->isAdmin(), 403);
-        if (! auth()->user()->isSuperAdmin()) {
-            $this->requireSuperAdminOrSupervisor($request, 'Action réservée aux super administrateurs ou à un superviseur valide.');
-        }
+        $this->requireSuperAdminOrSupervisor($request, 'Action réservée aux super administrateurs ou à un superviseur valide.');
 
         $data = $this->validatePayload($request);
         LoyaltyDiscount::create($data);
@@ -48,9 +46,7 @@ class LoyaltyDiscountController extends Controller
     public function update(Request $request, LoyaltyDiscount $loyaltyDiscount)
     {
         abort_unless(auth()->user()->isAdmin(), 403);
-        if (! auth()->user()->isSuperAdmin()) {
-            $this->requireSuperAdminOrSupervisor($request, 'Action réservée aux super administrateurs ou à un superviseur valide.');
-        }
+        $this->requireSuperAdminOrSupervisor($request, 'Action réservée aux super administrateurs ou à un superviseur valide.');
 
         $data = $this->validatePayload($request);
         $loyaltyDiscount->update($data);
@@ -104,9 +100,7 @@ class LoyaltyDiscountController extends Controller
     public function destroy(Request $request, LoyaltyDiscount $loyaltyDiscount)
     {
         abort_unless(auth()->user()->isAdmin(), 403);
-        if (! auth()->user()->isSuperAdmin()) {
-            $this->requireSuperAdminOrSupervisor($request, 'Action réservée aux super administrateurs ou à un superviseur valide.');
-        }
+        $this->requireSuperAdminOrSupervisor($request, 'Action réservée aux super administrateurs ou à un superviseur valide.');
 
         // Bloquer la suppression si la réduction est liée à des commandes.
         if ($loyaltyDiscount->orders()->exists()) {

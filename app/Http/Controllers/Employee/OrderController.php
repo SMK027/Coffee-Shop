@@ -92,9 +92,7 @@ class OrderController extends Controller
             return back()->withErrors(['order' => 'La commande doit être annulée pour être supprimée.']);
         }
 
-        if (! auth()->user()->isSuperAdmin()) {
-            $this->requireSuperAdminOrSupervisor($request, 'Action réservée aux super administrateurs ou à un superviseur valide.');
-        }
+        $this->requireSuperAdminOrSupervisor($request, 'Action réservée aux super administrateurs ou à un superviseur valide.');
 
         DB::transaction(function () use ($order, $request) {
             $order->load('loyaltyCard', 'loyaltyDiscounts', 'voucher');

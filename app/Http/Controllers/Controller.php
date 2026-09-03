@@ -16,11 +16,12 @@ abstract class Controller
 {
     private const SUPERVISION_PENDING_KEY = 'supervision.pending';
     private const SUPERVISION_BYPASSES_KEY = 'supervision.bypasses';
+    private const PERMANENT_SUPERVISION_KEY = 'supervision.permanent';
     private const SUPERVISION_BYPASS_TTL_SECONDS = 300;
 
     protected function requireSuperAdminOrSupervisor(Request $request, string $message = 'Numéro de superviseur ou PIN incorrect.'): ?Supervisor
     {
-        if (auth()->user()->isSuperAdmin()) {
+        if ($this->hasPermanentSupervision($request)) {
             return null;
         }
 
@@ -43,7 +44,7 @@ abstract class Controller
     protected function validateSupervisorCredentials(
         Request $request,
         string $message = 'Numéro de superviseur ou PIN incorrect.',
-        bool $allowSuperAdminBypass = true
+        bool $allowSuperAdminBypass = false
     ): ?Supervisor
     {
         if ($allowSuperAdminBypass && auth()->user()->isSuperAdmin()) {
@@ -160,6 +161,29 @@ abstract class Controller
         );
 
         return $supervisor;
+    }
+
+    protected function hasPermanentSupervision(Request $request): bool
+    {
+        $sessionValue = $request->session()->get(self::PERMANENT_SUPERVISION_KEY);
+
+        return auth()->user()?->isSuperAdmin()
+            && is_array($sessionValue)
+            && (int) ($sessionValue['user_id'] ?? 0) === (int) auth()->id();
+    }
+
+    protected function enablePermanentSupervision(Request $request, Supervisor $supervisor): void
+    {
+        $request->session()->put(self::PERMANENT_SUPERVISION_KEY, [
+            'user_id' => auth()->id(),
+            'supervisor_id' => $supervisor->id,
+            'enabled_at' => time(),
+        ]);
+    }
+
+    protected function disablePermanentSupervision(Request $request): void
+    {
+        $request->session()->forget(self::PERMANENT_SUPERVISION_KEY);
     }
 
     protected function requireStrictSupervisorValidation(

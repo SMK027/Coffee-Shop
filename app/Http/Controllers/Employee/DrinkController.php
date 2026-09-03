@@ -63,10 +63,7 @@ class DrinkController extends Controller
             'image'          => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
         ]);
 
-        // Créer une boisson avec un prix nécessite une validation superviseur pour les admins simples
-        if (! auth()->user()->isSuperAdmin()) {
-            $this->requireSuperAdminOrSupervisor($request, 'La définition d\'un prix nécessite la validation d\'un superviseur.');
-        }
+        $this->requireSuperAdminOrSupervisor($request, 'La définition d\'un prix nécessite la validation d\'un superviseur.');
 
         $validated['slug'] = Str::slug($validated['name']);
         $validated['available'] = $request->boolean('available', true);
@@ -107,8 +104,7 @@ class DrinkController extends Controller
             'image'          => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
         ]);
 
-        // Modification du prix : validation superviseur pour les admins simples
-        if (! auth()->user()->isSuperAdmin() && (float) $request->price !== (float) $drink->price) {
+        if ((float) $request->price !== (float) $drink->price) {
             $this->requireSuperAdminOrSupervisor($request, 'La modification du prix nécessite la validation d\'un superviseur.');
         }
 

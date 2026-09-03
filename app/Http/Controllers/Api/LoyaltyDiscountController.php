@@ -40,9 +40,7 @@ class LoyaltyDiscountController extends Controller
     {
         abort_unless(auth()->user()?->isAdmin() || auth()->user()?->isModerator(), 403);
 
-        if (! auth()->user()->isSuperAdmin()) {
-            $this->requireSuperAdminOrSupervisor($request, 'Validation du superviseur requise.');
-        }
+        $this->requireSuperAdminOrSupervisor($request, 'Validation du superviseur requise.');
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:120'],

@@ -62,6 +62,9 @@ Route::prefix('espace-employe')->name('employee.')->middleware(['auth', 'employe
 
     Route::get('/supervision/verrouillee', [SupervisionController::class, 'challenge'])->name('supervision.challenge');
     Route::post('/supervision/verrouillee', [SupervisionController::class, 'approve'])->name('supervision.approve');
+    Route::get('/supervision/permanente', [SupervisionController::class, 'permanent'])->name('supervision.permanent');
+    Route::post('/supervision/permanente', [SupervisionController::class, 'enablePermanent'])->name('supervision.permanent.enable');
+    Route::delete('/supervision/permanente', [SupervisionController::class, 'disablePermanent'])->name('supervision.permanent.disable');
 
     Route::get('/tableau-de-bord', [DashboardController::class, 'index'])->name('dashboard');
 

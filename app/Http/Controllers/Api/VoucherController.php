@@ -275,11 +275,9 @@ class VoucherController extends Controller
             $restrictedName = $name;
         }
 
-        if (! auth()->user()->isSuperAdmin()) {
-            $supervisor = $this->requireSuperAdminOrSupervisor($request, 'Validation du superviseur requise.');
-            if (! $supervisor?->superadmin) {
-                return response()->json(['message' => 'Superviseur invalide.'], 422);
-            }
+        $supervisor = $this->requireSuperAdminOrSupervisor($request, 'Validation du superviseur requise.');
+        if ($supervisor !== null && ! $supervisor->superadmin) {
+            return response()->json(['message' => 'Superviseur invalide.'], 422);
         }
 
         $voucher->update([

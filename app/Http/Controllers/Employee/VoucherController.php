@@ -157,10 +157,7 @@ class VoucherController extends Controller
             $restrictedName = $name;
         }
 
-        // Validation superviseur pour les admins simples
-        if (! auth()->user()->isSuperAdmin()) {
-            $this->requireSuperAdminOrSupervisor($request);
-        }
+        $this->requireSuperAdminOrSupervisor($request);
 
         $changes = array_filter([
             'montant_avant'    => $voucher->amount != $validated['amount'] ? (float) $voucher->amount : null,
@@ -233,29 +230,21 @@ class VoucherController extends Controller
             $restrictedName = $name;
         }
 
+        $validatedSupervisor = $this->requireSuperAdminOrSupervisor($request);
+
         // Résolution du super administrateur associé au bon
         if (auth()->user()->isSuperAdmin()) {
             $superadminId   = auth()->id();
             $superadminName = auth()->user()->name;
         } else {
-            // Validation superviseur : lance une ValidationException en cas d'échec
-            $this->requireSuperAdminOrSupervisor($request);
-
-            // Après validation réussie, retrouver le superviseur pour obtenir son superadmin
-            $supervisorNumber = trim((string) $request->input('supervisor_number', ''));
-            $supervisor = Supervisor::where('supervisor_number', $supervisorNumber)
-                ->where('is_active', true)
-                ->with('superadmin:id,name')
-                ->first();
-
-            if (! $supervisor?->superadmin) {
+            if (! $validatedSupervisor?->superadmin) {
                 return back()->withInput()->withErrors([
                     'supervisor_number' => 'Impossible de déterminer le super administrateur associé à ce superviseur.',
                 ]);
             }
 
-            $superadminId   = $supervisor->superadmin_id;
-            $superadminName = $supervisor->superadmin->name;
+            $superadminId   = $validatedSupervisor->superadmin_id;
+            $superadminName = $validatedSupervisor->superadmin->name;
         }
 
         $voucher = Voucher::create([

@@ -190,17 +190,15 @@ class SupervisorController extends Controller
         abort_unless(auth()->user()->isAdmin(), 403);
         abort_unless($this->canManageSupervisor($supervisor), 403);
 
-        if (! auth()->user()->isSuperAdmin()) {
-            $validatedSupervisor = $this->requireSuperAdminOrSupervisor(
-                request(),
-                'La suppression exige la validation d\'un superviseur externe à votre compte.'
-            );
+        $validatedSupervisor = $this->requireSuperAdminOrSupervisor(
+            request(),
+            'La suppression exige la validation d\'un superviseur externe à votre compte.'
+        );
 
-            if ((int) $validatedSupervisor->superadmin_id === (int) $supervisor->superadmin_id) {
-                throw ValidationException::withMessages([
-                    'supervisor_number' => "La suppression exige un superviseur non rattaché à votre compte.",
-                ]);
-            }
+        if ($validatedSupervisor !== null && (int) $validatedSupervisor->superadmin_id === (int) $supervisor->superadmin_id) {
+            throw ValidationException::withMessages([
+                'supervisor_number' => "La suppression exige un superviseur non rattaché à votre compte.",
+            ]);
         }
 
         $supervisor->delete();

@@ -77,6 +77,21 @@
             </form>
         </div>
 
+        @if($user->isSuperAdmin())
+            <div class="bg-white rounded-xl shadow-sm border border-stone-100 p-5 sm:p-6">
+                <div class="flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                        <h2 class="font-semibold text-stone-800">Supervision</h2>
+                        <p class="text-sm text-stone-500 mt-1">Gérez le mode superviseur permanent de cette session.</p>
+                    </div>
+                    <a href="{{ route('employee.supervision.permanent') }}"
+                       class="bg-amber-700 hover:bg-amber-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium transition-colors">
+                        Gérer le mode
+                    </a>
+                </div>
+            </div>
+        @endif
+
     </div>
 
 </x-employee-layout>

@@ -193,9 +193,7 @@ class LoyaltyCardController extends Controller
     {
         abort_unless(auth()->user()?->isAdmin() || auth()->user()?->isModerator(), 403);
 
-        if (! auth()->user()->isSuperAdmin()) {
-            $this->requireSuperAdminOrSupervisor($request);
-        }
+        $this->requireSuperAdminOrSupervisor($request);
 
         $validated = $request->validate([
             'label' => ['required', 'string', 'max:150'],
@@ -235,9 +233,7 @@ class LoyaltyCardController extends Controller
         abort_unless($offer->loyalty_card_id === $card->id, 404);
         abort_if($offer->isUsedState(), 403, 'Une offre déjà utilisée ne peut pas être modifiée.');
 
-        if (! auth()->user()->isSuperAdmin()) {
-            $this->requireSuperAdminOrSupervisor($request);
-        }
+        $this->requireSuperAdminOrSupervisor($request);
 
         $validated = $request->validate([
             'label' => ['required', 'string', 'max:150'],
@@ -276,9 +272,7 @@ class LoyaltyCardController extends Controller
         abort_unless($offer->loyalty_card_id === $card->id, 404);
         abort_if($offer->isUsedState(), 403, 'Une offre déjà utilisée ne peut pas être supprimée.');
 
-        if (! auth()->user()->isSuperAdmin()) {
-            $this->requireSuperAdminOrSupervisor($request);
-        }
+        $this->requireSuperAdminOrSupervisor($request);
 
         ActivityLogger::log(
             'card_offer.deleted',
@@ -297,9 +291,7 @@ class LoyaltyCardController extends Controller
     {
         abort_unless(auth()->user()->isAdmin(), 403);
 
-        if (! auth()->user()->isSuperAdmin()) {
-            $this->requireSuperAdminOrSupervisor($request, 'Action réservée aux super administrateurs ou à un superviseur valide.');
-        }
+        $this->requireSuperAdminOrSupervisor($request, 'Action réservée aux super administrateurs ou à un superviseur valide.');
 
         $validated = $request->validate([
             'type'   => ['required', Rule::in([LoyaltyPointAdjustment::TYPE_CREDIT, LoyaltyPointAdjustment::TYPE_DEBIT])],
