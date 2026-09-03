@@ -106,10 +106,7 @@ export default function CreateLoyaltyDiscountScreen() {
           </>
         )}
 
-        {!user?.global_role || user.global_role !== 'superadmin' ? (
-          <>
-            <Text style={styles.label}>QR code superviseur (optionnel)</Text>
-            <TextInput style={styles.input} value={supervisorToken} onChangeText={setSupervisorToken} placeholder="SUPERVISOR:..." placeholderTextColor="#9ca3af" selectionColor="#92400e" autoCapitalize="none" />
+        <>
             <TouchableOpacity style={styles.scanBtn} onPress={openScanner}>
               <Text style={styles.scanBtnText}>Scanner le QR code superviseur</Text>
             </TouchableOpacity>
@@ -118,8 +115,7 @@ export default function CreateLoyaltyDiscountScreen() {
             <TextInput style={styles.input} value={supervisorNumber} onChangeText={setSupervisorNumber} placeholderTextColor="#9ca3af" selectionColor="#92400e" />
             <Text style={styles.label}>Mot de passe du superviseur</Text>
             <TextInput style={styles.input} value={supervisorPin} onChangeText={setSupervisorPin} secureTextEntry keyboardType="numeric" placeholderTextColor="#9ca3af" selectionColor="#92400e" />
-          </>
-        ) : null}
+        </>
 
         <TouchableOpacity style={styles.submit} onPress={submit} disabled={loading}>
           {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitText}>Créer</Text>}

@@ -270,17 +270,14 @@ export default function LoyaltyCardDiscountsScreen() {
               />
             )}
 
-            {!isSuperAdmin && (
-              <>
-                <TextInput style={styles.input} placeholder="QR code superviseur (optionnel)" value={supervisorToken} onChangeText={setSupervisorToken} placeholderTextColor="#9ca3af" selectionColor="#92400e" autoCapitalize="none" />
+            <>
                 <TouchableOpacity style={styles.scanBtn} onPress={openSupervisorScanner}>
                   <Text style={styles.scanBtnText}>Scanner le QR code superviseur</Text>
                 </TouchableOpacity>
                 {supervisorToken ? <Text style={styles.scanSuccess}>Code superviseur scanné.</Text> : null}
                 <TextInput style={styles.input} placeholder="Identifiant superviseur" value={supervisorNumber} onChangeText={setSupervisorNumber} placeholderTextColor="#9ca3af" selectionColor="#92400e" />
                 <TextInput style={styles.input} placeholder="Mot de passe superviseur" value={supervisorPin} onChangeText={setSupervisorPin} secureTextEntry keyboardType="numeric" placeholderTextColor="#9ca3af" selectionColor="#92400e" />
-              </>
-            )}
+            </>
 
             <View style={styles.actionsRow}>
               <TouchableOpacity style={[styles.actionBtn, styles.cancelBtn]} onPress={() => setModalVisible(false)} disabled={saving}>

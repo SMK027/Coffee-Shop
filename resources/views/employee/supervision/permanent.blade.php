@@ -22,11 +22,7 @@
 
             <form action="{{ route('employee.supervision.permanent.enable') }}" method="POST" class="bg-white rounded-xl shadow-sm border border-stone-100 p-5 space-y-4">
                 @csrf
-                <div>
-                    <label for="supervisor_token" class="block text-sm font-medium text-stone-700 mb-1">QR code superviseur (optionnel)</label>
-                    <input type="text" name="supervisor_token" id="supervisor_token" value="{{ old('supervisor_token') }}" placeholder="SUPERVISOR:..."
-                           class="w-full border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
-                </div>
+                @include('employee.shared.supervisor-qr-scanner', ['scannerId' => 'permanent-supervision'])
                 <div class="grid sm:grid-cols-2 gap-4">
                     <div>
                         <label for="supervisor_number" class="block text-sm font-medium text-stone-700 mb-1">Identifiant superviseur</label>

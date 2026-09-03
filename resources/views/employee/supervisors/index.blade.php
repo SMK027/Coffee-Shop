@@ -224,14 +224,7 @@
                     <p class="text-xs text-amber-700">Cette action est réservée aux super administrateurs et exige une authentification superviseur supplémentaire.</p>
                 </div>
 
-                <div>
-                    <label for="pdf_supervisor_token" class="block text-sm font-medium text-amber-900 mb-1">QR code superviseur (optionnel)</label>
-                    <input type="text" name="supervisor_token" id="pdf_supervisor_token"
-                           value="{{ old('supervisor_token') }}"
-                           class="w-full border border-amber-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
-                           placeholder="SUPERVISOR:...">
-                    @error('supervisor_token')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
-                </div>
+                @include('employee.shared.supervisor-qr-scanner', ['scannerId' => 'pdf-supervisor'])
 
                 <div class="grid sm:grid-cols-2 gap-4">
                     <div>

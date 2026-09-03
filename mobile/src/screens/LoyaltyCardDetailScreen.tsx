@@ -335,16 +335,8 @@ export default function LoyaltyCardDetailScreen() {
               placeholder="Raison de l’ajustement"
             />
 
-            {!isSuperAdmin && (
-              <>
+            <>
                 <Text style={styles.modalSectionTitle}>Validation superviseur</Text>
-                <TextInput
-                  style={styles.modalInput}
-                  value={supervisorToken}
-                  onChangeText={setSupervisorToken}
-                  placeholder="QR code superviseur (optionnel)"
-                  autoCapitalize="none"
-                />
                 <TouchableOpacity style={styles.scanBtn} onPress={openSupervisorScanner}>
                   <Text style={styles.scanBtnText}>Scanner le QR code superviseur</Text>
                 </TouchableOpacity>
@@ -363,8 +355,7 @@ export default function LoyaltyCardDetailScreen() {
                   onChangeText={setSupervisorPin}
                   placeholder="Mot de passe du superviseur"
                 />
-              </>
-            )}
+            </>
 
             {adjustError && <Text style={styles.modalError}>{adjustError}</Text>}
 
