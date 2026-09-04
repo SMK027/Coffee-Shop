@@ -49,9 +49,11 @@
         {{-- Sélection des articles --}}
         <div class="bg-white rounded-xl shadow-sm border border-stone-100 p-5">
             <h2 class="font-semibold text-stone-800 mb-4">Articles à rembourser</h2>
-            <p class="text-xs text-stone-500 mb-4">Pour une sélection individuelle, le remboursement est calculé sur le prix de l'article, hors réduction salariée.</p>
+            <p class="text-xs text-stone-500 mb-4">Le remboursement applique proportionnellement les remises accordées sur la commande (fidélité, salarié, bon d'achat, offre carte).</p>
 
-            @if($refundableItems->isEmpty())
+            @if($hasTotalRefund)
+                <p class="text-sm text-stone-500 text-center py-4">Un remboursement total a déjà été effectué : le remboursement par article n'est plus disponible.</p>
+            @elseif($refundableItems->isEmpty())
                 <p class="text-sm text-stone-500 text-center py-4">Tous les articles ont déjà été remboursés.</p>
             @else
 
@@ -216,6 +218,54 @@
                 <button type="submit"
                         class="bg-red-700 hover:bg-red-600 text-white px-6 py-2.5 rounded-lg font-medium text-sm transition-colors">
                     Remboursement total
+                </button>
+            </form>
+        </div>
+        @endif
+
+        {{-- Remboursement d'un montant personnalisé --}}
+        @if(! $hasTotalRefund && $remainingAmount > 0)
+        <div class="bg-amber-50 border border-amber-200 rounded-xl p-5">
+            <h2 class="font-semibold text-amber-800 mb-2">Remboursement d'un montant au choix</h2>
+            <p class="text-sm text-amber-700 mb-4">
+                Rembourse un montant libre, non rattaché à des articles précis (maximum
+                <strong>{{ number_format($remainingAmount, 2, ',', ' ') }} €</strong>).
+            </p>
+            <form action="{{ route('employee.refunds.store', $order) }}" method="POST">
+                @csrf
+
+                <div class="mb-4">
+                    <label for="custom_amount" class="block text-sm font-medium text-amber-900 mb-1">Montant à rembourser (€) <span class="text-red-500">*</span></label>
+                    <input type="number" name="custom_amount" id="custom_amount" step="0.01" min="0.01" max="{{ $remainingAmount }}" required
+                           value="{{ old('custom_amount') }}"
+                           class="w-full border border-amber-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
+                    @error('custom_amount')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                </div>
+
+                <div class="mb-4">
+                    <label for="payment_method_id_custom" class="block text-sm font-medium text-amber-900 mb-1">Moyen de paiement du remboursement <span class="text-red-500">*</span></label>
+                    <select name="payment_method_id" id="payment_method_id_custom" required
+                            class="w-full border border-amber-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
+                        <option value="">— Choisir —</option>
+                        @foreach($paymentMethods as $method)
+                            <option value="{{ $method->id }}">{{ $method->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="mb-4">
+                    <label for="refund_reason_custom" class="block text-sm font-medium text-amber-900 mb-1">Motif (optionnel)</label>
+                    <input type="text" name="refund_reason" id="refund_reason_custom" value="{{ old('refund_reason') }}"
+                           maxlength="255"
+                           class="w-full border border-amber-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
+                </div>
+
+                @unless(auth()->user()->isSuperAdmin())
+                    @include('employee.shared.supervisor-auth-fields')
+                @endunless
+                <button type="submit"
+                        class="bg-amber-700 hover:bg-amber-600 text-white px-6 py-2.5 rounded-lg font-medium text-sm transition-colors">
+                    Rembourser ce montant
                 </button>
             </form>
         </div>

@@ -33,6 +33,7 @@ export interface OrderRefundLine {
   method_name: string;
   amount: number;
   reason: string | null;
+  type: 'partial' | 'total' | 'custom';
   is_refund: true;
 }
 
@@ -125,6 +126,7 @@ export interface OrderItem {
   drink_name: string;
   quantity: number;
   unit_price: number;
+  refund_unit_price: number;
   subtotal: number;
   custom_label: string | null;
   is_refund: boolean;

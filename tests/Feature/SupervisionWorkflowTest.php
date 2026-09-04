@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\PaymentMethod;
 use App\Models\User;
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -15,7 +16,7 @@ class SupervisionWorkflowTest extends TestCase
     {
         $superAdmin = User::factory()->create(['global_role' => 'superadmin']);
 
-        $response = $this->withoutMiddleware()
+        $response = $this->withoutMiddleware(PreventRequestForgery::class)
             ->actingAs($superAdmin)
             ->post(route('employee.payment-methods.store'), [
             'name' => 'Paiement test',

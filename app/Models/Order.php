@@ -49,6 +49,43 @@ class Order extends Model
     /** Taux de réduction immédiate accordé sur les commandes des salariés. */
     const EMPLOYEE_DISCOUNT_RATE = 0.15;
 
+    /**
+     * Sous-total brut des articles avant toute remise, reconstruit depuis les
+     * montants stockés (remises fidélité, salarié, bon d'achat, offre carte).
+     */
+    public function getGrossSubtotalAttribute(): float
+    {
+        return round(
+            (float) $this->total_amount
+            + (float) $this->discount_amount
+            + (float) $this->loyalty_discount_amount
+            + (float) $this->card_offer_discount
+            + (float) $this->voucher_discount_amount,
+            2
+        );
+    }
+
+    /**
+     * Part du prix brut effectivement remisée sur la commande (0 à 1), à
+     * répercuter proportionnellement sur les remboursements partiels.
+     */
+    public function getRefundDiscountRatioAttribute(): float
+    {
+        $gross = $this->gross_subtotal;
+
+        if ($gross <= 0) {
+            return 0.0;
+        }
+
+        return min(1.0, max(0.0, 1 - ((float) $this->total_amount / $gross)));
+    }
+
+    /** Indique si un remboursement total a déjà été appliqué à cette commande. */
+    public function hasTotalRefund(): bool
+    {
+        return $this->refunds()->where('type', OrderRefund::TYPE_TOTAL)->exists();
+    }
+
     public function items(): HasMany
     {
         return $this->hasMany(OrderItem::class);

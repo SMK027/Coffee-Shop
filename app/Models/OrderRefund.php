@@ -7,11 +7,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class OrderRefund extends Model
 {
-    protected $fillable = ['order_id', 'payment_method_id', 'amount', 'reason', 'created_by'];
+    protected $fillable = ['order_id', 'payment_method_id', 'amount', 'reason', 'created_by', 'type'];
 
     protected $casts = [
         'amount' => 'decimal:2',
     ];
+
+    const TYPE_PARTIAL = 'partial';
+    const TYPE_TOTAL = 'total';
+    const TYPE_CUSTOM = 'custom';
 
     public function order(): BelongsTo
     {

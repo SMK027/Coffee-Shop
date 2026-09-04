@@ -38,8 +38,9 @@ export default function OrderDetailScreen() {
   const [supervisorToken, setSupervisorToken] = useState('');
   const [supervisorError, setSupervisorError] = useState<string | null>(null);
   const [refundModalVisible, setRefundModalVisible] = useState(false);
-  const [refundMode, setRefundMode] = useState<'partial' | 'total'>('partial');
+  const [refundMode, setRefundMode] = useState<'partial' | 'total' | 'custom'>('partial');
   const [refundSelection, setRefundSelection] = useState<Record<number, number>>({});
+  const [refundCustomAmount, setRefundCustomAmount] = useState('');
   const [refundError, setRefundError] = useState<string | null>(null);
   const [refundSupervisorNumber, setRefundSupervisorNumber] = useState('');
   const [refundSupervisorPin, setRefundSupervisorPin] = useState('');
@@ -126,6 +127,7 @@ export default function OrderDetailScreen() {
   }).filter((item) => item.refundable_qty > 0);
 
   const totalRefundableAmount = Math.max(0, (order?.total_amount ?? 0) - (order?.refunded_amount ?? 0));
+  const hasTotalRefund = (order?.refunds ?? []).some((r) => r.type === 'total');
 
   const refundPayload = () => {
     const payload: Record<string, unknown> = {
@@ -138,6 +140,10 @@ export default function OrderDetailScreen() {
       payload.items = refundableItems
         .filter((item) => refundSelection[item.id] > 0)
         .map((item) => ({ item_id: item.id, qty: refundSelection[item.id] }));
+    }
+
+    if (refundMode === 'custom') {
+      payload.custom_amount = parseFloat(refundCustomAmount.replace(',', '.'));
     }
 
     if (!isPermanentSupervisionEnabled) {
@@ -157,6 +163,17 @@ export default function OrderDetailScreen() {
       setRefundError('Veuillez sélectionner un moyen de paiement pour le remboursement.');
       return;
     }
+    if (refundMode === 'custom') {
+      const amount = parseFloat(refundCustomAmount.replace(',', '.'));
+      if (!amount || amount <= 0) {
+        setRefundError('Veuillez saisir un montant valide.');
+        return;
+      }
+      if (amount > totalRefundableAmount) {
+        setRefundError('Le montant dépasse le solde encore remboursable.');
+        return;
+      }
+    }
     setUpdating(true);
     setRefundError(null);
 
@@ -165,6 +182,7 @@ export default function OrderDetailScreen() {
       setOrder(data.order);
       setRefundModalVisible(false);
       setRefundSelection({});
+      setRefundCustomAmount('');
       setRefundSupervisorNumber('');
       setRefundSupervisorPin('');
       setRefundSupervisorToken('');
@@ -399,7 +417,7 @@ export default function OrderDetailScreen() {
           <TouchableOpacity
             style={styles.refundBtn}
             onPress={() => {
-              setRefundMode('partial');
+              setRefundMode(hasTotalRefund ? 'total' : 'partial');
               setRefundModalVisible(true);
               setRefundError(null);
             }}
@@ -469,24 +487,46 @@ export default function OrderDetailScreen() {
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Remboursement</Text>
             <View style={styles.modalModeRow}>
-              <TouchableOpacity
-                style={[styles.modeButton, refundMode === 'partial' && styles.modeButtonActive]}
-                onPress={() => setRefundMode('partial')}
-              >
-                <Text style={[styles.modeButtonText, refundMode === 'partial' && styles.modeButtonTextActive]}>Partiel</Text>
-              </TouchableOpacity>
+              {!hasTotalRefund && (
+                <TouchableOpacity
+                  style={[styles.modeButton, refundMode === 'partial' && styles.modeButtonActive]}
+                  onPress={() => setRefundMode('partial')}
+                >
+                  <Text style={[styles.modeButtonText, refundMode === 'partial' && styles.modeButtonTextActive]}>Partiel</Text>
+                </TouchableOpacity>
+              )}
               <TouchableOpacity
                 style={[styles.modeButton, refundMode === 'total' && styles.modeButtonActive]}
                 onPress={() => setRefundMode('total')}
               >
                 <Text style={[styles.modeButtonText, refundMode === 'total' && styles.modeButtonTextActive]}>Total</Text>
               </TouchableOpacity>
+              {!hasTotalRefund && (
+                <TouchableOpacity
+                  style={[styles.modeButton, refundMode === 'custom' && styles.modeButtonActive]}
+                  onPress={() => setRefundMode('custom')}
+                >
+                  <Text style={[styles.modeButtonText, refundMode === 'custom' && styles.modeButtonTextActive]}>Montant</Text>
+                </TouchableOpacity>
+              )}
             </View>
 
             {refundMode === 'total' ? (
               <View style={styles.refundSummaryCard}>
                 <Text style={styles.refundSummaryLabel}>Montant à rembourser</Text>
                 <Text style={styles.refundSummaryValue}>{totalRefundableAmount.toFixed(2)} €</Text>
+              </View>
+            ) : refundMode === 'custom' ? (
+              <View style={styles.refundSummaryCard}>
+                <Text style={styles.refundSummaryLabel}>Montant à rembourser (max {totalRefundableAmount.toFixed(2)} €)</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="0.00"
+                  placeholderTextColor="#9ca3af"
+                  keyboardType="decimal-pad"
+                  value={refundCustomAmount}
+                  onChangeText={setRefundCustomAmount}
+                />
               </View>
             ) : (
               <ScrollView style={styles.refundItemsList}>
@@ -588,6 +628,7 @@ export default function OrderDetailScreen() {
                 onPress={() => {
                   setRefundModalVisible(false);
                   setRefundSelection({});
+                  setRefundCustomAmount('');
                   setRefundSupervisorNumber('');
                   setRefundSupervisorPin('');
                   setRefundSupervisorToken('');
@@ -602,7 +643,11 @@ export default function OrderDetailScreen() {
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalConfirmButton]}
                 onPress={confirmRefund}
-                disabled={updating || (refundMode === 'partial' && Object.values(refundSelection).every((qty) => qty <= 0))}
+                disabled={
+                  updating ||
+                  (refundMode === 'partial' && Object.values(refundSelection).every((qty) => qty <= 0)) ||
+                  (refundMode === 'custom' && !(parseFloat(refundCustomAmount.replace(',', '.')) > 0))
+                }
               >
                 {updating ? (
                   <ActivityIndicator size="small" color="#fff" />

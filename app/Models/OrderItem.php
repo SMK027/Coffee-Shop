@@ -37,9 +37,16 @@ class OrderItem extends Model
         return $this->quantity * $this->unit_price;
     }
 
-    /** Prix de remboursement partiel: les remises globales de la commande ne s'appliquent pas à l'article. */
+    /**
+     * Prix de remboursement partiel : applique proportionnellement les remises
+     * globales de la commande (fidélité, salarié, bon d'achat, offre carte) pour
+     * ne jamais rembourser plus que le montant réellement payé par le client.
+     */
     public function getRefundUnitPriceAttribute(): float
     {
-        return round(abs((float) $this->unit_price), 2);
+        $rawPrice = abs((float) $this->unit_price);
+        $ratio    = $this->order?->refund_discount_ratio ?? 0.0;
+
+        return round($rawPrice * (1 - $ratio), 2);
     }
 }
