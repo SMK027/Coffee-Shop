@@ -10,7 +10,7 @@ import {
   Modal,
   TextInput,
 } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
@@ -61,11 +61,16 @@ export default function OrderDetailScreen() {
 
   useEffect(() => {
     Promise.all([
-      api.get(`/orders/${orderId}`).then(({ data }) => setOrder(data.order)),
       api.get('/orders/statuses').then(({ data }) => setStatuses(data.statuses)),
       api.get('/payment-methods').then(({ data }) => setPaymentMethods(data.payment_methods)),
     ]).finally(() => setLoading(false));
-  }, [orderId]);
+  }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      api.get(`/orders/${orderId}`).then(({ data }) => setOrder(data.order));
+    }, [orderId])
+  );
 
   const currentStatus = statuses.find((s) => s.key === order?.status);
   const requiresSupervisor = Boolean(currentStatus?.is_terminal) && !isPermanentSupervisionEnabled;
