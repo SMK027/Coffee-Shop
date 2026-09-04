@@ -234,6 +234,15 @@
             @if($availableTransitions->isNotEmpty())
             <div class="bg-white rounded-xl shadow-sm border border-stone-100 p-4 sm:p-6">
                 <h2 class="font-semibold text-stone-800 mb-4">Changer le statut</h2>
+                @if($order->requiresPaymentBeforeStatusChange())
+                    <p class="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+                        Un paiement doit être enregistré avant de pouvoir changer le statut de cette commande.
+                    </p>
+                    <a href="{{ route('employee.orders.payment', $order) }}"
+                       class="mt-3 inline-flex items-center justify-center w-full bg-amber-700 hover:bg-amber-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors">
+                        Enregistrer le paiement
+                    </a>
+                @else
                 <div class="space-y-2">
                     @foreach($availableTransitions as $transition)
                     <form action="{{ route('employee.orders.status', $order) }}" method="POST">
@@ -246,6 +255,7 @@
                     </form>
                     @endforeach
                 </div>
+                @endif
             </div>
             @else
             <div class="bg-white rounded-xl shadow-sm border border-stone-100 p-4 sm:p-6">

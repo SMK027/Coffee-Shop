@@ -488,6 +488,12 @@ class OrderController extends Controller
             'status' => ['required', 'string', 'exists:order_statuses,key'],
         ]);
 
+        if ($order->requiresPaymentBeforeStatusChange()) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'status' => 'Un paiement doit être enregistré avant de changer le statut de la commande.',
+            ]);
+        }
+
         $currentStatus = $order->orderStatus;
         if ($currentStatus?->is_terminal && !Auth::user()?->isSuperAdmin()) {
             $this->requireSuperAdminOrSupervisor($request, 'Validation superviseur requise pour changer ce statut.');

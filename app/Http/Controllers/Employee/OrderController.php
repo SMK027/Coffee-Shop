@@ -773,6 +773,10 @@ class OrderController extends Controller
             'status' => ['required', 'string', Rule::in($validKeys)],
         ]);
 
+        if ($order->requiresPaymentBeforeStatusChange()) {
+            return back()->with('error', 'Un paiement doit être enregistré avant de changer le statut de la commande.');
+        }
+
         $newStatus = OrderStatus::where('key', $validated['status'])->first();
         $data = ['status' => $validated['status'], 'handled_by' => auth()->id()];
 

@@ -86,6 +86,15 @@ class Order extends Model
         return $this->refunds()->where('type', OrderRefund::TYPE_TOTAL)->exists();
     }
 
+    /**
+     * Indique si un paiement doit être enregistré avant de pouvoir changer le
+     * statut de la commande (les commandes à 0 € n'en ont pas besoin).
+     */
+    public function requiresPaymentBeforeStatusChange(): bool
+    {
+        return (float) $this->total_amount > 0 && $this->payments()->doesntExist();
+    }
+
     public function items(): HasMany
     {
         return $this->hasMany(OrderItem::class);

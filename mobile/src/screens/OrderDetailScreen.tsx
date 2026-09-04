@@ -69,6 +69,7 @@ export default function OrderDetailScreen() {
 
   const currentStatus = statuses.find((s) => s.key === order?.status);
   const requiresSupervisor = Boolean(currentStatus?.is_terminal) && !isPermanentSupervisionEnabled;
+  const requiresPayment = (order?.payments ?? []).length === 0 && (order?.total_amount ?? 0) > 0;
 
   const updateStatus = async (key: string, supervisor?: { number?: string; pin?: string; token?: string }) => {
     setUpdating(true);
@@ -103,6 +104,14 @@ export default function OrderDetailScreen() {
   };
 
   const handleStatusPress = (key: string) => {
+    if (requiresPayment) {
+      Alert.alert('Paiement requis', 'Enregistrez le paiement avant de changer le statut de cette commande.', [
+        { text: 'Annuler', style: 'cancel' },
+        { text: 'Enregistrer le paiement', onPress: () => navigation.navigate('OrderPayment', { orderId }) },
+      ]);
+      return;
+    }
+
     if (requiresSupervisor) {
       setPendingStatus(key);
       setSupervisorModalVisible(true);
@@ -387,22 +396,33 @@ export default function OrderDetailScreen() {
           <Text style={styles.sectionTitle}>
             Changer le statut{requiresSupervisor ? ' (superviseur requis)' : ''}
           </Text>
-          <View style={styles.transitionsRow}>
-            {availableTransitions.map((s) => (
-              <TouchableOpacity
-                key={s.key}
-                style={styles.transitionBtn}
-                onPress={() => handleStatusPress(s.key)}
-                disabled={updating}
-              >
-                {updating ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <Text style={styles.transitionBtnText}>{s.label}</Text>
-                )}
+          {requiresPayment ? (
+            <View style={styles.card}>
+              <Text style={styles.paymentNoticeText}>
+                Un paiement doit être enregistré avant de pouvoir changer le statut de cette commande.
+              </Text>
+              <TouchableOpacity style={styles.paymentBtn} onPress={() => navigation.navigate('OrderPayment', { orderId })}>
+                <Text style={styles.paymentBtnText}>💳  Enregistrer le paiement</Text>
               </TouchableOpacity>
-            ))}
-          </View>
+            </View>
+          ) : (
+            <View style={styles.transitionsRow}>
+              {availableTransitions.map((s) => (
+                <TouchableOpacity
+                  key={s.key}
+                  style={styles.transitionBtn}
+                  onPress={() => handleStatusPress(s.key)}
+                  disabled={updating}
+                >
+                  {updating ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Text style={styles.transitionBtnText}>{s.label}</Text>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
         </>
       )}
 
@@ -823,6 +843,7 @@ const styles = StyleSheet.create({
   sectionButtonRow: { marginTop: 16, gap: 10 },
   paymentBtn: { backgroundColor: '#16a34a', paddingHorizontal: 16, paddingVertical: 12, borderRadius: 10, alignItems: 'center', marginBottom: 8 },
   paymentBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  paymentNoticeText: { color: '#92400e', fontSize: 13, marginBottom: 12, lineHeight: 19 },
   refundBtn: { backgroundColor: '#dc2626', paddingHorizontal: 16, paddingVertical: 12, borderRadius: 10, alignItems: 'center' },
   refundBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
   modalOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(15, 23, 42, 0.45)', padding: 24 },
