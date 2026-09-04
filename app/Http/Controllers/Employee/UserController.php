@@ -7,11 +7,18 @@ use App\Mail\EmployeePasswordResetMail;
 use App\Models\EmployeePasswordReset;
 use App\Models\User;
 use App\Services\ActivityLogger;
+use BaconQrCode\Renderer\Image\SvgImageBackEnd;
+use BaconQrCode\Renderer\ImageRenderer;
+use BaconQrCode\Renderer\RendererStyle\RendererStyle;
+use BaconQrCode\Writer;
+use Dompdf\Dompdf;
+use Dompdf\Options;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class UserController extends Controller
 {
@@ -209,5 +216,97 @@ class UserController extends Controller
         Mail::to($user->email)->send(new EmployeePasswordResetMail($user, $resetUrl));
 
         return back()->with('success', "Un lien de réinitialisation a été envoyé à {$user->email}. Il expire dans 30 minutes.");
+    }
+
+    /**
+     * Génère une planche PDF de QR codes de connexion pour les salariés sélectionnés.
+     */
+    public function generatePdfBoard(Request $request)
+    {
+        abort_unless(auth()->user()->isAdmin(), 403);
+
+        $validated = $request->validate([
+            'selected_users'   => ['required', 'array', 'min:1'],
+            'selected_users.*' => ['integer', 'distinct', 'exists:users,id'],
+        ], [
+            'selected_users.required' => 'Sélectionnez au moins un salarié.',
+            'selected_users.min'      => 'Sélectionnez au moins un salarié.',
+        ]);
+
+        $validatedSupervisor = $this->requireStrictSupervisorValidation(
+            $request,
+            'La génération de la planche PDF exige une validation superviseur.'
+        );
+
+        $selectedIds = array_map('intval', $validated['selected_users']);
+
+        $users = User::whereIn('global_role', ['superadmin', 'admin', 'moderator'])
+            ->whereIn('id', $selectedIds)
+            ->orderBy('name')
+            ->get();
+
+        if ($users->count() !== count($selectedIds)) {
+            throw ValidationException::withMessages([
+                'selected_users' => 'Certains salariés sélectionnés sont introuvables.',
+            ]);
+        }
+
+        $qrWriter = new Writer(
+            new ImageRenderer(
+                new RendererStyle(220, 1),
+                new SvgImageBackEnd()
+            )
+        );
+
+        $roleLabels = [
+            'superadmin' => 'Super Admin',
+            'admin'      => 'Admin',
+            'moderator'  => 'Modérateur',
+        ];
+
+        $cards = $users->map(function (User $user) use ($qrWriter, $roleLabels): array {
+            $svg = $qrWriter->writeString($user->loginBarcodeValue());
+            $svg = preg_replace('/<\?xml[^>]*\?>/i', '', (string) $svg) ?? (string) $svg;
+            $svg = trim($svg);
+
+            return [
+                'id'          => $user->id,
+                'name'        => $user->name,
+                'username'    => $user->username,
+                'role_label'  => $roleLabels[$user->global_role] ?? $user->global_role,
+                'qr_data_uri' => 'data:image/svg+xml;base64,' . base64_encode($svg),
+            ];
+        })->values();
+
+        ActivityLogger::log(
+            'user.pdf_board_created',
+            'Création d\'une planche PDF de connexion salariés (' . $cards->count() . ' sélectionné(s))',
+            'user',
+            null,
+            [
+                'validated_by_supervisor' => $validatedSupervisor->supervisor_number,
+                'selected_user_ids'       => $cards->pluck('id')->all(),
+            ]
+        );
+
+        $html = view('employee.users.pdf-board', [
+            'cards'       => $cards,
+            'generatedAt' => now(),
+            'generatedBy' => auth()->user()?->name,
+        ])->render();
+
+        $options = new Options();
+        $options->set('isHtml5ParserEnabled', true);
+        $dompdf = new Dompdf($options);
+        $dompdf->loadHtml($html, 'UTF-8');
+        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->render();
+
+        $filename = 'planche-connexion-salaries-' . now()->format('Ymd-His') . '.pdf';
+
+        return response($dompdf->output(), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
     }
 }

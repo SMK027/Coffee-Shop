@@ -49,6 +49,10 @@
                     Se connecter
                 </button>
             </form>
+
+            <a href="{{ route('login.qr') }}" class="mt-4 block text-center text-amber-700 hover:text-amber-600 text-sm font-medium transition-colors">
+                📷 Connexion par QR code
+            </a>
         </div>
 
         <div class="text-center mt-6">

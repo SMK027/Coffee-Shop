@@ -74,4 +74,39 @@ class User extends Authenticatable implements JWTSubject
     {
         return $this->hasMany(LoyaltyCard::class);
     }
+
+    /** Jeton signé de connexion par QR code, invalidé automatiquement si le mot de passe change. */
+    public function loginToken(): string
+    {
+        $payload = $this->username . '|' . $this->password;
+        $signature = substr(hash_hmac('sha256', $payload, (string) config('app.key')), 0, 20);
+
+        return $this->username . '.' . $signature;
+    }
+
+    public function loginBarcodeValue(): string
+    {
+        return 'USERLOGIN:' . $this->loginToken();
+    }
+
+    /** Résout et vérifie un jeton de connexion par QR code (retourne null si invalide). */
+    public static function fromLoginToken(string $token): ?self
+    {
+        $tokenCompact = preg_replace('/\s+/', '', trim($token)) ?? trim($token);
+        $tokenCompact = preg_replace('/^USERLOGIN:/', '', $tokenCompact) ?? $tokenCompact;
+
+        if (preg_match('/^([A-Za-z0-9_-]{1,50})\.([A-Fa-f0-9]{20})$/', $tokenCompact, $matches) !== 1) {
+            return null;
+        }
+
+        $user = static::where('username', $matches[1])->first();
+        if (! $user) {
+            return null;
+        }
+
+        $payload = $user->username . '|' . $user->password;
+        $expected = substr(hash_hmac('sha256', $payload, (string) config('app.key')), 0, 20);
+
+        return hash_equals($expected, strtolower($matches[2])) ? $user : null;
+    }
 }

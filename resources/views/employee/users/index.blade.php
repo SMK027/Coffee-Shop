@@ -146,4 +146,85 @@
         </p>
     </div>
 
+    @if(auth()->user()->isAdmin() && $users->isNotEmpty())
+        <form action="{{ route('employee.users.pdf-board') }}" method="POST" class="mt-6 bg-white rounded-xl shadow-sm border border-stone-100 p-5 space-y-5">
+            @csrf
+
+            <div>
+                <h2 class="text-base font-semibold text-stone-800">Générer une planche PDF de QR codes de connexion</h2>
+                <p class="text-xs text-stone-500 mt-1">
+                    Sélectionnez les salariés à inclure. Le scan du QR code identifie le compte puis exige une validation superviseur avant connexion.
+                </p>
+                @error('selected_users')<p class="text-red-500 text-xs mt-2">{{ $message }}</p>@enderror
+            </div>
+
+            <div class="overflow-x-auto border border-stone-100 rounded-lg">
+                <table class="w-full text-sm">
+                    <thead class="bg-stone-50 border-b border-stone-100">
+                        <tr>
+                            <th class="px-4 py-2.5 text-left font-medium text-stone-600">Inclure</th>
+                            <th class="px-4 py-2.5 text-left font-medium text-stone-600">Salarié</th>
+                            <th class="px-4 py-2.5 text-left font-medium text-stone-600">Rôle</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-stone-50">
+                        @foreach($users as $user)
+                            @if($user->is_active)
+                                <tr>
+                                    <td class="px-4 py-3 align-top">
+                                        <input type="checkbox"
+                                               name="selected_users[]"
+                                               value="{{ $user->id }}"
+                                               {{ in_array((string) $user->id, array_map('strval', old('selected_users', [])), true) ? 'checked' : '' }}
+                                               class="rounded border-stone-300 text-amber-600 focus:ring-amber-500">
+                                    </td>
+                                    <td class="px-4 py-3 align-top">
+                                        <p class="text-stone-800">{{ $user->name }}</p>
+                                        <p class="text-xs text-stone-500 font-mono mt-1">{{ $user->username }}</p>
+                                    </td>
+                                    <td class="px-4 py-3 align-top text-xs text-stone-500">
+                                        {{ $user->isSuperAdmin() ? 'Super Admin' : ($user->isModerator() ? 'Modérateur' : 'Admin') }}
+                                    </td>
+                                </tr>
+                            @endif
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-4">
+                <div class="space-y-1">
+                    <p class="text-sm font-semibold text-amber-800">Validation superviseur obligatoire</p>
+                    <p class="text-xs text-amber-700">La génération de ces QR codes de connexion exige une authentification superviseur supplémentaire.</p>
+                </div>
+
+                @include('employee.shared.supervisor-qr-scanner', ['scannerId' => 'users-pdf-supervisor'])
+
+                <div class="grid sm:grid-cols-2 gap-4">
+                    <div>
+                        <label for="users_pdf_supervisor_number" class="block text-sm font-medium text-amber-900 mb-1">Identifiant superviseur</label>
+                        <input type="text" name="supervisor_number" id="users_pdf_supervisor_number"
+                               value="{{ old('supervisor_number') }}"
+                               class="w-full border border-amber-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
+                        @error('supervisor_number')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                    </div>
+
+                    <div>
+                        <label for="users_pdf_supervisor_pin" class="block text-sm font-medium text-amber-900 mb-1">PIN superviseur</label>
+                        <input type="password" name="supervisor_pin" id="users_pdf_supervisor_pin" maxlength="6" minlength="4" inputmode="numeric" pattern="\d{4,6}"
+                               class="w-full border border-amber-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
+                        @error('supervisor_pin')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end">
+                <button type="submit"
+                        class="bg-amber-700 hover:bg-amber-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium transition-colors">
+                    Générer le PDF
+                </button>
+            </div>
+        </form>
+    @endif
+
 </x-employee-layout>

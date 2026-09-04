@@ -9,6 +9,7 @@ interface AuthContextValue {
   isLoading: boolean;
   isPermanentSupervisionEnabled: boolean;
   login: (email: string, password: string) => Promise<void>;
+  loginWithQr: (token: string, supervisor: { token?: string; number?: string; pin?: string }) => Promise<void>;
   logout: () => Promise<void>;
   enablePermanentSupervision: (credentials: { token?: string; number?: string; pin?: string }) => Promise<void>;
   disablePermanentSupervision: () => Promise<void>;
@@ -65,6 +66,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsPermanentSupervisionEnabled(false);
   };
 
+  const loginWithQr = async (token: string, supervisor: { token?: string; number?: string; pin?: string }) => {
+    await SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY);
+    await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
+    await SecureStore.deleteItemAsync(PERMANENT_SUPERVISION_TOKEN_KEY);
+
+    const payload: Record<string, string> = { token };
+    if (supervisor.token) {
+      payload.supervisor_token = supervisor.token;
+    } else {
+      payload.supervisor_number = supervisor.number ?? '';
+      payload.supervisor_pin = supervisor.pin ?? '';
+    }
+
+    const { data } = await api.post('/auth/login/qr', payload);
+    await SecureStore.setItemAsync(ACCESS_TOKEN_KEY, data.access_token);
+    await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, data.refresh_token ?? data.access_token);
+    setUser(data.user);
+    setIsPermanentSupervisionEnabled(false);
+  };
+
   const logout = async () => {
     try {
       await api.post('/auth/logout');
@@ -96,7 +117,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, isPermanentSupervisionEnabled, login, logout, enablePermanentSupervision, disablePermanentSupervision }}>
+    <AuthContext.Provider value={{ user, isLoading, isPermanentSupervisionEnabled, login, loginWithQr, logout, enablePermanentSupervision, disablePermanentSupervision }}>
       {children}
     </AuthContext.Provider>
   );

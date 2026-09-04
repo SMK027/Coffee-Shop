@@ -196,6 +196,7 @@ Route::prefix('espace-employe')->name('employee.')->middleware(['auth', 'employe
     Route::get('/employes', [UserController::class, 'index'])->name('users.index');
     Route::get('/employes/nouveau', [UserController::class, 'create'])->name('users.create');
     Route::post('/employes', [UserController::class, 'store'])->name('users.store');
+    Route::post('/employes/planche-pdf', [UserController::class, 'generatePdfBoard'])->name('users.pdf-board');
     Route::get('/employes/{user}/modifier', [UserController::class, 'edit'])->name('users.edit');
     Route::put('/employes/{user}', [UserController::class, 'update'])->name('users.update');
     Route::delete('/employes/{user}', [UserController::class, 'destroy'])->name('users.destroy');

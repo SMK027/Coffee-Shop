@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -45,6 +46,70 @@ class AuthController extends Controller
         }
 
         return $this->respondWithToken($token);
+    }
+
+    /**
+     * Étape 1-2 : identification du salarié à partir du QR code scanné (mobile).
+     */
+    public function identifyQr(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'token' => ['required', 'string', 'max:200'],
+        ]);
+
+        $user = $this->resolveQrUser($validated['token']);
+
+        if (! $user) {
+            return response()->json([
+                'message' => 'QR code invalide ou compte introuvable.',
+            ], 422);
+        }
+
+        return response()->json([
+            'name'     => $user->name,
+            'username' => $user->username,
+        ]);
+    }
+
+    /**
+     * Étape 3 : authentification superviseur obligatoire puis connexion effective par QR code.
+     */
+    public function loginQr(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'token' => ['required', 'string', 'max:200'],
+        ]);
+
+        $user = $this->resolveQrUser($validated['token']);
+
+        if (! $user) {
+            throw ValidationException::withMessages([
+                'token' => 'QR code invalide ou compte introuvable.',
+            ]);
+        }
+
+        if (! $user->isAdmin() && ! $user->isModerator()) {
+            return response()->json([
+                'message' => 'Accès réservé aux salariés.',
+            ], 403);
+        }
+
+        // Authentification superviseur obligatoire, sans dérogation possible.
+        $this->requireStrictSupervisorValidation(
+            $request,
+            'Une authentification superviseur est requise pour se connecter par QR code.'
+        );
+
+        $token = Auth::guard('api')->login($user);
+
+        return $this->respondWithToken($token);
+    }
+
+    private function resolveQrUser(string $token): ?User
+    {
+        $user = User::fromLoginToken($token);
+
+        return ($user && $user->isActive()) ? $user : null;
     }
 
     /**
