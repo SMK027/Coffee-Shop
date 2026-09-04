@@ -17,20 +17,17 @@ class SupervisorController extends Controller
     {
         abort_unless(auth()->user()?->isAdmin(), 403);
 
-        $user = auth()->user();
-        $isSuperAdmin = (bool) $user?->isSuperAdmin();
-        $ownerId = $this->ownerReferenceId();
-        $currentUserId = (int) ($user?->id ?? 0);
+        $currentUserId = (int) (auth()->id() ?? 0);
 
         $items = Supervisor::with(['superadmin:id,name', 'holderAdmin:id,name'])
-            ->when($isSuperAdmin, fn ($query) => $query->where('superadmin_id', $currentUserId))
-            ->when(! $isSuperAdmin, function ($query) use ($currentUserId) {
-                $query->where('holder_admin_id', $currentUserId);
+            ->where(function ($query) use ($currentUserId) {
+                $query->where('superadmin_id', $currentUserId)
+                    ->orWhere('holder_admin_id', $currentUserId);
             })
             ->orderBy('supervisor_number')
             ->get()
-            ->map(function (Supervisor $s) use ($currentUserId, $isSuperAdmin) {
-                $relationType = $isSuperAdmin
+            ->map(function (Supervisor $s) use ($currentUserId) {
+                $relationType = (int) $s->superadmin_id === $currentUserId
                     ? 'responsible'
                     : ((int) $s->holder_admin_id === $currentUserId ? 'holder' : 'visible');
 
@@ -78,13 +75,6 @@ class SupervisorController extends Controller
             'holder_admin_name' => $supervisor->holderAdmin?->name,
             'barcode_value' => $supervisor->barcodeValue(),
         ]);
-    }
-
-    private function ownerReferenceId(): int
-    {
-        $user = auth()->user();
-
-        return (int) ($user?->superadmin_id ?: $user?->id);
     }
 
     private function canManageSupervisor(Supervisor $supervisor): bool

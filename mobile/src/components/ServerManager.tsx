@@ -4,6 +4,7 @@ import {
   TextInput, Modal, KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
 import { useServer } from '../context/ServerContext';
+import { useAuth } from '../context/AuthContext';
 import { Server } from '../api/servers';
 
 type ModalMode = { type: 'add' } | { type: 'edit'; server: Server };
@@ -14,6 +15,7 @@ interface Props {
 
 export default function ServerManager({ onSelect }: Props) {
   const { server, servers, setServer, addServer, updateServer, deleteServer } = useServer();
+  const { logout } = useAuth();
 
   const [modalVisible, setModalVisible] = useState(false);
   const [modalMode, setModalMode] = useState<ModalMode>({ type: 'add' });
@@ -64,7 +66,16 @@ export default function ServerManager({ onSelect }: Props) {
   };
 
   const handleSelect = async (s: Server) => {
+    const isSwitchingServer = s.id !== server.id;
     await setServer(s);
+
+    // Un token d'authentification n'est valide que pour le serveur qui l'a émis :
+    // le réutiliser sur un autre serveur pourrait authentifier le mauvais compte.
+    if (isSwitchingServer) {
+      await logout();
+      Alert.alert('Serveur changé', 'Reconnectez-vous pour accéder à ce serveur.');
+    }
+
     onSelect?.(s);
   };
 
