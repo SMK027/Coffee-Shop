@@ -14,6 +14,7 @@ class PaymentMethodSeeder extends Seeder
             ['name' => 'Carte bancaire',   'slug' => 'card',         'sort_order' => 2],
             ['name' => 'Ticket restaurant','slug' => 'ticket-resto', 'sort_order' => 3],
             ['name' => 'Virement',         'slug' => 'transfer',     'sort_order' => 4],
+            ['name' => "Bon d'achat",      'slug' => PaymentMethod::SLUG_VOUCHER, 'sort_order' => 5],
         ];
 
         foreach ($methods as $method) {

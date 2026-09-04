@@ -185,11 +185,22 @@ class VoucherController extends Controller
             ->with('success', 'Bon d\'achat mis à jour avec succès.');
     }
 
-    public function create()
+    public function create(Request $request)
     {
         abort_unless(auth()->user()->isAdmin(), 403);
 
-        return view('employee.vouchers.create');
+        // Préremplissage possible depuis un remboursement réglé en "Bon d'achat"
+        // (montant, durée de validité, restriction à la carte de fidélité liée).
+        $prefill = [
+            'amount'                 => $request->query('amount'),
+            'validity_days'          => (int) $request->query('validity_days', 7),
+            'restriction_type'       => in_array($request->query('restriction_type'), ['card', 'name'], true)
+                ? $request->query('restriction_type')
+                : 'none',
+            'restricted_card_number' => $request->query('restricted_card_number'),
+        ];
+
+        return view('employee.vouchers.create', compact('prefill'));
     }
 
     public function store(Request $request)

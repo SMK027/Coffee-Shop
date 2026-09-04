@@ -7,6 +7,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PaymentMethod extends Model
 {
+    /** Slug identifiant le moyen de paiement "Bon d'achat", déclenchant l'émission d'un bon lors d'un remboursement. */
+    public const SLUG_VOUCHER = 'voucher';
+
     protected $fillable = ['name', 'slug', 'is_active', 'sort_order'];
 
     protected $casts = [

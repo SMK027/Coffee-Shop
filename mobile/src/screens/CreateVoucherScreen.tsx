@@ -11,6 +11,7 @@ export default function CreateVoucherScreen() {
   const { isPermanentSupervisionEnabled } = useAuth();
   const voucher = route.params?.voucher ?? null;
   const isEditing = !!voucher?.id;
+  const prefill = route.params?.prefill ?? null;
   const [amount, setAmount] = useState('');
   const [validityDays, setValidityDays] = useState('7');
   const [expiresAt, setExpiresAt] = useState('');
@@ -40,6 +41,18 @@ export default function CreateVoucherScreen() {
       setValidityDays(String(diff));
     }
   }, [voucher]);
+
+  // Préremplissage depuis un remboursement réglé en "Bon d'achat" (montant, durée, restriction à la carte).
+  useEffect(() => {
+    if (voucher || !prefill) return;
+
+    if (prefill.amount != null) setAmount(String(prefill.amount));
+    if (prefill.validity_days != null) setValidityDays(String(prefill.validity_days));
+    if (prefill.restriction_type === 'card' || prefill.restriction_type === 'name') {
+      setRestrictionType(prefill.restriction_type);
+    }
+    if (prefill.restricted_card_number) setRestrictedCardNumber(String(prefill.restricted_card_number));
+  }, [voucher, prefill]);
 
   const submit = async () => {
     if (!amount || Number(amount) <= 0) {

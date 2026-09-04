@@ -18,7 +18,7 @@
                     <div class="relative">
                         <input type="number" id="amount" name="amount"
                                step="0.01" min="0.01" max="9999.99"
-                               value="{{ old('amount') }}"
+                                   value="{{ old('amount', $prefill['amount'] ?? '') }}"
                                class="w-full border {{ $errors->has('amount') ? 'border-red-400 bg-red-50' : 'border-stone-300' }} rounded-lg px-4 py-2.5 pr-9 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
                                placeholder="0,00" required>
                         <span class="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 text-sm font-medium pointer-events-none">€</span>
@@ -35,18 +35,18 @@
                     <div class="flex items-center gap-3">
                         <input type="range" id="validity_days" name="validity_days"
                                min="3" max="31" step="1"
-                               value="{{ old('validity_days', 7) }}"
+                                 value="{{ old('validity_days', $prefill['validity_days'] ?? 7) }}"
                                class="flex-1 accent-amber-700"
                                oninput="document.getElementById('validity_display').textContent = this.value + ' jour' + (this.value > 1 ? 's' : '')">
                         <span id="validity_display"
                               class="w-20 text-center text-sm font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg py-1 px-2">
-                            {{ old('validity_days', 7) }} jours
+                               {{ old('validity_days', $prefill['validity_days'] ?? 7) }} jours
                         </span>
                     </div>
                     <p class="text-xs text-stone-500 mt-1">
                         Le bon expirera le
                         <span id="expiry_date" class="font-medium text-stone-700">
-                            {{ now()->addDays(old('validity_days', 7))->translatedFormat('d/m/Y') }}
+                               {{ now()->addDays((int) old('validity_days', $prefill['validity_days'] ?? 7))->translatedFormat('d/m/Y') }}
                         </span>
                     </p>
                     @error('validity_days')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
@@ -88,7 +88,7 @@
                         <label for="restricted_card_number" class="block text-sm text-stone-600">Numéro de carte fidélité</label>
                         <div class="flex gap-2">
                             <input type="text" name="restricted_card_number" id="restricted_card_number"
-                                   value="{{ old('restricted_card_number') }}"
+                                       value="{{ old('restricted_card_number', $prefill['restricted_card_number'] ?? '') }}"
                                    maxlength="20"
                                    placeholder="0000 0000 0000 0000"
                                    @input="cardName = ''; cardError = ''"
@@ -160,10 +160,15 @@
 function voucherRestriction() {
     const checkUrl = '{{ route('employee.orders.loyalty-check') }}';
     return {
-        restrictType: '{{ old('restriction_type', 'none') }}',
+        restrictType: '{{ old('restriction_type', $prefill['restriction_type'] ?? 'none') }}',
         cardName: '',
         cardChecking: false,
         cardError: '',
+        init() {
+            if (this.restrictType === 'card' && document.getElementById('restricted_card_number')?.value) {
+                this.checkCard();
+            }
+        },
         async checkCard() {
             const num = document.getElementById('restricted_card_number').value.replace(/\s/g, '');
             if (!num) return;

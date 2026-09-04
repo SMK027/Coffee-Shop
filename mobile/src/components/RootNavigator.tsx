@@ -43,6 +43,7 @@ function OrdersStack() {
       <OrderStack.Screen name="OrderDetail" component={OrderDetailScreen} options={{ title: 'Détail' }} />
       <OrderStack.Screen name="CreateOrder" component={CreateOrderScreen} options={{ title: 'Nouvelle commande' }} />
       <OrderStack.Screen name="OrderPayment" component={OrderPaymentScreen} options={{ title: 'Enregistrer le paiement' }} />
+      <OrderStack.Screen name="CreateVoucher" component={CreateVoucherScreen} options={{ title: "Émettre un bon d'achat" }} />
     </OrderStack.Navigator>
   );
 }

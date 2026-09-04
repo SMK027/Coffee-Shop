@@ -197,6 +197,10 @@ export default function OrderDetailScreen() {
       setRefundSupervisorToken('');
       setRefundPaymentMethodId('');
       setRefundReason('');
+
+      if (data.voucher_prefill) {
+        navigation.navigate('CreateVoucher', { prefill: data.voucher_prefill });
+      }
     } catch (error: any) {
       setRefundError(error?.response?.data?.message || 'Impossible de procéder au remboursement.');
     } finally {

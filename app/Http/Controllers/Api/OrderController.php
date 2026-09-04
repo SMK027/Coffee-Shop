@@ -548,35 +548,46 @@ class OrderController extends Controller
         }
 
         if ($isTotalRefund) {
-            $this->applyTotalRefund($order, $paymentMethodId, $reason);
+            $refundAmount = $this->applyTotalRefund($order, $paymentMethodId, $reason);
         } elseif ($isCustomRefund) {
             $request->validate([
                 'custom_amount' => ['required', 'numeric', 'min:0.01'],
             ]);
-            $this->applyCustomRefund($order, (float) $request->input('custom_amount'), $paymentMethodId, $reason);
+            $refundAmount = $this->applyCustomRefund($order, (float) $request->input('custom_amount'), $paymentMethodId, $reason);
         } else {
             $request->validate([
                 'items'            => ['required', 'array', 'min:1'],
                 'items.*.item_id'  => ['required', 'integer', 'exists:order_items,id'],
                 'items.*.qty'      => ['required', 'integer', 'min:1'],
             ]);
-            $this->applyPartialRefund($order, $request->input('items', []), $paymentMethodId, $reason);
+            $refundAmount = $this->applyPartialRefund($order, $request->input('items', []), $paymentMethodId, $reason);
         }
 
-        return response()->json([
+        $response = [
             'message' => 'Remboursement enregistré avec succès.',
             'order'   => $this->formatOrder($order->fresh()->load('items.drink', 'loyaltyCard', 'loyaltyDiscounts', 'payments.paymentMethod', 'refunds.paymentMethod'), true),
-        ]);
+        ];
+
+        if ($activeMethod->slug === \App\Models\PaymentMethod::SLUG_VOUCHER && $refundAmount > 0) {
+            $response['voucher_prefill'] = [
+                'amount'                 => $refundAmount,
+                'validity_days'          => 30,
+                'restriction_type'       => $order->loyalty_card_id ? 'card' : 'none',
+                'restricted_card_number' => $order->loyaltyCard?->card_number,
+            ];
+        }
+
+        return response()->json($response);
     }
 
-    private function applyTotalRefund(Order $order, int $paymentMethodId, ?string $reason): void
+    private function applyTotalRefund(Order $order, int $paymentMethodId, ?string $reason): float
     {
-        DB::transaction(function () use ($order, $paymentMethodId, $reason) {
+        return DB::transaction(function () use ($order, $paymentMethodId, $reason) {
             $alreadyRefunded = (float) $order->refunded_amount;
             $remaining       = round((float) $order->total_amount - $alreadyRefunded, 2);
 
             if ($remaining <= 0) {
-                return;
+                return 0.0;
             }
 
             OrderItem::create([
@@ -620,18 +631,20 @@ class OrderController extends Controller
                     ]);
                 }
             }
+
+            return $remaining;
         });
     }
 
     /** Remboursement d'un montant au choix, non rattaché à des articles précis. */
-    private function applyCustomRefund(Order $order, float $amount, int $paymentMethodId, ?string $reason): void
+    private function applyCustomRefund(Order $order, float $amount, int $paymentMethodId, ?string $reason): float
     {
-        DB::transaction(function () use ($order, $amount, $paymentMethodId, $reason) {
+        return DB::transaction(function () use ($order, $amount, $paymentMethodId, $reason) {
             $remaining = round((float) $order->total_amount - (float) $order->refunded_amount, 2);
             $amount    = round(min($amount, $remaining), 2);
 
             if ($amount <= 0) {
-                return;
+                return 0.0;
             }
 
             OrderItem::create([
@@ -677,12 +690,14 @@ class OrderController extends Controller
                     ]);
                 }
             }
+
+            return $amount;
         });
     }
 
-    private function applyPartialRefund(Order $order, array $items, int $paymentMethodId, ?string $reason): void
+    private function applyPartialRefund(Order $order, array $items, int $paymentMethodId, ?string $reason): float
     {
-        DB::transaction(function () use ($order, $items, $paymentMethodId, $reason) {
+        return DB::transaction(function () use ($order, $items, $paymentMethodId, $reason) {
             $totalRefundAmount = 0;
             $totalPointsToDebit = 0;
 
@@ -755,6 +770,8 @@ class OrderController extends Controller
                     'reason'          => 'Remboursement partiel — commande #' . str_pad($order->id, 4, '0', STR_PAD_LEFT),
                 ]);
             }
+
+                return $totalRefundAmount;
         });
     }
 
