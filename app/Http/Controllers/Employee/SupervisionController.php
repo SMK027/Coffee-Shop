@@ -88,6 +88,10 @@ class SupervisionController extends Controller
         $payload = $pending['input'] ?? [];
         $payload['__supervision_bypass_nonce'] = $nonce;
 
+        if (! empty($pending['referer'])) {
+            $request->session()->put('_previous.url', $pending['referer']);
+        }
+
         return response()->view('employee.supervision.replay', [
             'actionPath' => '/' . ltrim((string) ($pending['path'] ?? ''), '/'),
             'method' => strtoupper((string) ($pending['method'] ?? 'POST')),

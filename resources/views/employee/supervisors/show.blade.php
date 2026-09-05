@@ -53,7 +53,7 @@
                 <div>
                     <h3 class="text-sm font-semibold text-red-800">Suppression protégée</h3>
                     <p class="text-xs text-red-700 mt-1">
-                        La suppression nécessite l'authentification d'un autre compte superviseur non rattaché à votre compte.
+                        La suppression nécessite l'authentification d'un autre superviseur que celui-ci.
                     </p>
                 </div>
 

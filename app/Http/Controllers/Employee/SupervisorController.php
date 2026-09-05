@@ -245,12 +245,12 @@ class SupervisorController extends Controller
 
         $validatedSupervisor = $this->requireSuperAdminOrSupervisor(
             $request,
-            'La suppression exige la validation d\'un superviseur externe à votre compte.'
+            'La suppression exige la validation d\'un superviseur.'
         );
 
-        if ($validatedSupervisor !== null && (int) $validatedSupervisor->superadmin_id === (int) $supervisor->superadmin_id) {
+        if ($validatedSupervisor !== null && (int) $validatedSupervisor->id === (int) $supervisor->id) {
             throw ValidationException::withMessages([
-                'supervisor_number' => "La suppression exige un superviseur non rattaché à votre compte.",
+                'supervisor_number' => "Un superviseur ne peut pas valider sa propre suppression. Veuillez utiliser un autre superviseur.",
             ]);
         }
 
