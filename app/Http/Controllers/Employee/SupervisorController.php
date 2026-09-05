@@ -76,6 +76,14 @@ class SupervisorController extends Controller
         $barcodeValue = $supervisor->barcodeValue();
         $isSuperAdmin = auth()->user()->isSuperAdmin();
 
+        ActivityLogger::log(
+            'supervisor.show',
+            'Consultation du superviseur #' . $supervisor->supervisor_number,
+            'supervisor',
+            $supervisor->id,
+            ['supervisor_number' => $supervisor->supervisor_number]
+        );
+
         return view('employee.supervisors.show', compact('supervisor', 'barcodeValue', 'isSuperAdmin'));
     }
 
@@ -115,12 +123,24 @@ class SupervisorController extends Controller
             }
         }
 
-        Supervisor::create([
+        $supervisor = Supervisor::create([
             'supervisor_number' => $validated['supervisor_number'],
             'password'          => Hash::make($validated['supervisor_pin']),
             'superadmin_id'     => $owner->id,
             'holder_admin_id'   => $holderId,
         ]);
+
+        ActivityLogger::log(
+            'supervisor.created',
+            'Superviseur créé : #' . $supervisor->supervisor_number,
+            'supervisor',
+            $supervisor->id,
+            [
+                'supervisor_number' => $supervisor->supervisor_number,
+                'responsable'       => $owner->name,
+                'detenteur'         => $holderId ? User::find($holderId)?->name : null,
+            ]
+        );
 
         return redirect()->route('employee.supervisors.index')
             ->with('success', 'Superviseur créé avec succès.');
@@ -156,6 +176,14 @@ class SupervisorController extends Controller
             $supervisor->password = Hash::make($validated['supervisor_pin']);
             $supervisor->save();
 
+            ActivityLogger::log(
+                'supervisor.updated',
+                'Code PIN du superviseur #' . $supervisor->supervisor_number . ' mis à jour',
+                'supervisor',
+                $supervisor->id,
+                ['supervisor_number' => $supervisor->supervisor_number]
+            );
+
             return redirect()->route('employee.supervisors.index')
                 ->with('success', 'Code PIN du superviseur mis à jour avec succès.');
         }
@@ -178,6 +206,14 @@ class SupervisorController extends Controller
 
         $supervisor->save();
 
+        ActivityLogger::log(
+            'supervisor.updated',
+            'Superviseur #' . $supervisor->supervisor_number . ' mis à jour',
+            'supervisor',
+            $supervisor->id,
+            ['supervisor_number' => $supervisor->supervisor_number, 'actif' => $supervisor->is_active]
+        );
+
         return redirect()->route('employee.supervisors.index')
             ->with('success', 'Superviseur mis à jour avec succès.');
     }
@@ -189,6 +225,14 @@ class SupervisorController extends Controller
         abort_unless($this->canManageSupervisor($supervisor), 403);
 
         $supervisor->update(['is_active' => ! $supervisor->is_active]);
+
+        ActivityLogger::log(
+            'supervisor.activation_toggled',
+            ($supervisor->is_active ? 'Superviseur réactivé' : 'Superviseur désactivé') . ' : #' . $supervisor->supervisor_number,
+            'supervisor',
+            $supervisor->id,
+            ['supervisor_number' => $supervisor->supervisor_number, 'actif' => $supervisor->is_active]
+        );
 
         return back()->with('success', $supervisor->is_active ? 'Superviseur réactivé.' : 'Superviseur désactivé.');
     }
@@ -211,6 +255,14 @@ class SupervisorController extends Controller
         }
 
         $supervisor->delete();
+
+        ActivityLogger::log(
+            'supervisor.deleted',
+            'Superviseur supprimé : #' . $supervisor->supervisor_number,
+            'supervisor',
+            $supervisor->id,
+            ['supervisor_number' => $supervisor->supervisor_number]
+        );
 
         return redirect()->route('employee.supervisors.index')
             ->with('success', 'Superviseur supprimé.');

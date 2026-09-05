@@ -13,6 +13,9 @@ class ActivityLogger
     private static array $routeLabels = [
         // Authentification / compte
         'login'                              => 'Ouverture de la connexion',
+        'login.qr'                           => 'Ouverture de la connexion par QR code',
+        'login.qr.identify'                  => 'Identification pour connexion par QR code',
+        'login.qr.store'                     => 'Connexion par QR code',
         'logout'                             => 'Déconnexion',
         'password.request'                   => 'Demande de réinitialisation de mot de passe',
         'password.email'                     => 'Envoi du lien de réinitialisation de mot de passe',
@@ -41,10 +44,13 @@ class ActivityLogger
         'employee.password.form'             => 'Ouverture de la réinitialisation de mot de passe employé',
         'employee.password.reset'            => 'Réinitialisation du mot de passe employé',
         // Tableau de bord / navigation back-office
-        'employee.dashboard'                 => 'Consultation du tableau de bord employé',
-        'employee.supervision.challenge'     => 'Consultation de la demande de validation superviseur',
-        'employee.supervision.approve'       => 'Validation superviseur pour exécution différée',
-        'employee.profile.edit'              => 'Consultation du profil',
+        'employee.dashboard'                     => 'Consultation du tableau de bord employé',
+        'employee.supervision.challenge'         => 'Consultation de la demande de validation superviseur',
+        'employee.supervision.approve'           => 'Validation superviseur pour exécution différée',
+        'employee.supervision.permanent'         => 'Consultation du mode superviseur permanent',
+        'employee.supervision.permanent.enable'  => 'Activation du mode superviseur permanent',
+        'employee.supervision.permanent.disable' => 'Désactivation du mode superviseur permanent',
+        'employee.profile.edit'                  => 'Consultation du profil',
         'employee.profile.update'            => 'Mise à jour du profil',
         'employee.profile.destroy'           => 'Suppression du profil',
         'employee.activity-logs.index'       => 'Consultation du journal d\'activité',
@@ -149,6 +155,7 @@ class ActivityLogger
         'employee.users.index'               => 'Consultation des salariés',
         'employee.users.create'              => 'Ouverture du formulaire de création d\'un salarié',
         'employee.users.store'               => 'Création d\'un salarié',
+        'employee.users.pdf-board'           => 'Génération d\'une planche PDF de connexion salariés',
         'employee.users.edit'                => 'Ouverture du formulaire de modification d\'un salarié',
         'employee.users.update'              => 'Modification d\'un salarié',
         'employee.users.destroy'             => 'Suppression d\'un salarié',
@@ -165,9 +172,11 @@ class ActivityLogger
         'employee.supervisors.destroy'         => "Suppression d'un superviseur",
         'employee.supervisors.pdf-board'       => "Génération d'une planche PDF de superviseurs",
         // Paramètres boutique
-        'employee.shop-settings.index'         => 'Consultation des paramètres boutique',
-        'employee.shop-settings.update'        => 'Mise à jour des paramètres boutique',
-        'employee.shop-settings.exception.add' => 'Ajout d\'une exception de fermeture boutique',
+        'employee.shop-settings.index'            => 'Consultation des paramètres boutique',
+        'employee.shop-settings.update'           => 'Mise à jour des paramètres boutique',
+        'employee.shop-settings.supervisor-ips.update' => 'Mise à jour des adresses IP autorisées pour les superviseurs',
+        'employee.shop-settings.features.update' => 'Mise à jour des fonctionnalités de l\'application',
+        'employee.shop-settings.exception.add'    => 'Ajout d\'une exception de fermeture boutique',
         'employee.shop-settings.exception.remove' => 'Suppression d\'une exception de fermeture boutique',
     ];
 
@@ -178,6 +187,8 @@ class ActivityLogger
      */
     private static array $apiPathLabels = [
         'api/auth/login'                 => 'Connexion (application mobile)',
+        'api/auth/login/qr/identifier'   => 'Identification pour connexion par QR code (application mobile)',
+        'api/auth/login/qr'              => 'Connexion par QR code (application mobile)',
         'api/auth/refresh'               => 'Rafraîchissement de session (application mobile)',
         'api/auth/logout'                => 'Déconnexion (application mobile)',
         'api/auth/me'                    => 'Consultation du profil connecté (application mobile)',
@@ -206,17 +217,18 @@ class ActivityLogger
         'api/vouchers/*'                 => 'Consultation, modification ou suppression d\'un bon d\'achat (application mobile)',
         'api/supervisors'                => 'Consultation des superviseurs (application mobile)',
         'api/supervisors/*/barcode'      => 'Consultation du QR superviseur (application mobile)',
+        'api/supervision/permanent'      => 'Gestion du mode superviseur permanent (application mobile)',
     ];
 
     /** Traduit un nom de route en libellé lisible. */
     public static function routeLabel(?string $routeName, ?string $path = null): string
     {
         // Route nommée connue dans le mapping web
-        if ($routeName !== null && ! str_starts_with($routeName, 'generated::')) {
-            return self::$routeLabels[$routeName] ?? $routeName;
+        if ($routeName !== null && ! str_starts_with($routeName, 'generated::') && isset(self::$routeLabels[$routeName])) {
+            return self::$routeLabels[$routeName];
         }
 
-        // Route non nommée (API mobile) → matching par chemin
+        // Matching par chemin URL (API mobile ou routes non nommées)
         if ($path !== null) {
             $cleanPath = ltrim($path, '/');
             foreach (self::$apiPathLabels as $pattern => $label) {
@@ -225,11 +237,12 @@ class ActivityLogger
                     return $label;
                 }
             }
-            // Dernier recours : afficher le chemin lisiblement
-            return 'API mobile : ' . $cleanPath;
+            if ($routeName === null || str_starts_with($routeName, 'generated::')) {
+                return 'API mobile : ' . $cleanPath;
+            }
         }
 
-        return 'Action inconnue';
+        return self::$routeLabels[$routeName] ?? $routeName ?? 'Action inconnue';
     }
 
     /**

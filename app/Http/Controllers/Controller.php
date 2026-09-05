@@ -75,7 +75,7 @@ abstract class Controller
                     if (hash_equals($expected, $signature)) {
                         ActivityLogger::log(
                             'auth.supervisor',
-                            'Validation superviseur #' . $supervisor->supervisor_number . ' (token court) — ' . ActivityLogger::routeLabel($request->route()?->getName()),
+                            'Validation superviseur #' . $supervisor->supervisor_number . ' (token court) — ' . ActivityLogger::routeLabel($request->route()?->getName(), $request->path()),
                             null,
                             null,
                             ['supervisor_number' => $supervisor->supervisor_number, 'action' => ActivityLogger::routeLabel($request->route()?->getName(), $request->path())]
@@ -106,7 +106,7 @@ abstract class Controller
                 if ($valid) {
                     ActivityLogger::log(
                         'auth.supervisor',
-                        'Validation superviseur #' . $supervisor->supervisor_number . ' (token) — ' . ActivityLogger::routeLabel($request->route()?->getName()),
+                        'Validation superviseur #' . $supervisor->supervisor_number . ' (token) — ' . ActivityLogger::routeLabel($request->route()?->getName(), $request->path()),
                         null,
                         null,
                         ['supervisor_number' => $supervisor->supervisor_number, 'action' => ActivityLogger::routeLabel($request->route()?->getName(), $request->path())]
@@ -158,7 +158,7 @@ abstract class Controller
 
         ActivityLogger::log(
             'auth.supervisor',
-            'Validation superviseur #' . $supervisor->supervisor_number . ' — ' . ActivityLogger::routeLabel($request->route()?->getName()),
+            'Validation superviseur #' . $supervisor->supervisor_number . ' — ' . ActivityLogger::routeLabel($request->route()?->getName(), $request->path()),
             null, null,
             ['supervisor_number' => $supervisor->supervisor_number, 'action' => ActivityLogger::routeLabel($request->route()?->getName(), $request->path())]
         );

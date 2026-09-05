@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Supervisor;
+use App\Services\ActivityLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -67,6 +68,14 @@ class SupervisorController extends Controller
                 'message' => 'Code superviseur incorrect.',
             ], 422);
         }
+
+        ActivityLogger::log(
+            'supervisor.qr_viewed',
+            'Consultation du QR code du superviseur #' . $supervisor->supervisor_number . ' (application mobile)',
+            'supervisor',
+            $supervisor->id,
+            ['supervisor_number' => $supervisor->supervisor_number, 'channel' => 'mobile']
+        );
 
         return response()->json([
             'id' => $supervisor->id,
