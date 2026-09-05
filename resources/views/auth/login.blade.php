@@ -50,9 +50,11 @@
                 </button>
             </form>
 
-            <a href="{{ route('login.qr') }}" class="mt-4 block text-center text-amber-700 hover:text-amber-600 text-sm font-medium transition-colors">
-                📷 Connexion par QR code
-            </a>
+            @if(\App\Models\Setting::isFeatureEnabled(\App\Models\Setting::KEY_FEATURE_QUICK_LOGIN))
+                <a href="{{ route('login.qr') }}" class="mt-4 block text-center text-amber-700 hover:text-amber-600 text-sm font-medium transition-colors">
+                    📷 Connexion par QR code
+                </a>
+            @endif
         </div>
 
         <div class="text-center mt-6">

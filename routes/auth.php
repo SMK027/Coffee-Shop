@@ -10,6 +10,7 @@ use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\QrLoginController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
+use App\Models\Setting;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -21,14 +22,16 @@ Route::middleware('guest')->group(function () {
 
     Route::post('login', [AuthenticatedSessionController::class, 'store']);
 
-    Route::get('login/qr', [QrLoginController::class, 'show'])
-        ->name('login.qr');
+    Route::middleware('feature:' . Setting::KEY_FEATURE_QUICK_LOGIN)->group(function () {
+        Route::get('login/qr', [QrLoginController::class, 'show'])
+            ->name('login.qr');
 
-    Route::post('login/qr/identifier', [QrLoginController::class, 'identify'])
-        ->name('login.qr.identify');
+        Route::post('login/qr/identifier', [QrLoginController::class, 'identify'])
+            ->name('login.qr.identify');
 
-    Route::post('login/qr', [QrLoginController::class, 'store'])
-        ->name('login.qr.store');
+        Route::post('login/qr', [QrLoginController::class, 'store'])
+            ->name('login.qr.store');
+    });
 
     Route::get('forgot-password', [PasswordResetLinkController::class, 'create'])
         ->name('password.request');

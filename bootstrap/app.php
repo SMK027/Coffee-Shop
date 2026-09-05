@@ -22,6 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'employee' => \App\Http\Middleware\EnsureIsEmployee::class,
+            'feature'  => \App\Http\Middleware\EnsureFeatureIsEnabled::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

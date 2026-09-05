@@ -15,13 +15,39 @@ class ShopSettingsController extends Controller
     {
         abort_unless(auth()->user()->isAdmin(), 403);
 
+        $features = [];
+        foreach (Setting::FEATURES as $key => $label) {
+            $features[$key] = Setting::isFeatureEnabled($key);
+        }
+
         return view('employee.shop-settings.index', [
             'address' => Setting::get(Setting::KEY_SHOP_ADDRESS, Setting::DEFAULTS[Setting::KEY_SHOP_ADDRESS]),
             'phone'   => Setting::get(Setting::KEY_SHOP_PHONE,   Setting::DEFAULTS[Setting::KEY_SHOP_PHONE]),
             'email'   => Setting::get(Setting::KEY_SHOP_EMAIL,   Setting::DEFAULTS[Setting::KEY_SHOP_EMAIL]),
             'hours'   => Setting::getHours(),
             'supervisorManagementAllowedIps' => Setting::get(Setting::KEY_SUPERVISOR_MANAGEMENT_ALLOWED_IPS, ''),
+            'features' => $features,
         ]);
+    }
+
+    public function updateFeatures(Request $request)
+    {
+        abort_unless(auth()->user()->isAdmin(), 403);
+        $this->requireSuperAdminOrSupervisor(
+            $request,
+            'La modification des fonctionnalités de l\'application nécessite une authentification superviseur.'
+        );
+
+        $featureStates = [];
+        foreach (Setting::FEATURES as $key => $label) {
+            $enabled = $request->boolean("features.{$key}") ? '1' : '0';
+            Setting::set($key, $enabled);
+            $featureStates[$key] = ($enabled === '1');
+        }
+
+        ActivityLogger::log('settings.features_updated', 'Activation / Désactivation des fonctionnalités mise à jour.', null, null, ['features' => $featureStates]);
+
+        return back()->with('success', 'Fonctionnalités de l\'application mises à jour.');
     }
 
     public function updateSupervisorManagementAllowedIps(Request $request)

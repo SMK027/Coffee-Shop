@@ -8,6 +8,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderRefund;
 use App\Models\PaymentMethod;
+use App\Models\Setting;
 use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -104,7 +105,7 @@ class RefundController extends Controller
             array_filter(['type' => $refundType, 'mode_paiement' => $paymentMethod->name, 'motif' => $request->input('refund_reason')])
         );
 
-        if ($paymentMethod->slug === PaymentMethod::SLUG_VOUCHER && $refundAmount > 0) {
+        if ($paymentMethod->slug === PaymentMethod::SLUG_VOUCHER && $refundAmount > 0 && Setting::isFeatureEnabled(Setting::KEY_FEATURE_VOUCHERS)) {
             $voucherParams = [
                 'amount'        => $refundAmount,
                 'validity_days' => 30,

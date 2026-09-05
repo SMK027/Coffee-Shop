@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\PaymentMethodController;
 use App\Http\Controllers\Api\SupervisorController;
 use App\Http\Controllers\Api\SupervisionController;
 use App\Http\Controllers\Api\VoucherController;
+use App\Models\Setting;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -20,8 +21,12 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('auth')->group(function () {
     Route::post('/login',   [AuthController::class, 'login']);
-    Route::post('/login/qr/identifier', [AuthController::class, 'identifyQr']);
-    Route::post('/login/qr', [AuthController::class, 'loginQr']);
+
+    Route::middleware('feature:' . Setting::KEY_FEATURE_QUICK_LOGIN)->group(function () {
+        Route::post('/login/qr/identifier', [AuthController::class, 'identifyQr']);
+        Route::post('/login/qr', [AuthController::class, 'loginQr']);
+    });
+
     Route::post('/refresh', [AuthController::class, 'refresh'])->middleware('auth:api');
     Route::post('/logout',  [AuthController::class, 'logout'])->middleware('auth:api');
     Route::get('/me',       [AuthController::class, 'me'])->middleware('auth:api');
@@ -44,7 +49,7 @@ Route::middleware('auth:api')->group(function () {
     Route::post('/orders',         [OrderController::class, 'store']);
     Route::get('/orders/{order}',  [OrderController::class, 'show']);
     Route::patch('/orders/{order}/status',   [OrderController::class, 'updateStatus']);
-    Route::post('/orders/{order}/refund',    [OrderController::class, 'refund']);
+    Route::post('/orders/{order}/refund',    [OrderController::class, 'refund'])->middleware('feature:' . Setting::KEY_FEATURE_REFUNDS);
     Route::post('/orders/{order}/payments',  [OrderController::class, 'storePayments']);
     Route::delete('/orders/{order}',         [OrderController::class, 'destroy']);
 
@@ -54,12 +59,12 @@ Route::middleware('auth:api')->group(function () {
     // Récapitulatifs journaliers
     Route::get('/daily-reports',           [DailyReportController::class, 'index']);
     Route::get('/daily-reports/preview',   [DailyReportController::class, 'preview']);
-    Route::post('/daily-reports',          [DailyReportController::class, 'store']);
+    Route::post('/daily-reports',          [DailyReportController::class, 'store'])->middleware('feature:' . Setting::KEY_FEATURE_DAILY_REPORTS);
     Route::get('/daily-reports/{dailyReport}', [DailyReportController::class, 'show']);
 
     // Cartes de fidélité
     Route::get('/loyalty-cards',             [LoyaltyCardController::class, 'index']);
-    Route::post('/loyalty-cards',            [LoyaltyCardController::class, 'store']);
+    Route::post('/loyalty-cards',            [LoyaltyCardController::class, 'store'])->middleware('feature:' . Setting::KEY_FEATURE_LOYALTY_CARDS);
     Route::post('/loyalty-cards/check',      [LoyaltyCardController::class, 'check']);
     Route::post('/loyalty-cards/verify-pin', [LoyaltyCardController::class, 'verifyPin']);
     Route::get('/loyalty-cards/{card}/offers', [LoyaltyCardController::class, 'offers']);
@@ -71,15 +76,15 @@ Route::middleware('auth:api')->group(function () {
 
     // Réductions fidélité
     Route::get('/loyalty-discounts', [LoyaltyDiscountController::class, 'index']);
-    Route::post('/loyalty-discounts', [LoyaltyDiscountController::class, 'store']);
+    Route::post('/loyalty-discounts', [LoyaltyDiscountController::class, 'store'])->middleware('feature:' . Setting::KEY_FEATURE_LOYALTY_DISCOUNTS);
 
     // Bons d'achat
     Route::get('/vouchers/check', [VoucherController::class, 'check']);
     Route::get('/vouchers', [VoucherController::class, 'index']);
     Route::get('/vouchers/{voucher}', [VoucherController::class, 'show']);
-    Route::post('/vouchers', [VoucherController::class, 'store']);
-    Route::put('/vouchers/{voucher}', [VoucherController::class, 'update']);
-    Route::delete('/vouchers/{voucher}', [VoucherController::class, 'destroy']);
+    Route::post('/vouchers', [VoucherController::class, 'store'])->middleware('feature:' . Setting::KEY_FEATURE_VOUCHERS);
+    Route::put('/vouchers/{voucher}', [VoucherController::class, 'update'])->middleware('feature:' . Setting::KEY_FEATURE_VOUCHERS);
+    Route::delete('/vouchers/{voucher}', [VoucherController::class, 'destroy'])->middleware('feature:' . Setting::KEY_FEATURE_VOUCHERS);
 
     // Superviseurs (compte connecté)
     Route::get('/supervisors', [SupervisorController::class, 'index']);

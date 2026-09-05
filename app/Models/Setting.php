@@ -32,6 +32,23 @@ class Setting extends Model
     public const KEY_SHOP_HOURS   = 'shop_hours';
     public const KEY_SUPERVISOR_MANAGEMENT_ALLOWED_IPS = 'supervisor_management_allowed_ips';
 
+    /** Fonctionnalités activables / désactivables. */
+    public const KEY_FEATURE_QUICK_LOGIN       = 'feature_quick_login';
+    public const KEY_FEATURE_VOUCHERS          = 'feature_vouchers';
+    public const KEY_FEATURE_REFUNDS           = 'feature_refunds';
+    public const KEY_FEATURE_LOYALTY_CARDS     = 'feature_loyalty_cards';
+    public const KEY_FEATURE_LOYALTY_DISCOUNTS = 'feature_loyalty_discounts';
+    public const KEY_FEATURE_DAILY_REPORTS     = 'feature_daily_reports';
+
+    public const FEATURES = [
+        self::KEY_FEATURE_QUICK_LOGIN       => 'Connexion rapide par QR code',
+        self::KEY_FEATURE_VOUCHERS          => 'Émission de bons d\'achat',
+        self::KEY_FEATURE_REFUNDS           => 'Remboursements de commande',
+        self::KEY_FEATURE_LOYALTY_CARDS     => 'Création de cartes de fidélité',
+        self::KEY_FEATURE_LOYALTY_DISCOUNTS => 'Création de réductions de fidélité',
+        self::KEY_FEATURE_DAILY_REPORTS     => 'Génération de récapitulatifs journaliers',
+    ];
+
     public const DEFAULTS = [
         self::KEY_POINTS_PER_EURO => '5',
         self::KEY_SHOP_ADDRESS    => "12 Rue des Arômes\n75001 Paris",
@@ -39,6 +56,12 @@ class Setting extends Model
         self::KEY_SHOP_EMAIL      => 'contact@lecoffeeshop.fr',
         self::KEY_SHOP_HOURS      => '{"regular":{"monday":{"open":true,"from":"07:00","to":"19:00"},"tuesday":{"open":true,"from":"07:00","to":"19:00"},"wednesday":{"open":true,"from":"07:00","to":"19:00"},"thursday":{"open":true,"from":"07:00","to":"19:00"},"friday":{"open":true,"from":"07:00","to":"19:00"},"saturday":{"open":true,"from":"08:00","to":"20:00"},"sunday":{"open":true,"from":"09:00","to":"18:00"}},"exceptions":[]}',
         self::KEY_SUPERVISOR_MANAGEMENT_ALLOWED_IPS => "127.0.0.1\n::1",
+        self::KEY_FEATURE_QUICK_LOGIN       => '1',
+        self::KEY_FEATURE_VOUCHERS          => '1',
+        self::KEY_FEATURE_REFUNDS           => '1',
+        self::KEY_FEATURE_LOYALTY_CARDS     => '1',
+        self::KEY_FEATURE_LOYALTY_DISCOUNTS => '1',
+        self::KEY_FEATURE_DAILY_REPORTS     => '1',
     ];
 
     /**
@@ -180,6 +203,14 @@ class Setting extends Model
     {
         static::query()->updateOrCreate(['key' => $key], ['value' => $value]);
         Cache::forget("setting:{$key}");
+    }
+
+    /**
+     * Indique si une fonctionnalité de l'application est activée.
+     */
+    public static function isFeatureEnabled(string $featureKey): bool
+    {
+        return self::get($featureKey, '1') === '1';
     }
 
     /**

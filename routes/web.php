@@ -27,6 +27,7 @@ use App\Http\Controllers\Employee\ActivityLogController;
 use App\Http\Controllers\Employee\CardOfferController;
 use App\Http\Controllers\Auth\EmployeePasswordResetController;
 use App\Http\Controllers\ProfileController;
+use App\Models\Setting;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -92,22 +93,28 @@ Route::prefix('espace-employe')->name('employee.')->middleware(['auth', 'employe
     Route::delete('/commandes/{order}', [OrderController::class, 'destroy'])->name('orders.destroy');
 
     // Remboursements (super admin uniquement)
-    Route::get('/commandes/{order}/remboursement', [RefundController::class, 'create'])->name('orders.refund');
-    Route::post('/commandes/{order}/remboursement', [RefundController::class, 'store'])->name('orders.refund.store');
+    Route::middleware('feature:' . Setting::KEY_FEATURE_REFUNDS)->group(function () {
+        Route::get('/commandes/{order}/remboursement', [RefundController::class, 'create'])->name('orders.refund');
+        Route::post('/commandes/{order}/remboursement', [RefundController::class, 'store'])->name('orders.refund.store');
 
-    // Section dédiée aux remboursements (admins uniquement, action superviseur requise)
-    Route::prefix('remboursements')->name('refunds.')->group(function () {
-        Route::get('/', [RefundOrderController::class, 'index'])->name('index');
-        Route::get('/creer', [RefundOrderController::class, 'create'])->name('create');
-        Route::post('/{order}', [RefundOrderController::class, 'store'])->name('store');
+        // Section dédiée aux remboursements (admins uniquement, action superviseur requise)
+        Route::prefix('remboursements')->name('refunds.')->group(function () {
+            Route::get('/', [RefundOrderController::class, 'index'])->name('index');
+            Route::get('/creer', [RefundOrderController::class, 'create'])->name('create');
+            Route::post('/{order}', [RefundOrderController::class, 'store'])->name('store');
+        });
     });
 
     // Bons d'achat / avoirs (admins uniquement)
     Route::prefix('bons-dachat')->name('vouchers.')->group(function () {
         Route::get('/',                    [VoucherController::class, 'index'])->name('index');
-        Route::get('/nouveau',             [VoucherController::class, 'create'])->name('create');
-        Route::post('/',                   [VoucherController::class, 'store'])->name('store');
         Route::get('/verifier',            [VoucherController::class, 'check'])->name('check');
+
+        Route::middleware('feature:' . Setting::KEY_FEATURE_VOUCHERS)->group(function () {
+            Route::get('/nouveau',             [VoucherController::class, 'create'])->name('create');
+            Route::post('/',                   [VoucherController::class, 'store'])->name('store');
+        });
+
         Route::get('/{voucher}',           [VoucherController::class, 'show'])->name('show');
         Route::get('/{voucher}/modifier',  [VoucherController::class, 'edit'])->name('edit');
         Route::put('/{voucher}',           [VoucherController::class, 'update'])->name('update');
@@ -127,9 +134,12 @@ Route::prefix('espace-employe')->name('employee.')->middleware(['auth', 'employe
 
     // Récapitulatifs journaliers
     Route::get('/recapitulatifs', [DailyReportController::class, 'index'])->name('daily-reports.index');
-    Route::get('/recapitulatifs/nouveau', [DailyReportController::class, 'create'])->name('daily-reports.create');
-    Route::post('/recapitulatifs', [DailyReportController::class, 'store'])->name('daily-reports.store');
     Route::get('/recapitulatifs/{dailyReport}', [DailyReportController::class, 'show'])->name('daily-reports.show');
+
+    Route::middleware('feature:' . Setting::KEY_FEATURE_DAILY_REPORTS)->group(function () {
+        Route::get('/recapitulatifs/nouveau', [DailyReportController::class, 'create'])->name('daily-reports.create');
+        Route::post('/recapitulatifs', [DailyReportController::class, 'store'])->name('daily-reports.store');
+    });
 
     // Gestion du menu
     Route::get('/boissons', [DrinkController::class, 'index'])->name('drinks.index');
@@ -167,13 +177,16 @@ Route::prefix('espace-employe')->name('employee.')->middleware(['auth', 'employe
     Route::get('/parametres-boutique', [ShopSettingsController::class, 'index'])->name('shop-settings.index');
     Route::post('/parametres-boutique', [ShopSettingsController::class, 'update'])->name('shop-settings.update');
     Route::put('/parametres-boutique/acces-superviseurs', [ShopSettingsController::class, 'updateSupervisorManagementAllowedIps'])->name('shop-settings.supervisor-ips.update');
+    Route::put('/parametres-boutique/fonctionnalites', [ShopSettingsController::class, 'updateFeatures'])->name('shop-settings.features.update');
     Route::post('/parametres-boutique/exceptions', [ShopSettingsController::class, 'addException'])->name('shop-settings.exception.add');
     Route::delete('/parametres-boutique/exceptions/{date}', [ShopSettingsController::class, 'removeException'])->name('shop-settings.exception.remove');
 
     // Fidélité
     Route::get('/fidelite', [EmployeeLoyaltyController::class, 'index'])->name('loyalty.index');
-    Route::get('/fidelite/nouvelle-carte', [EmployeeLoyaltyController::class, 'create'])->name('loyalty.create');
-    Route::post('/fidelite/nouvelle-carte', [EmployeeLoyaltyController::class, 'store'])->name('loyalty.store');
+    Route::middleware('feature:' . Setting::KEY_FEATURE_LOYALTY_CARDS)->group(function () {
+        Route::get('/fidelite/nouvelle-carte', [EmployeeLoyaltyController::class, 'create'])->name('loyalty.create');
+        Route::post('/fidelite/nouvelle-carte', [EmployeeLoyaltyController::class, 'store'])->name('loyalty.store');
+    });
     Route::get('/fidelite/reglages', [EmployeeLoyaltyController::class, 'settings'])->name('loyalty.settings');
     Route::patch('/fidelite/reglages', [EmployeeLoyaltyController::class, 'updateSettings'])->name('loyalty.settings.update');
     Route::get('/fidelite/employes/recherche', [EmployeeLoyaltyController::class, 'searchEmployees'])->name('loyalty.employees.search');
@@ -185,8 +198,10 @@ Route::prefix('espace-employe')->name('employee.')->middleware(['auth', 'employe
     Route::post('/fidelite/{loyaltyCard}/offres', [CardOfferController::class, 'store'])->name('loyalty.offers.store');
     Route::delete('/fidelite/{loyaltyCard}/offres/{cardOffer}', [CardOfferController::class, 'destroy'])->name('loyalty.offers.destroy');
     Route::get('/fidelite/reductions', [LoyaltyDiscountController::class, 'index'])->name('loyalty-discounts.index');
-    Route::get('/fidelite/reductions/nouvelle', [LoyaltyDiscountController::class, 'create'])->name('loyalty-discounts.create');
-    Route::post('/fidelite/reductions', [LoyaltyDiscountController::class, 'store'])->name('loyalty-discounts.store');
+    Route::middleware('feature:' . Setting::KEY_FEATURE_LOYALTY_DISCOUNTS)->group(function () {
+        Route::get('/fidelite/reductions/nouvelle', [LoyaltyDiscountController::class, 'create'])->name('loyalty-discounts.create');
+        Route::post('/fidelite/reductions', [LoyaltyDiscountController::class, 'store'])->name('loyalty-discounts.store');
+    });
     Route::get('/fidelite/reductions/{loyaltyDiscount}/modifier', [LoyaltyDiscountController::class, 'edit'])->name('loyalty-discounts.edit');
     Route::put('/fidelite/reductions/{loyaltyDiscount}', [LoyaltyDiscountController::class, 'update'])->name('loyalty-discounts.update');
     Route::delete('/fidelite/reductions/{loyaltyDiscount}', [LoyaltyDiscountController::class, 'destroy'])->name('loyalty-discounts.destroy');

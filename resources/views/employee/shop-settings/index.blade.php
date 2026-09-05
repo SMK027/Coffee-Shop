@@ -236,6 +236,46 @@
             </form>
         </div>
 
+        {{-- ── Activation / Désactivation des fonctionnalités ── --}}
+        <form action="{{ route('employee.shop-settings.features.update') }}" method="POST">
+            @csrf
+            @method('PUT')
+            <div class="bg-white rounded-xl shadow-sm border border-stone-100 p-6 space-y-5">
+                <div>
+                    <h2 class="font-semibold text-stone-800">Fonctionnalités de l'application</h2>
+                    <p class="text-sm text-stone-500 mt-1">Activez ou désactivez les différentes fonctionnalités de l'application (web et mobile). La modification nécessite une authentification superviseur ou le mode superviseur permanent actif.</p>
+                </div>
+
+                <div class="space-y-3">
+                    @foreach(\App\Models\Setting::FEATURES as $key => $label)
+                        @php $isEnabled = $features[$key] ?? true; @endphp
+                        <div class="flex items-center justify-between p-3 rounded-lg border border-stone-100 hover:bg-stone-50 transition-colors">
+                            <label for="feature-{{ $key }}" class="flex items-center gap-3 cursor-pointer select-none">
+                                <input type="checkbox" id="feature-{{ $key }}" name="features[{{ $key }}]" value="1"
+                                       {{ $isEnabled ? 'checked' : '' }}
+                                       class="rounded border-stone-300 text-amber-600 focus:ring-amber-500">
+                                <div>
+                                    <p class="text-sm font-medium text-stone-800">{{ $label }}</p>
+                                    <p class="text-xs text-stone-400 font-mono">{{ $key }}</p>
+                                </div>
+                            </label>
+                            <span class="px-2.5 py-1 rounded-full text-xs font-semibold {{ $isEnabled ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600' }}">
+                                {{ $isEnabled ? 'Active' : 'Désactivée' }}
+                            </span>
+                        </div>
+                    @endforeach
+                </div>
+
+                @unless(auth()->user()->isSuperAdmin())
+                    @include('employee.shared.supervisor-auth-fields')
+                @endunless
+
+                <button type="submit" class="bg-amber-700 hover:bg-amber-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium transition-colors">
+                    Enregistrer les fonctionnalités
+                </button>
+            </div>
+        </form>
+
     </div>
 
 </x-employee-layout>

@@ -568,7 +568,7 @@ class OrderController extends Controller
             'order'   => $this->formatOrder($order->fresh()->load('items.drink', 'loyaltyCard', 'loyaltyDiscounts', 'payments.paymentMethod', 'refunds.paymentMethod'), true),
         ];
 
-        if ($activeMethod->slug === \App\Models\PaymentMethod::SLUG_VOUCHER && $refundAmount > 0) {
+        if ($activeMethod->slug === \App\Models\PaymentMethod::SLUG_VOUCHER && $refundAmount > 0 && \App\Models\Setting::isFeatureEnabled(\App\Models\Setting::KEY_FEATURE_VOUCHERS)) {
             $response['voucher_prefill'] = [
                 'amount'                 => $refundAmount,
                 'validity_days'          => 30,
