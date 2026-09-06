@@ -86,6 +86,7 @@
     @php
         $globalBannerNotes = \App\Models\InternalNote::query()
             ->with('author:id,name')
+            ->active()
             ->where('display_location', 'global_banner')
             ->latest()
             ->get();

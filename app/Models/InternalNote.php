@@ -11,7 +11,23 @@ class InternalNote extends Model
 {
     protected $fillable = [
         'author_id', 'title', 'description', 'display_location', 'target_role',
-        'background_color', 'text_color', 'font_family',
+        'is_for_all', 'background_color', 'text_color', 'font_family', 'expires_at',
+    ];
+
+    public const FONT_FAMILIES = [
+        'Figtree, ui-sans-serif, system-ui, sans-serif' => 'Police du site',
+        'Arial, sans-serif' => 'Arial',
+        'Verdana, sans-serif' => 'Verdana',
+        'Trebuchet MS, sans-serif' => 'Trebuchet MS',
+        'Georgia, serif' => 'Georgia',
+        'Times New Roman, serif' => 'Times New Roman',
+        'Courier New, monospace' => 'Courier New',
+        'cursive' => 'Cursive',
+    ];
+
+    protected $casts = [
+        'is_for_all' => 'boolean',
+        'expires_at' => 'datetime',
     ];
 
     public function author(): BelongsTo
@@ -31,6 +47,10 @@ class InternalNote extends Model
 
     public function isVisibleTo(?User $user): bool
     {
+        if ($this->expires_at?->isPast()) {
+            return false;
+        }
+
         if ($this->display_location === 'global_banner') {
             return true;
         }
@@ -39,7 +59,7 @@ class InternalNote extends Model
             return false;
         }
 
-        if ($this->target_role && $this->target_role === $user->global_role) {
+        if ($this->is_for_all || ($this->target_role && $this->target_role === $user->global_role)) {
             return true;
         }
 
@@ -48,9 +68,17 @@ class InternalNote extends Model
 
     public function scopeForUser($query, User $user)
     {
-        return $query->where(function ($notes) use ($user) {
-            $notes->where('target_role', $user->global_role)
+        return $query->active()->where(function ($notes) use ($user) {
+            $notes->where('is_for_all', true)
+                ->orWhere('target_role', $user->global_role)
                 ->orWhereHas('recipients', fn ($recipients) => $recipients->whereKey($user->id));
+        });
+    }
+
+    public function scopeActive($query)
+    {
+        return $query->where(function ($notes) {
+            $notes->whereNull('expires_at')->orWhere('expires_at', '>', now());
         });
     }
 }

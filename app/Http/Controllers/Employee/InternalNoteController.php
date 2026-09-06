@@ -56,17 +56,20 @@ class InternalNoteController extends Controller
             'title'            => ['required', 'string', 'max:150'],
             'description'      => ['required', 'string', 'max:20000'],
             'display_location' => ['required', Rule::in(['global_banner', 'employee_banner', 'inbox'])],
+            'audience'         => ['required', Rule::in(['all', 'targeted'])],
             'target_role'      => ['nullable', Rule::in(['superadmin', 'admin', 'moderator'])],
             'recipient_ids'    => ['nullable', 'array', 'max:100'],
             'recipient_ids.*'  => ['integer', 'distinct', 'exists:users,id'],
             'background_color' => ['required', 'regex:/^#[A-Fa-f0-9]{6}$/'],
             'text_color'       => ['required', 'regex:/^#[A-Fa-f0-9]{6}$/'],
-            'font_family'      => ['required', Rule::in(['sans-serif', 'serif', 'monospace', 'cursive'])],
+            'font_family'      => ['required', Rule::in(collect(array_keys(InternalNote::FONT_FAMILIES)))],
+            'expires_at'       => ['nullable', 'date', 'after:now'],
             'attachments'      => ['nullable', 'array', 'max:3'],
             'attachments.*'    => ['file', 'max:5120'],
         ]);
 
         if ($validated['display_location'] !== 'global_banner'
+            && $validated['audience'] !== 'all'
             && empty($validated['target_role'] ?? null)
             && empty($validated['recipient_ids'] ?? [])) {
             return back()->withInput()->withErrors([
@@ -80,13 +83,15 @@ class InternalNoteController extends Controller
                 'title'            => $validated['title'],
                 'description'      => $this->sanitizeDescription($validated['description']),
                 'display_location' => $validated['display_location'],
-                'target_role'      => $validated['display_location'] === 'global_banner' ? null : ($validated['target_role'] ?? null),
+                'target_role'      => $validated['display_location'] === 'global_banner' || $validated['audience'] === 'all' ? null : ($validated['target_role'] ?? null),
+                'is_for_all'       => $validated['display_location'] !== 'global_banner' && $validated['audience'] === 'all',
                 'background_color' => $validated['background_color'],
                 'text_color'       => $validated['text_color'],
                 'font_family'      => $validated['font_family'],
+                'expires_at'       => $validated['expires_at'] ?? null,
             ]);
 
-            if ($validated['display_location'] !== 'global_banner') {
+            if ($validated['display_location'] !== 'global_banner' && $validated['audience'] !== 'all') {
                 $note->recipients()->sync($validated['recipient_ids'] ?? []);
             }
 
@@ -111,7 +116,7 @@ class InternalNoteController extends Controller
             'Note interne envoyée : ' . $note->title,
             'internal_note',
             $note->id,
-            ['emplacement' => $note->display_location, 'type_destinataire' => $note->target_role]
+            ['emplacement' => $note->display_location, 'type_destinataire' => $note->is_for_all ? 'Tous' : $note->target_role, 'expire_le' => $note->expires_at?->format('d/m/Y H:i')]
         );
 
         return redirect()->route('employee.internal-notes.index')

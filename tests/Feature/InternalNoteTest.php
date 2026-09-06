@@ -90,13 +90,39 @@ class InternalNoteTest extends TestCase
                 'title' => 'Information équipe',
                 'description' => '<p>Réunion à 10h.</p>',
                 'display_location' => 'inbox',
+                'audience' => 'targeted',
                 'recipient_ids' => [$recipient->id],
                 'background_color' => '#FEF3C7',
                 'text_color' => '#78350F',
-                'font_family' => 'sans-serif',
+                'font_family' => 'Figtree, ui-sans-serif, system-ui, sans-serif',
             ])
             ->assertRedirect(route('employee.internal-notes.index'));
 
         $this->assertDatabaseHas(InternalNote::class, ['title' => 'Information équipe']);
+    }
+
+    public function test_expired_note_is_not_visible_and_can_be_purged(): void
+    {
+        $author = User::factory()->create(['global_role' => 'admin']);
+        $recipient = User::factory()->create(['global_role' => 'moderator']);
+        $note = InternalNote::create([
+            'author_id' => $author->id,
+            'title' => 'Note expirée',
+            'description' => '<p>Ne plus afficher.</p>',
+            'display_location' => 'inbox',
+            'is_for_all' => true,
+            'background_color' => '#FEF3C7',
+            'text_color' => '#78350F',
+            'font_family' => 'Figtree, ui-sans-serif, system-ui, sans-serif',
+            'expires_at' => now()->subMinute(),
+        ]);
+
+        $this->actingAs($recipient)
+            ->get(route('employee.internal-notes.index'))
+            ->assertOk()
+            ->assertDontSee('Note expirée');
+
+        $this->artisan('internal-notes:purge-expired')->assertSuccessful();
+        $this->assertDatabaseMissing(InternalNote::class, ['id' => $note->id]);
     }
 }
