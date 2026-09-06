@@ -77,4 +77,25 @@ class FeatureToggleTest extends TestCase
         $response->assertRedirect(route('employee.dashboard'));
         $response->assertSessionHas('error', 'Cette fonctionnalité a été désactivée par un administrateur.');
     }
+
+    public function test_disabled_board_features_block_pdf_generation(): void
+    {
+        $superAdmin = User::factory()->create(['global_role' => 'superadmin']);
+
+        Setting::set(Setting::KEY_FEATURE_SUPERVISOR_BOARDS, '0');
+        $this->withoutMiddleware(PreventRequestForgery::class)
+            ->actingAs($superAdmin)
+            ->from(route('employee.supervisors.index'))
+            ->post(route('employee.supervisors.pdf-board'))
+            ->assertRedirect(route('employee.supervisors.index'))
+            ->assertSessionHas('error', 'Cette fonctionnalité a été désactivée par un administrateur.');
+
+        Setting::set(Setting::KEY_FEATURE_QUICK_LOGIN_BOARDS, '0');
+        $this->withoutMiddleware(PreventRequestForgery::class)
+            ->actingAs($superAdmin)
+            ->from(route('employee.users.index'))
+            ->post(route('employee.users.pdf-board'))
+            ->assertRedirect(route('employee.users.index'))
+            ->assertSessionHas('error', 'Cette fonctionnalité a été désactivée par un administrateur.');
+    }
 }

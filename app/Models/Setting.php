@@ -39,6 +39,8 @@ class Setting extends Model
     public const KEY_FEATURE_LOYALTY_CARDS     = 'feature_loyalty_cards';
     public const KEY_FEATURE_LOYALTY_DISCOUNTS = 'feature_loyalty_discounts';
     public const KEY_FEATURE_DAILY_REPORTS     = 'feature_daily_reports';
+    public const KEY_FEATURE_SUPERVISOR_BOARDS = 'feature_supervisor_boards';
+    public const KEY_FEATURE_QUICK_LOGIN_BOARDS = 'feature_quick_login_boards';
 
     public const FEATURES = [
         self::KEY_FEATURE_QUICK_LOGIN       => 'Connexion rapide par QR code',
@@ -47,6 +49,8 @@ class Setting extends Model
         self::KEY_FEATURE_LOYALTY_CARDS     => 'Création de cartes de fidélité',
         self::KEY_FEATURE_LOYALTY_DISCOUNTS => 'Création de réductions de fidélité',
         self::KEY_FEATURE_DAILY_REPORTS     => 'Génération de récapitulatifs journaliers',
+        self::KEY_FEATURE_SUPERVISOR_BOARDS => 'Émission de planches de superviseurs',
+        self::KEY_FEATURE_QUICK_LOGIN_BOARDS => 'Émission de planches de connexion rapide',
     ];
 
     public const DEFAULTS = [
@@ -62,6 +66,8 @@ class Setting extends Model
         self::KEY_FEATURE_LOYALTY_CARDS     => '1',
         self::KEY_FEATURE_LOYALTY_DISCOUNTS => '1',
         self::KEY_FEATURE_DAILY_REPORTS     => '1',
+        self::KEY_FEATURE_SUPERVISOR_BOARDS => '1',
+        self::KEY_FEATURE_QUICK_LOGIN_BOARDS => '1',
     ];
 
     /**

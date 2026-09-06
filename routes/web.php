@@ -221,7 +221,9 @@ Route::prefix('espace-employe')->name('employee.')->middleware(['auth', 'employe
     Route::get('/employes', [UserController::class, 'index'])->name('users.index');
     Route::get('/employes/nouveau', [UserController::class, 'create'])->name('users.create');
     Route::post('/employes', [UserController::class, 'store'])->name('users.store');
-    Route::post('/employes/planche-pdf', [UserController::class, 'generatePdfBoard'])->name('users.pdf-board');
+    Route::post('/employes/planche-pdf', [UserController::class, 'generatePdfBoard'])
+        ->middleware('feature:' . Setting::KEY_FEATURE_QUICK_LOGIN_BOARDS)
+        ->name('users.pdf-board');
     Route::get('/employes/{user}/modifier', [UserController::class, 'edit'])->name('users.edit');
     Route::put('/employes/{user}', [UserController::class, 'update'])->name('users.update');
     Route::delete('/employes/{user}', [UserController::class, 'destroy'])->name('users.destroy');
@@ -233,7 +235,9 @@ Route::prefix('espace-employe')->name('employee.')->middleware(['auth', 'employe
     Route::get('/superviseurs/nouveau', [SupervisorController::class, 'create'])->name('supervisors.create');
     Route::post('/superviseurs', [SupervisorController::class, 'store'])->name('supervisors.store');
     Route::get('/superviseurs/{supervisor}', [SupervisorController::class, 'show'])->name('supervisors.show');
-    Route::post('/superviseurs/planche-pdf', [SupervisorController::class, 'generatePdfBoard'])->name('supervisors.pdf-board');
+    Route::post('/superviseurs/planche-pdf', [SupervisorController::class, 'generatePdfBoard'])
+        ->middleware('feature:' . Setting::KEY_FEATURE_SUPERVISOR_BOARDS)
+        ->name('supervisors.pdf-board');
     Route::get('/superviseurs/{supervisor}/modifier', [SupervisorController::class, 'edit'])->name('supervisors.edit');
     Route::put('/superviseurs/{supervisor}', [SupervisorController::class, 'update'])->name('supervisors.update');
     Route::patch('/superviseurs/{supervisor}/activation', [SupervisorController::class, 'toggleActivation'])->name('supervisors.toggle-activation');
