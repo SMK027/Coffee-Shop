@@ -125,4 +125,58 @@ class InternalNoteTest extends TestCase
         $this->artisan('internal-notes:purge-expired')->assertSuccessful();
         $this->assertDatabaseMissing(InternalNote::class, ['id' => $note->id]);
     }
+
+    public function test_author_can_edit_and_delete_note_after_supervisor_validation(): void
+    {
+        $author = User::factory()->create(['global_role' => 'admin']);
+        $recipient = User::factory()->create(['global_role' => 'moderator']);
+        $supervisor = Supervisor::create([
+            'supervisor_number' => 'SUP009',
+            'password' => Hash::make('1234'),
+            'superadmin_id' => $author->id,
+            'is_active' => true,
+        ]);
+        $note = InternalNote::create([
+            'author_id' => $author->id,
+            'title' => 'Version initiale',
+            'description' => '<p>Initiale</p>',
+            'display_location' => 'inbox',
+            'background_color' => '#FEF3C7',
+            'text_color' => '#78350F',
+            'font_family' => 'Figtree, ui-sans-serif, system-ui, sans-serif',
+        ]);
+        $note->recipients()->attach($recipient->id);
+
+        $this->withoutMiddleware(PreventRequestForgery::class)->actingAs($author)
+            ->get(route('employee.internal-notes.edit', $note))
+            ->assertRedirect(route('employee.supervision.challenge'));
+
+        $this->withoutMiddleware(PreventRequestForgery::class)->actingAs($author)
+            ->post(route('employee.supervision.approve'), ['supervisor_number' => 'SUP009', 'supervisor_pin' => '1234']);
+        $editNonce = array_key_first(session('supervision.bypasses', []));
+
+        $this->withoutMiddleware(PreventRequestForgery::class)->actingAs($author)
+            ->get(route('employee.internal-notes.edit', ['note' => $note, '__supervision_bypass_nonce' => $editNonce]))
+            ->assertOk();
+        $this->withoutMiddleware(PreventRequestForgery::class)->actingAs($author)
+            ->put(route('employee.internal-notes.update', $note), [
+                'title' => 'Version modifiée', 'description' => '<p>Modifiée</p>',
+                'display_location' => 'inbox', 'audience' => 'all',
+                'background_color' => '#FEF3C7', 'text_color' => '#78350F',
+                'font_family' => 'Figtree, ui-sans-serif, system-ui, sans-serif',
+            ])->assertRedirect(route('employee.internal-notes.index'));
+        $this->assertDatabaseHas(InternalNote::class, ['id' => $note->id, 'title' => 'Version modifiée', 'is_for_all' => true]);
+
+        $this->withoutMiddleware(PreventRequestForgery::class)->actingAs($author)
+            ->delete(route('employee.internal-notes.destroy', $note))
+            ->assertRedirect(route('employee.supervision.challenge'));
+        $this->withoutMiddleware(PreventRequestForgery::class)->actingAs($author)
+            ->post(route('employee.supervision.approve'), ['supervisor_number' => 'SUP009', 'supervisor_pin' => '1234']);
+        $deleteNonce = array_key_first(session('supervision.bypasses', []));
+        $this->withoutMiddleware(PreventRequestForgery::class)->actingAs($author)
+            ->delete(route('employee.internal-notes.destroy', $note), ['__supervision_bypass_nonce' => $deleteNonce])
+            ->assertRedirect(route('employee.internal-notes.index'));
+
+        $this->assertDatabaseMissing(InternalNote::class, ['id' => $note->id]);
+    }
 }

@@ -74,6 +74,9 @@ Route::prefix('espace-employe')->name('employee.')->middleware(['auth', 'employe
     Route::get('/notes-internes', [InternalNoteController::class, 'index'])->name('internal-notes.index');
     Route::get('/notes-internes/nouvelle', [InternalNoteController::class, 'create'])->name('internal-notes.create');
     Route::post('/notes-internes', [InternalNoteController::class, 'store'])->name('internal-notes.store');
+    Route::get('/notes-internes/{note}/modifier', [InternalNoteController::class, 'edit'])->name('internal-notes.edit');
+    Route::put('/notes-internes/{note}', [InternalNoteController::class, 'update'])->name('internal-notes.update');
+    Route::delete('/notes-internes/{note}', [InternalNoteController::class, 'destroy'])->name('internal-notes.destroy');
     Route::get('/notes-internes/pieces-jointes/{attachment}', [InternalNoteController::class, 'download'])->name('internal-notes.attachments.download');
 
     // Commandes
