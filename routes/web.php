@@ -23,6 +23,7 @@ use App\Http\Controllers\Employee\PaymentMethodController;
 use App\Http\Controllers\Employee\DailyReportController;
 use App\Http\Controllers\Employee\RefundOrderController;
 use App\Http\Controllers\Employee\VoucherController;
+use App\Http\Controllers\Employee\InternalNoteController;
 use App\Http\Controllers\Employee\ActivityLogController;
 use App\Http\Controllers\Employee\CardOfferController;
 use App\Http\Controllers\Auth\EmployeePasswordResetController;
@@ -68,6 +69,12 @@ Route::prefix('espace-employe')->name('employee.')->middleware(['auth', 'employe
     Route::delete('/supervision/permanente', [SupervisionController::class, 'disablePermanent'])->name('supervision.permanent.disable');
 
     Route::get('/tableau-de-bord', [DashboardController::class, 'index'])->name('dashboard');
+
+    // Messagerie interne
+    Route::get('/notes-internes', [InternalNoteController::class, 'index'])->name('internal-notes.index');
+    Route::get('/notes-internes/nouvelle', [InternalNoteController::class, 'create'])->name('internal-notes.create');
+    Route::post('/notes-internes', [InternalNoteController::class, 'store'])->name('internal-notes.store');
+    Route::get('/notes-internes/pieces-jointes/{attachment}', [InternalNoteController::class, 'download'])->name('internal-notes.attachments.download');
 
     // Commandes
     Route::get('/commandes', [OrderController::class, 'index'])->name('orders.index');

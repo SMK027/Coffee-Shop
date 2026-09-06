@@ -343,6 +343,12 @@
                     @endisset
                 </div>
                 <div class="flex items-center gap-2 flex-shrink-0">
+                    <a href="{{ route('employee.internal-notes.index') }}" class="inline-flex items-center gap-1.5 text-stone-600 hover:text-amber-700 p-2 rounded-lg hover:bg-amber-50 transition-colors" title="Messagerie interne">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 3.866-4.03 7-9 7a9.77 9.77 0 01-4.255-.949L3 19l1.395-3.72C3.512 14.958 3 13.504 3 12c0-3.866 4.03-7 9-7s9 3.134 9 7z"/>
+                        </svg>
+                        <span class="hidden sm:inline text-sm font-medium">Notes</span>
+                    </a>
                     {{ $headerActions ?? '' }}
                 </div>
             </header>
@@ -358,6 +364,22 @@
                     {{ session('error') }}
                 </div>
             @endif
+
+            @php
+                $employeeBannerNotes = \App\Models\InternalNote::query()
+                    ->with('author:id,name')
+                    ->forUser(auth()->user())
+                    ->where('display_location', 'employee_banner')
+                    ->latest()
+                    ->get();
+            @endphp
+            @foreach($employeeBannerNotes as $note)
+                <section class="mx-4 sm:mx-6 mt-3 sm:mt-4 px-4 py-3 rounded-lg border shadow-sm" style="background-color: {{ $note->background_color }}; color: {{ $note->text_color }}; font-family: {{ $note->font_family }}; border-color: {{ $note->text_color }}33;">
+                    <p class="font-semibold text-sm">{{ $note->title }}</p>
+                    <div class="mt-1 text-sm rich-note-content">{!! $note->description !!}</div>
+                    <p class="mt-2 text-xs opacity-70">{{ $note->author->name }} · {{ $note->created_at->format('d/m/Y à H:i') }}</p>
+                </section>
+            @endforeach
 
             {{-- Contenu page --}}
             <main class="flex-1 overflow-y-auto p-4 sm:p-6">

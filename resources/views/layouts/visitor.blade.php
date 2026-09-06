@@ -83,6 +83,22 @@
         </div>
     @endif
 
+    @php
+        $globalBannerNotes = \App\Models\InternalNote::query()
+            ->with('author:id,name')
+            ->where('display_location', 'global_banner')
+            ->latest()
+            ->get();
+    @endphp
+    @foreach($globalBannerNotes as $note)
+        <section class="px-4 py-3 border-b" style="background-color: {{ $note->background_color }}; color: {{ $note->text_color }}; font-family: {{ $note->font_family }}; border-color: {{ $note->text_color }}33;">
+            <div class="max-w-6xl mx-auto">
+                <p class="font-semibold text-sm">{{ $note->title }}</p>
+                <div class="mt-1 text-sm rich-note-content">{!! $note->description !!}</div>
+            </div>
+        </section>
+    @endforeach
+
     {{-- Bandeau exceptions horaires (aujourd'hui + 6 jours à venir) --}}
     @php
         $today     = now()->startOfDay();

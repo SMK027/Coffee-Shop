@@ -1,0 +1,102 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\InternalNote;
+use App\Models\Supervisor;
+use App\Models\User;
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
+use Tests\TestCase;
+
+class InternalNoteTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_employee_can_only_read_notes_addressed_to_them(): void
+    {
+        $author = User::factory()->create(['global_role' => 'admin']);
+        $recipient = User::factory()->create(['global_role' => 'moderator']);
+        $otherUser = User::factory()->create(['global_role' => 'admin']);
+
+        $note = InternalNote::create([
+            'author_id' => $author->id,
+            'title' => 'Note confidentielle',
+            'description' => 'Contenu réservé.',
+            'display_location' => 'inbox',
+            'background_color' => '#FEF3C7',
+            'text_color' => '#78350F',
+            'font_family' => 'sans-serif',
+        ]);
+        $note->recipients()->attach($recipient->id);
+
+        $this->actingAs($recipient)
+            ->get(route('employee.internal-notes.index'))
+            ->assertOk()
+            ->assertSee('Note confidentielle');
+
+        $this->actingAs($otherUser)
+            ->get(route('employee.internal-notes.index'))
+            ->assertOk()
+            ->assertDontSee('Note confidentielle');
+    }
+
+    public function test_opening_note_editor_requires_supervisor_validation(): void
+    {
+        $admin = User::factory()->create(['global_role' => 'admin']);
+
+        $this->withoutMiddleware(PreventRequestForgery::class)
+            ->actingAs($admin)
+            ->get(route('employee.internal-notes.create'))
+            ->assertRedirect(route('employee.supervision.challenge'));
+    }
+
+    public function test_validated_supervisor_can_open_editor_and_send_note(): void
+    {
+        $admin = User::factory()->create(['global_role' => 'admin']);
+        $recipient = User::factory()->create(['global_role' => 'moderator']);
+        $supervisor = Supervisor::create([
+            'supervisor_number' => 'SUP001',
+            'password' => Hash::make('1234'),
+            'superadmin_id' => $admin->id,
+            'is_active' => true,
+        ]);
+
+        $this->withoutMiddleware(PreventRequestForgery::class)
+            ->actingAs($admin)
+            ->get(route('employee.internal-notes.create'));
+
+        $this->withoutMiddleware(PreventRequestForgery::class)
+            ->actingAs($admin)
+            ->post(route('employee.supervision.approve'), [
+                'supervisor_number' => $supervisor->supervisor_number,
+                'supervisor_pin' => '1234',
+            ]);
+
+        $nonce = array_key_first(session('supervision.bypasses', []));
+
+        $this->withoutMiddleware(PreventRequestForgery::class)
+            ->actingAs($admin)
+            ->get(route('employee.internal-notes.create', [
+                '__supervision_bypass_nonce' => $nonce,
+            ]))
+            ->assertOk()
+            ->assertViewIs('employee.internal-notes.create');
+
+        $this->withoutMiddleware(PreventRequestForgery::class)
+            ->actingAs($admin)
+            ->post(route('employee.internal-notes.store'), [
+                'title' => 'Information équipe',
+                'description' => '<p>Réunion à 10h.</p>',
+                'display_location' => 'inbox',
+                'recipient_ids' => [$recipient->id],
+                'background_color' => '#FEF3C7',
+                'text_color' => '#78350F',
+                'font_family' => 'sans-serif',
+            ])
+            ->assertRedirect(route('employee.internal-notes.index'));
+
+        $this->assertDatabaseHas(InternalNote::class, ['title' => 'Information équipe']);
+    }
+}

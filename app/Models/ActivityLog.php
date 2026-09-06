@@ -36,6 +36,7 @@ class ActivityLog extends Model
             'refund'   => ['badge' => 'bg-red-100 text-red-700',       'dot' => 'bg-red-500',     'label' => 'Remboursements'],
             'payment'  => ['badge' => 'bg-green-100 text-green-700',   'dot' => 'bg-green-500',   'label' => 'Paiements'],
             'voucher'  => ['badge' => 'bg-purple-100 text-purple-700', 'dot' => 'bg-purple-500',  'label' => 'Bons d\'achat'],
+            'internal_note' => ['badge' => 'bg-sky-100 text-sky-700', 'dot' => 'bg-sky-500', 'label' => 'Notes internes'],
             'user'     => ['badge' => 'bg-indigo-100 text-indigo-700', 'dot' => 'bg-indigo-500',  'label' => 'Utilisateurs'],
             'drink'    => ['badge' => 'bg-orange-100 text-orange-700', 'dot' => 'bg-orange-500',  'label' => 'Menu'],
             'settings' => ['badge' => 'bg-stone-100 text-stone-600',   'dot' => 'bg-stone-400',   'label' => 'Paramètres'],
