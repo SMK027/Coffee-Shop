@@ -18,12 +18,20 @@
         </div>
 
         @if(isset($supervisor))
+        @php $isQuarantined = $supervisor->quarantined_until?->isFuture(); @endphp
         <div class="sm:col-span-2">
             <label class="flex items-center gap-3">
                 <input type="hidden" name="is_active" value="0">
-                <input type="checkbox" name="is_active" id="is_active" value="1" {{ old('is_active', $supervisor->is_active) ? 'checked' : '' }} class="rounded border-stone-300 text-amber-600 focus:ring-amber-500">
+                <input type="checkbox" name="is_active" id="is_active" value="1" {{ old('is_active', $supervisor->is_active) ? 'checked' : '' }} @disabled($isQuarantined) class="rounded border-stone-300 text-amber-600 focus:ring-amber-500 disabled:opacity-50">
                 <span class="text-sm text-stone-700">Actif</span>
             </label>
+            @if($isQuarantined)
+                <p class="text-xs text-red-600 mt-1">Ce superviseur est en quarantaine jusqu’au {{ $supervisor->quarantined_until->format('d/m/Y à H:i') }}. La réactivation directe est désactivée.</p>
+                <label class="flex items-center gap-3 mt-3">
+                    <input type="checkbox" name="reactivate_after_pin_reset" value="1" class="rounded border-stone-300 text-green-600 focus:ring-green-500">
+                    <span class="text-sm text-stone-700">Réactiver après changement du PIN et supprimer les codes provisoires</span>
+                </label>
+            @endif
             @error('is_active')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
         </div>
         @endif

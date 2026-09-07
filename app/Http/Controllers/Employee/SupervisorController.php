@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Employee;
 
 use App\Http\Controllers\Controller;
+use App\Models\InternalNote;
 use App\Models\Setting;
 use App\Models\Supervisor;
 use App\Models\User;
@@ -165,7 +166,7 @@ class SupervisorController extends Controller
 
         $isSuperAdmin = auth()->user()->isSuperAdmin();
         $holderAdmins = $isSuperAdmin
-            ? User::where('global_role', 'admin')->where('is_active', true)->orderBy('name')->get(['id', 'name'])
+            ? User::where('global_role', 'admin')->where('is_active', true)->orderBy('name')->get(['id', 'name', 'email'])
             : collect();
 
         return view('employee.supervisors.edit', compact('supervisor', 'isSuperAdmin', 'holderAdmins'));
@@ -186,13 +187,22 @@ class SupervisorController extends Controller
         if (! $isSuperAdmin) {
             $validated = $request->validate([
                 'supervisor_pin' => ['required', 'string', 'regex:/^\d{4,6}$/'],
+                'reactivate_after_pin_reset' => ['nullable', 'boolean'],
             ], [
                 'supervisor_pin.required' => 'Le PIN est requis pour la mise à jour.',
                 'supervisor_pin.regex'    => 'Le PIN doit contenir entre 4 et 6 chiffres.',
             ]);
 
             $supervisor->password = Hash::make($validated['supervisor_pin']);
+            if ($supervisor->quarantined_until?->isFuture() && $request->boolean('reactivate_after_pin_reset')) {
+                $supervisor->quarantined_until = null;
+                $supervisor->is_active = true;
+            }
             $supervisor->save();
+
+            if ($request->boolean('reactivate_after_pin_reset')) {
+                $this->deleteTemporaryCredentialsFor($supervisor);
+            }
 
             ActivityLogger::log(
                 'supervisor.updated',
@@ -211,6 +221,7 @@ class SupervisorController extends Controller
             'supervisor_pin'    => ['nullable', 'string', 'regex:/^\d{4,6}$/'],
             'is_active'         => ['required', 'boolean'],
             'holder_admin_id'   => ['nullable', 'integer', 'exists:users,id'],
+            'reactivate_after_pin_reset' => ['nullable', 'boolean'],
         ], [
             'supervisor_number.alpha_dash' => 'Le numéro de superviseur ne peut contenir que des lettres, chiffres, tirets et underscores.',
             'supervisor_pin.regex'         => 'Le PIN doit contenir entre 4 et 6 chiffres.',
@@ -229,15 +240,34 @@ class SupervisorController extends Controller
             ]);
         }
 
+        if ($supervisor->quarantined_until?->isFuture() && $request->boolean('reactivate_after_pin_reset') && empty($validated['supervisor_pin'])) {
+            throw ValidationException::withMessages([
+                'supervisor_pin' => 'Un nouveau PIN est requis pour réactiver un superviseur en quarantaine.',
+            ]);
+        }
+
         $supervisor->supervisor_number = $validated['supervisor_number'];
-        $supervisor->is_active = $validated['is_active'];
         $supervisor->holder_admin_id = $holderId;
+
+        if ($supervisor->quarantined_until?->isFuture()) {
+            $supervisor->is_active = false;
+        } else {
+            $supervisor->is_active = $validated['is_active'];
+        }
 
         if (! empty($validated['supervisor_pin'])) {
             $supervisor->password = Hash::make($validated['supervisor_pin']);
+            if ($supervisor->quarantined_until?->isFuture() && $request->boolean('reactivate_after_pin_reset')) {
+                $supervisor->quarantined_until = null;
+                $supervisor->is_active = true;
+            }
         }
 
         $supervisor->save();
+
+        if (! empty($validated['supervisor_pin']) && $request->boolean('reactivate_after_pin_reset')) {
+            $this->deleteTemporaryCredentialsFor($supervisor);
+        }
 
         ActivityLogger::log(
             'supervisor.updated',
@@ -424,6 +454,22 @@ class SupervisorController extends Controller
 
         $userId = (int) $user->id;
         return (int) $supervisor->holder_admin_id === $userId;
+    }
+
+    private function deleteTemporaryCredentialsFor(Supervisor $supervisor): void
+    {
+        $temporarySupervisors = Supervisor::query()
+            ->where('replaces_supervisor_id', $supervisor->id)
+            ->get();
+
+        foreach ($temporarySupervisors as $temporarySupervisor) {
+            InternalNote::query()
+                ->where('title', 'Identifiants superviseur temporaires')
+                ->where('description', 'like', '%' . $temporarySupervisor->supervisor_number . '%')
+                ->delete();
+
+            $temporarySupervisor->delete();
+        }
     }
 
     private function ensureSupervisorManagementIpIsAllowed(Request $request): void

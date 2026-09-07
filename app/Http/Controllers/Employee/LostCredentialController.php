@@ -81,14 +81,16 @@ class LostCredentialController extends Controller
                 $request->user(),
                 $recipient,
                 'Identifiants superviseur temporaires',
-                "Le superviseur #{$temporary->replacedSupervisor->supervisor_number} est en quarantaine jusqu’au {$temporary->temporary_expires_at->format('d/m/Y à H:i')}.\n\nVotre superviseur temporaire est : {$temporary->supervisor_number}\nPIN temporaire : {$temporary->plain_pin}\n\nCe code ne peut pas être modifié et sera désactivé automatiquement à la fin de la quarantaine."
+                "Le superviseur #{$temporary->replacedSupervisor->supervisor_number} est en quarantaine jusqu’au {$temporary->temporary_expires_at->format('d/m/Y à H:i')}.\n\nVotre superviseur temporaire est : {$temporary->supervisor_number}\nPIN temporaire : {$temporary->plain_pin}\n\nCe code ne peut pas être modifié et sera désactivé automatiquement à la fin de la quarantaine.",
+                $temporary->temporary_expires_at
             );
         }
 
-        foreach (User::whereIn('id', $validated['user_ids'] ?? [])->get() as $user) {
-            $this->sendInternalNote(
+        $usersWithLostQuickLogin = User::whereIn('id', $validated['user_ids'] ?? [])->get();
+        if ($usersWithLostQuickLogin->isNotEmpty()) {
+            $this->sendInternalNoteToUsers(
                 $request->user(),
-                $user,
+                $usersWithLostQuickLogin,
                 'Connexion rapide désactivée',
                 'Votre QR code de connexion rapide a été signalé comme perdu. Il est désactivé jusqu’à la réinitialisation de votre mot de passe.'
             );
@@ -131,7 +133,12 @@ class LostCredentialController extends Controller
         return $temporary;
     }
 
-    private function sendInternalNote(User $author, User $recipient, string $title, string $description): void
+    private function sendInternalNote(User $author, User $recipient, string $title, string $description, $expiresAt = null): void
+    {
+        $this->sendInternalNoteToUsers($author, collect([$recipient]), $title, $description, $expiresAt);
+    }
+
+    private function sendInternalNoteToUsers(User $author, $recipients, string $title, string $description, $expiresAt = null): void
     {
         $note = InternalNote::create([
             'author_id' => $author->id,
@@ -141,7 +148,8 @@ class LostCredentialController extends Controller
             'background_color' => '#FEF3C7',
             'text_color' => '#78350F',
             'font_family' => 'Figtree, ui-sans-serif, system-ui, sans-serif',
+            'expires_at' => $expiresAt,
         ]);
-        $note->recipients()->attach($recipient->id);
+        $note->recipients()->attach($recipients->pluck('id')->all());
     }
 }
