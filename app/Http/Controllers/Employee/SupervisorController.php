@@ -98,6 +98,8 @@ class SupervisorController extends Controller
             'supervisor_pin'    => ['required', 'string', 'regex:/^\d{4,6}$/'],
             'superadmin_id'     => ['required', 'integer', 'exists:users,id'],
             'holder_admin_id'   => ['nullable', 'integer', 'exists:users,id'],
+            'is_manual_temporary' => ['nullable', 'boolean'],
+            'temporary_expires_at' => ['nullable', 'date', 'after:now'],
         ], [
             'supervisor_number.alpha_dash' => 'Le numéro de superviseur ne peut contenir que des lettres, chiffres, tirets et underscores.',
             'supervisor_pin.regex'         => 'Le PIN doit contenir entre 4 et 6 chiffres.',
@@ -106,9 +108,22 @@ class SupervisorController extends Controller
             'holder_admin_id.exists'       => 'Ce détenteur administrateur est invalide.',
         ]);
 
-        if (str_starts_with($validated['supervisor_number'], '7')) {
+        $isManualTemporary = $request->boolean('is_manual_temporary');
+        if (str_starts_with($validated['supervisor_number'], '7') && ! $isManualTemporary) {
             throw ValidationException::withMessages([
                 'supervisor_number' => 'Les identifiants commençant par 7 sont réservés aux superviseurs temporaires.',
+            ]);
+        }
+
+        if ($isManualTemporary && ! str_starts_with($validated['supervisor_number'], '7')) {
+            throw ValidationException::withMessages([
+                'supervisor_number' => 'Un superviseur temporaire doit avoir un identifiant commençant par 7.',
+            ]);
+        }
+
+        if ($isManualTemporary && empty($validated['temporary_expires_at'])) {
+            throw ValidationException::withMessages([
+                'temporary_expires_at' => 'La date d’expiration est requise pour un superviseur temporaire.',
             ]);
         }
 
@@ -133,6 +148,9 @@ class SupervisorController extends Controller
         $supervisor = Supervisor::create([
             'supervisor_number' => $validated['supervisor_number'],
             'password'          => Hash::make($validated['supervisor_pin']),
+            'is_temporary'      => $isManualTemporary,
+            'is_manual_temporary' => $isManualTemporary,
+            'temporary_expires_at' => $isManualTemporary ? $validated['temporary_expires_at'] : null,
             'superadmin_id'     => $owner->id,
             'holder_admin_id'   => $holderId,
         ]);
@@ -159,7 +177,7 @@ class SupervisorController extends Controller
         $this->ensureSupervisorManagementIpIsAllowed(request());
         abort_unless($this->canManageSupervisor($supervisor), 403);
 
-        if ($supervisor->is_temporary) {
+        if ($supervisor->is_temporary && ! $supervisor->is_manual_temporary) {
             return redirect()->route('employee.supervisors.index')
                 ->with('error', 'Un superviseur temporaire ne peut pas être modifié manuellement.');
         }
@@ -178,7 +196,7 @@ class SupervisorController extends Controller
         $this->ensureSupervisorManagementIpIsAllowed($request);
         abort_unless($this->canManageSupervisor($supervisor), 403);
 
-        if ($supervisor->is_temporary) {
+        if ($supervisor->is_temporary && ! $supervisor->is_manual_temporary) {
             return back()->with('error', 'Un superviseur temporaire ne peut pas être modifié manuellement.');
         }
 
@@ -222,6 +240,7 @@ class SupervisorController extends Controller
             'is_active'         => ['required', 'boolean'],
             'holder_admin_id'   => ['nullable', 'integer', 'exists:users,id'],
             'reactivate_after_pin_reset' => ['nullable', 'boolean'],
+            'temporary_expires_at' => ['nullable', 'date', 'after:now'],
         ], [
             'supervisor_number.alpha_dash' => 'Le numéro de superviseur ne peut contenir que des lettres, chiffres, tirets et underscores.',
             'supervisor_pin.regex'         => 'Le PIN doit contenir entre 4 et 6 chiffres.',
@@ -230,6 +249,18 @@ class SupervisorController extends Controller
         if (! $supervisor->is_temporary && str_starts_with($validated['supervisor_number'], '7')) {
             throw ValidationException::withMessages([
                 'supervisor_number' => 'Les identifiants commençant par 7 sont réservés aux superviseurs temporaires.',
+            ]);
+        }
+
+        if ($supervisor->is_manual_temporary && ! str_starts_with($validated['supervisor_number'], '7')) {
+            throw ValidationException::withMessages([
+                'supervisor_number' => 'Un superviseur temporaire doit conserver un identifiant commençant par 7.',
+            ]);
+        }
+
+        if ($supervisor->is_manual_temporary && empty($validated['temporary_expires_at'])) {
+            throw ValidationException::withMessages([
+                'temporary_expires_at' => 'La date d’expiration est requise pour un superviseur temporaire.',
             ]);
         }
 
@@ -248,6 +279,9 @@ class SupervisorController extends Controller
 
         $supervisor->supervisor_number = $validated['supervisor_number'];
         $supervisor->holder_admin_id = $holderId;
+        if ($supervisor->is_manual_temporary) {
+            $supervisor->temporary_expires_at = $validated['temporary_expires_at'];
+        }
 
         if ($supervisor->quarantined_until?->isFuture()) {
             $supervisor->is_active = false;
@@ -291,7 +325,7 @@ class SupervisorController extends Controller
             return back()->with('error', 'Ce superviseur est en quarantaine jusqu’au ' . $supervisor->quarantined_until->format('d/m/Y à H:i') . ' et ne peut pas être réactivé.');
         }
 
-        if ($supervisor->is_temporary) {
+        if ($supervisor->is_temporary && ! $supervisor->is_manual_temporary) {
             return back()->with('error', 'Un superviseur temporaire ne peut pas être modifié manuellement.');
         }
 
@@ -460,6 +494,7 @@ class SupervisorController extends Controller
     {
         $temporarySupervisors = Supervisor::query()
             ->where('replaces_supervisor_id', $supervisor->id)
+            ->where('is_manual_temporary', false)
             ->get();
 
         foreach ($temporarySupervisors as $temporarySupervisor) {

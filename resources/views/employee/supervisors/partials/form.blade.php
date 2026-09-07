@@ -1,4 +1,4 @@
-<div class="bg-white rounded-xl shadow-sm border border-stone-100 p-6 space-y-5">
+<div class="bg-white rounded-xl shadow-sm border border-stone-100 p-6 space-y-5" x-data="{ temporary: {{ old('is_manual_temporary', $supervisor->is_manual_temporary ?? false) ? 'true' : 'false' }} }">
     <div class="grid sm:grid-cols-2 gap-5">
         <div>
             <label for="supervisor_number" class="block text-sm font-medium text-stone-700 mb-1.5">Numéro du superviseur *</label>
@@ -15,6 +15,22 @@
                    class="w-full border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
             @error('supervisor_pin')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
             <p class="text-xs text-stone-400 mt-1">PIN de 4 à 6 chiffres.</p>
+        </div>
+
+        <div class="sm:col-span-2 border-t border-stone-100 pt-5">
+            <label class="flex items-center gap-3 cursor-pointer">
+                <input type="checkbox" name="is_manual_temporary" value="1" x-model="temporary" class="rounded border-stone-300 text-amber-600 focus:ring-amber-500">
+                <span class="text-sm font-medium text-stone-700">Superviseur temporaire</span>
+            </label>
+            <p class="text-xs text-stone-400 mt-1">Les superviseurs temporaires manuels sont gérables et leur identifiant doit commencer par 7.</p>
+
+            <div x-show="temporary" x-cloak class="mt-4">
+                <label for="temporary_expires_at" class="block text-sm font-medium text-stone-700 mb-1.5">Date d'expiration *</label>
+                <input type="datetime-local" name="temporary_expires_at" id="temporary_expires_at"
+                       value="{{ old('temporary_expires_at', isset($supervisor) && $supervisor->temporary_expires_at ? $supervisor->temporary_expires_at->format('Y-m-d\TH:i') : '') }}"
+                       class="w-full border {{ $errors->has('temporary_expires_at') ? 'border-red-400 bg-red-50' : 'border-stone-300' }} rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
+                @error('temporary_expires_at')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+            </div>
         </div>
 
         @if(isset($supervisor))

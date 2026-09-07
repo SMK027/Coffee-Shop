@@ -70,7 +70,9 @@
                                 @endif
                             </td>
                             <td class="px-5 py-3 text-xs">
-                                @if($supervisor->is_active)
+                                @if($supervisor->is_manual_temporary)
+                                    <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-violet-100 text-violet-700">Temporaire jusqu'au {{ $supervisor->temporary_expires_at?->format('d/m/Y') }}</span>
+                                @elseif($supervisor->is_active)
                                     <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-green-100 text-green-700">Actif</span>
                                 @else
                                     <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-stone-100 text-stone-500">Désactivé</span>

@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\User;
 
-#[Fillable(['supervisor_number', 'password', 'is_active', 'quarantined_until', 'is_temporary', 'replaces_supervisor_id', 'temporary_expires_at', 'superadmin_id', 'holder_admin_id'])]
+#[Fillable(['supervisor_number', 'password', 'is_active', 'quarantined_until', 'is_temporary', 'is_manual_temporary', 'replaces_supervisor_id', 'temporary_expires_at', 'superadmin_id', 'holder_admin_id'])]
 #[Hidden(['password'])]
 class Supervisor extends Model
 {
@@ -19,6 +19,7 @@ class Supervisor extends Model
         return [
             'is_active' => 'boolean',
             'is_temporary' => 'boolean',
+            'is_manual_temporary' => 'boolean',
             'quarantined_until' => 'datetime',
             'temporary_expires_at' => 'datetime',
         ];

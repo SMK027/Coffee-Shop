@@ -150,6 +150,38 @@ class SupervisionWorkflowTest extends TestCase
         ]);
     }
 
+    public function test_superadmin_can_create_and_manage_manual_temporary_supervisor(): void
+    {
+        \App\Models\Setting::set(\App\Models\Setting::KEY_SUPERVISOR_MANAGEMENT_ALLOWED_IPS, '127.0.0.1');
+        $superAdmin = User::factory()->create(['global_role' => 'superadmin']);
+
+        $this->withoutMiddleware(PreventRequestForgery::class)
+            ->actingAs($superAdmin)
+            ->post(route('employee.supervisors.store'), [
+                'supervisor_number' => '70001',
+                'supervisor_pin' => '1234',
+                'superadmin_id' => $superAdmin->id,
+                'is_manual_temporary' => '1',
+                'temporary_expires_at' => now()->addDays(2)->format('Y-m-d H:i:s'),
+            ])
+            ->assertRedirect(route('employee.supervisors.index'));
+
+        $supervisor = Supervisor::where('supervisor_number', '70001')->firstOrFail();
+        $this->assertTrue($supervisor->is_temporary);
+        $this->assertTrue($supervisor->is_manual_temporary);
+
+        $this->withoutMiddleware(PreventRequestForgery::class)
+            ->actingAs($superAdmin)
+            ->put(route('employee.supervisors.update', $supervisor), [
+                'supervisor_number' => '70001',
+                'is_active' => '1',
+                'temporary_expires_at' => now()->addDays(5)->format('Y-m-d H:i:s'),
+            ])
+            ->assertRedirect(route('employee.supervisors.index'));
+
+        $this->assertTrue($supervisor->fresh()->temporary_expires_at->isAfter(now()->addDays(4)));
+    }
+
     public function test_quick_login_can_be_reactivated_after_supervisor_validation(): void
     {
         $superAdmin = User::factory()->create(['global_role' => 'superadmin']);
