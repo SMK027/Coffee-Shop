@@ -121,4 +121,32 @@ class SupervisionWorkflowTest extends TestCase
         $response3->assertSessionHasErrors(['supervisor_number']);
         $this->assertDatabaseHas(Supervisor::class, ['id' => $supervisor1->id]);
     }
+
+    public function test_responsible_superadmin_can_change_supervisor_holder(): void
+    {
+        \App\Models\Setting::set(\App\Models\Setting::KEY_SUPERVISOR_MANAGEMENT_ALLOWED_IPS, '127.0.0.1');
+
+        $superAdmin = User::factory()->create(['global_role' => 'superadmin']);
+        $holder = User::factory()->create(['global_role' => 'admin', 'is_active' => true]);
+        $supervisor = Supervisor::create([
+            'supervisor_number' => 'SUP001',
+            'password' => Hash::make('1234'),
+            'superadmin_id' => $superAdmin->id,
+            'is_active' => true,
+        ]);
+
+        $response = $this->withoutMiddleware(PreventRequestForgery::class)
+            ->actingAs($superAdmin)
+            ->put(route('employee.supervisors.update', $supervisor), [
+                'supervisor_number' => 'SUP001',
+                'is_active' => '1',
+                'holder_admin_id' => $holder->id,
+            ]);
+
+        $response->assertRedirect(route('employee.supervisors.index'));
+        $this->assertDatabaseHas(Supervisor::class, [
+            'id' => $supervisor->id,
+            'holder_admin_id' => $holder->id,
+        ]);
+    }
 }

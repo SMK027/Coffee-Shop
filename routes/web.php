@@ -24,6 +24,7 @@ use App\Http\Controllers\Employee\DailyReportController;
 use App\Http\Controllers\Employee\RefundOrderController;
 use App\Http\Controllers\Employee\VoucherController;
 use App\Http\Controllers\Employee\InternalNoteController;
+use App\Http\Controllers\Employee\LostCredentialController;
 use App\Http\Controllers\Employee\ActivityLogController;
 use App\Http\Controllers\Employee\CardOfferController;
 use App\Http\Controllers\Auth\EmployeePasswordResetController;
@@ -78,6 +79,10 @@ Route::prefix('espace-employe')->name('employee.')->middleware(['auth', 'employe
     Route::put('/notes-internes/{note}', [InternalNoteController::class, 'update'])->name('internal-notes.update');
     Route::delete('/notes-internes/{note}', [InternalNoteController::class, 'destroy'])->name('internal-notes.destroy');
     Route::get('/notes-internes/pieces-jointes/{attachment}', [InternalNoteController::class, 'download'])->name('internal-notes.attachments.download');
+
+    // Signalement d'identifiants perdus
+    Route::get('/identifiants-perdus', [LostCredentialController::class, 'create'])->name('lost-credentials.create');
+    Route::post('/identifiants-perdus', [LostCredentialController::class, 'store'])->name('lost-credentials.store');
 
     // Commandes
     Route::get('/commandes', [OrderController::class, 'index'])->name('orders.index');

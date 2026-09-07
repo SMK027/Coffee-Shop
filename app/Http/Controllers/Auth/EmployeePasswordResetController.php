@@ -51,6 +51,7 @@ class EmployeePasswordResetController extends Controller
         // Mise à jour du mot de passe
         $record->user->update([
             'password' => Hash::make($request->password),
+            'quick_login_disabled' => false,
         ]);
 
         // Invalide le token (usage unique)

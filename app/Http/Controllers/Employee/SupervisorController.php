@@ -105,6 +105,12 @@ class SupervisorController extends Controller
             'holder_admin_id.exists'       => 'Ce détenteur administrateur est invalide.',
         ]);
 
+        if (str_starts_with($validated['supervisor_number'], '7')) {
+            throw ValidationException::withMessages([
+                'supervisor_number' => 'Les identifiants commençant par 7 sont réservés aux superviseurs temporaires.',
+            ]);
+        }
+
         // Vérifier que le compte désigné est bien un super-administrateur
         $owner = User::where('id', $validated['superadmin_id'])
             ->where('global_role', 'superadmin')
@@ -152,9 +158,17 @@ class SupervisorController extends Controller
         $this->ensureSupervisorManagementIpIsAllowed(request());
         abort_unless($this->canManageSupervisor($supervisor), 403);
 
-        $isSuperAdmin = auth()->user()->isSuperAdmin();
+        if ($supervisor->is_temporary) {
+            return redirect()->route('employee.supervisors.index')
+                ->with('error', 'Un superviseur temporaire ne peut pas être modifié manuellement.');
+        }
 
-        return view('employee.supervisors.edit', compact('supervisor', 'isSuperAdmin'));
+        $isSuperAdmin = auth()->user()->isSuperAdmin();
+        $holderAdmins = $isSuperAdmin
+            ? User::where('global_role', 'admin')->where('is_active', true)->orderBy('name')->get(['id', 'name'])
+            : collect();
+
+        return view('employee.supervisors.edit', compact('supervisor', 'isSuperAdmin', 'holderAdmins'));
     }
 
     public function update(Request $request, Supervisor $supervisor)
@@ -162,6 +176,10 @@ class SupervisorController extends Controller
         abort_unless(auth()->user()->isAdmin(), 403);
         $this->ensureSupervisorManagementIpIsAllowed($request);
         abort_unless($this->canManageSupervisor($supervisor), 403);
+
+        if ($supervisor->is_temporary) {
+            return back()->with('error', 'Un superviseur temporaire ne peut pas être modifié manuellement.');
+        }
 
         $isSuperAdmin = auth()->user()->isSuperAdmin();
 
@@ -192,13 +210,28 @@ class SupervisorController extends Controller
             'supervisor_number' => ['required', 'string', 'max:50', 'alpha_dash', Rule::unique('supervisors', 'supervisor_number')->ignore($supervisor->id)],
             'supervisor_pin'    => ['nullable', 'string', 'regex:/^\d{4,6}$/'],
             'is_active'         => ['required', 'boolean'],
+            'holder_admin_id'   => ['nullable', 'integer', 'exists:users,id'],
         ], [
             'supervisor_number.alpha_dash' => 'Le numéro de superviseur ne peut contenir que des lettres, chiffres, tirets et underscores.',
             'supervisor_pin.regex'         => 'Le PIN doit contenir entre 4 et 6 chiffres.',
         ]);
 
+        if (! $supervisor->is_temporary && str_starts_with($validated['supervisor_number'], '7')) {
+            throw ValidationException::withMessages([
+                'supervisor_number' => 'Les identifiants commençant par 7 sont réservés aux superviseurs temporaires.',
+            ]);
+        }
+
+        $holderId = $validated['holder_admin_id'] ?? null;
+        if ($holderId !== null && ! User::whereKey($holderId)->where('global_role', 'admin')->where('is_active', true)->exists()) {
+            throw ValidationException::withMessages([
+                'holder_admin_id' => 'Le détenteur doit être un administrateur simple actif.',
+            ]);
+        }
+
         $supervisor->supervisor_number = $validated['supervisor_number'];
         $supervisor->is_active = $validated['is_active'];
+        $supervisor->holder_admin_id = $holderId;
 
         if (! empty($validated['supervisor_pin'])) {
             $supervisor->password = Hash::make($validated['supervisor_pin']);
@@ -211,7 +244,7 @@ class SupervisorController extends Controller
             'Superviseur #' . $supervisor->supervisor_number . ' mis à jour',
             'supervisor',
             $supervisor->id,
-            ['supervisor_number' => $supervisor->supervisor_number, 'actif' => $supervisor->is_active]
+            ['supervisor_number' => $supervisor->supervisor_number, 'actif' => $supervisor->is_active, 'detenteur' => $holderId ? User::find($holderId)?->name : null]
         );
 
         return redirect()->route('employee.supervisors.index')
@@ -223,6 +256,14 @@ class SupervisorController extends Controller
         abort_unless(auth()->user()->isAdmin(), 403);
         $this->ensureSupervisorManagementIpIsAllowed($request);
         abort_unless($this->canManageSupervisor($supervisor), 403);
+
+        if (! $supervisor->is_active && $supervisor->quarantined_until?->isFuture()) {
+            return back()->with('error', 'Ce superviseur est en quarantaine jusqu’au ' . $supervisor->quarantined_until->format('d/m/Y à H:i') . ' et ne peut pas être réactivé.');
+        }
+
+        if ($supervisor->is_temporary) {
+            return back()->with('error', 'Un superviseur temporaire ne peut pas être modifié manuellement.');
+        }
 
         $supervisor->update(['is_active' => ! $supervisor->is_active]);
 

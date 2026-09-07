@@ -11,7 +11,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject;
 
-#[Fillable(['username', 'name', 'email', 'password', 'global_role', 'avatar', 'bio', 'is_active', 'superadmin_id'])]
+#[Fillable(['username', 'name', 'email', 'password', 'global_role', 'avatar', 'bio', 'is_active', 'quick_login_disabled', 'superadmin_id'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements JWTSubject
 {
@@ -24,6 +24,7 @@ class User extends Authenticatable implements JWTSubject
             'email_verified_at' => 'datetime',
             'password'          => 'hashed',
             'is_active'         => 'boolean',
+            'quick_login_disabled' => 'boolean',
         ];
     }
 
@@ -100,7 +101,7 @@ class User extends Authenticatable implements JWTSubject
         }
 
         $user = static::where('username', $matches[1])->first();
-        if (! $user) {
+        if (! $user || $user->quick_login_disabled) {
             return null;
         }
 

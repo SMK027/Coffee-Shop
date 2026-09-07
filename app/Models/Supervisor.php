@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\User;
 
-#[Fillable(['supervisor_number', 'password', 'is_active', 'superadmin_id', 'holder_admin_id'])]
+#[Fillable(['supervisor_number', 'password', 'is_active', 'quarantined_until', 'is_temporary', 'replaces_supervisor_id', 'temporary_expires_at', 'superadmin_id', 'holder_admin_id'])]
 #[Hidden(['password'])]
 class Supervisor extends Model
 {
@@ -18,12 +18,17 @@ class Supervisor extends Model
     {
         return [
             'is_active' => 'boolean',
+            'is_temporary' => 'boolean',
+            'quarantined_until' => 'datetime',
+            'temporary_expires_at' => 'datetime',
         ];
     }
 
     public function isActive(): bool
     {
-        return (bool) $this->is_active;
+        return (bool) $this->is_active
+            && ! ($this->quarantined_until?->isFuture())
+            && ! ($this->is_temporary && $this->temporary_expires_at?->isPast());
     }
 
     public function superadmin(): \Illuminate\Database\Eloquent\Relations\BelongsTo
@@ -34,6 +39,11 @@ class Supervisor extends Model
     public function holderAdmin(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(User::class, 'holder_admin_id');
+    }
+
+    public function replacedSupervisor(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(self::class, 'replaces_supervisor_id');
     }
 
     public function bypassToken(): string

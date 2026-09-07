@@ -68,7 +68,7 @@ abstract class Controller
                     ->where('is_active', true)
                     ->first();
 
-                if ($supervisor) {
+                if ($supervisor?->isActive()) {
                     $payload = $supervisor->supervisor_number . '|' . $supervisor->password;
                     $expected = substr(hash_hmac('sha256', $payload, (string) config('app.key')), 0, 20);
 
@@ -102,7 +102,7 @@ abstract class Controller
                     ->where('is_active', true)
                     ->first();
 
-                $valid = $supervisor && hash_equals($supervisor->password, $passwordHash);
+                $valid = $supervisor?->isActive() && hash_equals($supervisor->password, $passwordHash);
                 if ($valid) {
                     ActivityLogger::log(
                         'auth.supervisor',
@@ -137,7 +137,7 @@ abstract class Controller
             ->where('is_active', true)
             ->first();
 
-        $valid = $supervisor && Hash::check($validated['supervisor_pin'], $supervisor->password);
+        $valid = $supervisor?->isActive() && Hash::check($validated['supervisor_pin'], $supervisor->password);
 
         if (! $valid) {
             ActivityLogger::log(

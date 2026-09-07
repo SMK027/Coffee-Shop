@@ -237,6 +237,16 @@
                                 Superviseurs
                             </a>
                         </li>
+                        <li>
+                            <a href="{{ route('employee.lost-credentials.create') }}"
+                               class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium
+                                      {{ request()->routeIs('employee.lost-credentials*') ? 'bg-amber-800 text-white' : 'text-amber-100 hover:bg-amber-800 hover:text-white' }}">
+                                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6.938 4h13.856A2 2 0 0021 19.062V8.938A2 2 0 0019.062 7H4.938A2 2 0 003 8.938v10.124A2 2 0 005.062 21zM12 3a4 4 0 00-4 4v0h8v0a4 4 0 00-4-4z"/>
+                                </svg>
+                                Identifiants perdus
+                            </a>
+                        </li>
                         @endif
                         @if(auth()->user()->isAdmin())
                         <li>

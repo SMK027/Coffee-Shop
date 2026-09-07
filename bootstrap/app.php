@@ -15,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withSchedule(function (Schedule $schedule): void {
         $schedule->command('internal-notes:purge-expired')->daily();
+        $schedule->command('supervisors:disable-expired-temporary')->hourly();
     })
     ->withMiddleware(function (Middleware $middleware): void {
         // Faire confiance à Traefik (reverse proxy) pour les headers X-Forwarded-*

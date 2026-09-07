@@ -69,6 +69,12 @@ class SupervisorController extends Controller
             ], 422);
         }
 
+        if (! $supervisor->isActive()) {
+            return response()->json([
+                'message' => 'Ce superviseur est en quarantaine ou son accès temporaire a expiré.',
+            ], 403);
+        }
+
         ActivityLogger::log(
             'supervisor.qr_viewed',
             'Consultation du QR code du superviseur #' . $supervisor->supervisor_number . ' (application mobile)',
