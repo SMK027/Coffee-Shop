@@ -14,6 +14,7 @@ use BaconQrCode\Writer;
 use Dompdf\Dompdf;
 use Dompdf\Options;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
@@ -183,6 +184,89 @@ class UserController extends Controller
         );
 
         return back()->with('success', $user->is_active ? 'Compte réactivé avec succès.' : 'Compte désactivé avec succès.');
+    }
+
+    public function reactivateQuickLogin(Request $request, User $user)
+    {
+        abort_unless($request->user()->isAdmin(), 403);
+
+        $this->requireSuperAdminOrSupervisor(
+            $request,
+            'La réactivation de la connexion rapide nécessite une authentification superviseur.'
+        );
+
+        $user->update(['quick_login_disabled' => false]);
+
+        ActivityLogger::log(
+            'user.quick_login_reactivated',
+            'Connexion rapide réactivée pour ' . $user->name,
+            'user',
+            $user->id,
+            ['utilisateur' => $user->username]
+        );
+
+        return redirect()->route('employee.users.index')
+            ->with('success', 'Connexion rapide réactivée pour ' . $user->name . '.');
+    }
+
+    public function takeControl(Request $request, User $user)
+    {
+        $operator = $request->user();
+        abort_unless($operator?->isSuperAdmin(), 403);
+
+        if ($request->session()->has('impersonation.original_user_id')) {
+            return back()->with('error', 'Une prise de contrôle est déjà active. Revenez d’abord à votre compte.');
+        }
+
+        if ((int) $user->id === (int) $operator->id || ! $user->isActive()) {
+            return back()->with('error', 'Ce compte ne peut pas être pris en charge.');
+        }
+
+        $this->requireSuperAdminOrSupervisor(
+            $request,
+            'La prise de contrôle d’un compte nécessite une authentification superviseur.'
+        );
+
+        $request->session()->put('impersonation.original_user_id', $operator->id);
+        $request->session()->put('impersonation.original_user_name', $operator->name);
+        Auth::guard('web')->login($user);
+        $request->session()->regenerate();
+
+        ActivityLogger::logAs(
+            $operator->id,
+            $operator->name,
+            'user.impersonation_started',
+            'Prise de contrôle du compte ' . $user->name,
+            'user',
+            $user->id,
+            ['compte_cible' => $user->username]
+        );
+
+        return redirect()->route('employee.dashboard')
+            ->with('success', 'Vous utilisez maintenant le compte de ' . $user->name . '.');
+    }
+
+    public function releaseControl(Request $request)
+    {
+        $originalUser = User::find($request->session()->get('impersonation.original_user_id'));
+        abort_unless($originalUser?->isSuperAdmin(), 403);
+
+        $controlledUser = $request->user();
+        Auth::guard('web')->login($originalUser);
+        $request->session()->forget(['impersonation.original_user_id', 'impersonation.original_user_name']);
+        $request->session()->regenerate();
+
+        ActivityLogger::logAs(
+            $originalUser->id,
+            $originalUser->name,
+            'user.impersonation_ended',
+            'Retour depuis la prise de contrôle du compte ' . ($controlledUser?->name ?? 'inconnu'),
+            'user',
+            $controlledUser?->id,
+        );
+
+        return redirect()->route('employee.users.index')
+            ->with('success', 'Vous avez repris votre compte.');
     }
 
     /**

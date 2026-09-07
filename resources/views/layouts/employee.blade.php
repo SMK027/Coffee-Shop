@@ -363,6 +363,16 @@
                 </div>
             </header>
 
+            @if(session()->has('impersonation.original_user_id'))
+                <div class="bg-violet-700 text-white px-4 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3 text-sm">
+                    <span>Prise de contrôle active : vous utilisez le compte de {{ auth()->user()->name }}.</span>
+                    <form action="{{ route('employee.users.release-control') }}" method="POST">
+                        @csrf
+                        <button type="submit" class="bg-white text-violet-800 hover:bg-violet-50 px-3 py-1.5 rounded font-medium">Reprendre mon compte</button>
+                    </form>
+                </div>
+            @endif
+
             {{-- Flash Messages --}}
             @if(session('success'))
                 <div class="mx-4 sm:mx-6 mt-3 sm:mt-4 bg-green-50 border-l-4 border-green-500 text-green-800 px-4 py-3 rounded-r-lg text-sm" role="alert">

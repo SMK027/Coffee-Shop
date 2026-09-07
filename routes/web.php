@@ -226,6 +226,9 @@ Route::prefix('espace-employe')->name('employee.')->middleware(['auth', 'employe
     Route::get('/employes', [UserController::class, 'index'])->name('users.index');
     Route::get('/employes/nouveau', [UserController::class, 'create'])->name('users.create');
     Route::post('/employes', [UserController::class, 'store'])->name('users.store');
+    Route::post('/employes/{user}/reactiver-connexion-rapide', [UserController::class, 'reactivateQuickLogin'])->name('users.quick-login.reactivate');
+    Route::post('/employes/{user}/prise-de-controle', [UserController::class, 'takeControl'])->name('users.take-control');
+    Route::post('/employes/retour-prise-de-controle', [UserController::class, 'releaseControl'])->name('users.release-control');
     Route::post('/employes/planche-pdf', [UserController::class, 'generatePdfBoard'])
         ->middleware('feature:' . Setting::KEY_FEATURE_QUICK_LOGIN_BOARDS)
         ->name('users.pdf-board');

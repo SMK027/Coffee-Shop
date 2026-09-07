@@ -149,4 +149,62 @@ class SupervisionWorkflowTest extends TestCase
             'holder_admin_id' => $holder->id,
         ]);
     }
+
+    public function test_quick_login_can_be_reactivated_after_supervisor_validation(): void
+    {
+        $superAdmin = User::factory()->create(['global_role' => 'superadmin']);
+        $user = User::factory()->create(['global_role' => 'admin', 'quick_login_disabled' => true]);
+        $supervisor = Supervisor::create([
+            'supervisor_number' => 'SUP010',
+            'password' => Hash::make('1234'),
+            'superadmin_id' => $superAdmin->id,
+            'is_active' => true,
+        ]);
+
+        $this->withoutMiddleware(PreventRequestForgery::class)->actingAs($superAdmin)
+            ->post(route('employee.users.quick-login.reactivate', $user))
+            ->assertRedirect(route('employee.supervision.challenge'));
+        $this->withoutMiddleware(PreventRequestForgery::class)->actingAs($superAdmin)
+            ->post(route('employee.supervision.approve'), ['supervisor_number' => $supervisor->supervisor_number, 'supervisor_pin' => '1234']);
+        $nonce = array_key_first(session('supervision.bypasses', []));
+        $this->withoutMiddleware(PreventRequestForgery::class)->actingAs($superAdmin)
+            ->post(route('employee.users.quick-login.reactivate', $user), ['__supervision_bypass_nonce' => $nonce])
+            ->assertRedirect(route('employee.users.index'));
+
+        $this->assertFalse($user->fresh()->quick_login_disabled);
+    }
+
+    public function test_superadmin_can_take_and_release_control_without_nested_takeover(): void
+    {
+        $superAdmin = User::factory()->create(['global_role' => 'superadmin']);
+        $target = User::factory()->create(['global_role' => 'superadmin']);
+        $otherTarget = User::factory()->create(['global_role' => 'superadmin']);
+        $supervisor = Supervisor::create([
+            'supervisor_number' => 'SUP011',
+            'password' => Hash::make('1234'),
+            'superadmin_id' => $superAdmin->id,
+            'is_active' => true,
+        ]);
+
+        $this->withoutMiddleware(PreventRequestForgery::class)->actingAs($superAdmin)
+            ->post(route('employee.users.take-control', $target))
+            ->assertRedirect(route('employee.supervision.challenge'));
+        $this->withoutMiddleware(PreventRequestForgery::class)->actingAs($superAdmin)
+            ->post(route('employee.supervision.approve'), ['supervisor_number' => $supervisor->supervisor_number, 'supervisor_pin' => '1234']);
+        $nonce = array_key_first(session('supervision.bypasses', []));
+        $this->withoutMiddleware(PreventRequestForgery::class)->actingAs($superAdmin)
+            ->post(route('employee.users.take-control', $target), ['__supervision_bypass_nonce' => $nonce])
+            ->assertRedirect(route('employee.dashboard'));
+
+        $this->assertAuthenticatedAs($target);
+        $this->withoutMiddleware(PreventRequestForgery::class)
+            ->post(route('employee.users.take-control', $otherTarget))
+            ->assertRedirect()
+            ->assertSessionHas('error', 'Une prise de contrôle est déjà active. Revenez d’abord à votre compte.');
+        $this->withoutMiddleware(PreventRequestForgery::class)
+            ->post(route('employee.users.release-control'))
+            ->assertRedirect(route('employee.users.index'));
+
+        $this->assertAuthenticatedAs($superAdmin);
+    }
 }
