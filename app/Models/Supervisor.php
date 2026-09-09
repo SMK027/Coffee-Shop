@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\User;
 
-#[Fillable(['supervisor_number', 'password', 'is_active', 'quarantined_until', 'is_temporary', 'is_manual_temporary', 'replaces_supervisor_id', 'temporary_expires_at', 'superadmin_id', 'holder_admin_id'])]
+#[Fillable(['supervisor_number', 'password', 'is_active', 'quarantined_until', 'is_temporary', 'is_manual_temporary', 'replaces_supervisor_id', 'temporary_expires_at', 'superadmin_id', 'holder_admin_id', 'permissions'])]
 #[Hidden(['password'])]
 class Supervisor extends Model
 {
@@ -22,6 +22,7 @@ class Supervisor extends Model
             'is_manual_temporary' => 'boolean',
             'quarantined_until' => 'datetime',
             'temporary_expires_at' => 'datetime',
+            'permissions' => 'array',
         ];
     }
 
@@ -30,6 +31,17 @@ class Supervisor extends Model
         return (bool) $this->is_active
             && ! ($this->quarantined_until?->isFuture())
             && ! ($this->is_temporary && $this->temporary_expires_at?->isPast());
+    }
+
+    /**
+     * Indique si ce superviseur est habilité à effectuer l'opération donnée
+     * (voir App\Support\SupervisorOperation). Un superviseur possède de 0 à n
+     * habilitations ; une opération non couverte par le catalogue reste
+     * autorisée (aucune restriction définie).
+     */
+    public function hasHabilitation(string $operation): bool
+    {
+        return in_array($operation, $this->permissions ?? [], true);
     }
 
     public function superadmin(): \Illuminate\Database\Eloquent\Relations\BelongsTo

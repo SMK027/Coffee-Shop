@@ -77,7 +77,13 @@ class SupervisionController extends Controller
                 ->with('error', 'Aucune opération en attente de validation superviseur.');
         }
 
-        $supervisor = $this->validateSupervisorCredentials($request, $pending['message'] ?? 'Numéro de superviseur ou PIN incorrect.');
+        $supervisor = $this->validateSupervisorCredentials(
+            $request,
+            $pending['message'] ?? 'Numéro de superviseur ou PIN incorrect.',
+            false,
+            $pending['route_name'] ?? null,
+            $pending['path'] ?? null
+        );
         if ($supervisor === null) {
             abort(403, 'Validation superviseur requise.');
         }

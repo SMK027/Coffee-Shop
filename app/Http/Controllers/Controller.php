@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Supervisor;
 use App\Services\ActivityLogger;
+use App\Support\SupervisorOperation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Crypt;
@@ -21,10 +22,14 @@ abstract class Controller
     private const MOBILE_PERMANENT_SUPERVISION_HEADER = 'X-Supervisor-Permanent-Token';
     private const MOBILE_PERMANENT_SUPERVISION_TTL_HOURS = 8;
     private const SUPERVISION_BYPASS_TTL_SECONDS = 300;
+    private const HABILITATION_DENIED_MESSAGE = 'Echec authentification superviseur: fonctionnalité non autorisée';
 
     protected function requireSuperAdminOrSupervisor(Request $request, string $message = 'Numéro de superviseur ou PIN incorrect.'): ?Supervisor
     {
-        if ($this->hasPermanentSupervision($request)) {
+        $permanentSupervisor = $this->resolvePermanentSupervisor($request);
+        if ($permanentSupervisor !== null) {
+            $this->ensureHabilitated($permanentSupervisor, $request);
+
             return null;
         }
 
@@ -47,7 +52,9 @@ abstract class Controller
     protected function validateSupervisorCredentials(
         Request $request,
         string $message = 'Numéro de superviseur ou PIN incorrect.',
-        bool $allowSuperAdminBypass = false
+        bool $allowSuperAdminBypass = false,
+        ?string $operationRouteName = null,
+        ?string $operationPath = null
     ): ?Supervisor
     {
         if ($allowSuperAdminBypass && auth()->user()->isSuperAdmin()) {
@@ -73,6 +80,8 @@ abstract class Controller
                     $expected = substr(hash_hmac('sha256', $payload, (string) config('app.key')), 0, 20);
 
                     if (hash_equals($expected, $signature)) {
+                        $this->ensureHabilitated($supervisor, $request, $operationRouteName, $operationPath);
+
                         ActivityLogger::log(
                             'auth.supervisor',
                             'Validation superviseur #' . $supervisor->supervisor_number . ' (token court) — ' . ActivityLogger::routeLabel($request->route()?->getName(), $request->path()),
@@ -104,6 +113,8 @@ abstract class Controller
 
                 $valid = $supervisor?->isActive() && hash_equals($supervisor->password, $passwordHash);
                 if ($valid) {
+                    $this->ensureHabilitated($supervisor, $request, $operationRouteName, $operationPath);
+
                     ActivityLogger::log(
                         'auth.supervisor',
                         'Validation superviseur #' . $supervisor->supervisor_number . ' (token) — ' . ActivityLogger::routeLabel($request->route()?->getName(), $request->path()),
@@ -156,6 +167,8 @@ abstract class Controller
             ]);
         }
 
+        $this->ensureHabilitated($supervisor, $request, $operationRouteName, $operationPath);
+
         ActivityLogger::log(
             'auth.supervisor',
             'Validation superviseur #' . $supervisor->supervisor_number . ' — ' . ActivityLogger::routeLabel($request->route()?->getName(), $request->path()),
@@ -168,8 +181,19 @@ abstract class Controller
 
     protected function hasPermanentSupervision(Request $request): bool
     {
+        return $this->resolvePermanentSupervisor($request) !== null;
+    }
+
+    /**
+     * Résout le superviseur à l'origine du mode superviseur permanent actif
+     * pour l'utilisateur courant (session web ou token mobile), ou null si
+     * le mode n'est pas actif / ne peut plus être rattaché à un superviseur
+     * valide.
+     */
+    private function resolvePermanentSupervisor(Request $request): ?Supervisor
+    {
         if (! auth()->user()?->isSuperAdmin()) {
-            return false;
+            return null;
         }
 
         $sessionValue = $request->hasSession()
@@ -177,10 +201,17 @@ abstract class Controller
             : null;
 
         if (is_array($sessionValue) && (int) ($sessionValue['user_id'] ?? 0) === (int) auth()->id()) {
-            return true;
+            $supervisor = Supervisor::query()
+                ->whereKey((int) ($sessionValue['supervisor_id'] ?? 0))
+                ->where('is_active', true)
+                ->first();
+
+            if ($supervisor !== null) {
+                return $supervisor;
+            }
         }
 
-        return $this->hasMobilePermanentSupervision($request);
+        return $this->resolveMobilePermanentSupervisor($request);
     }
 
     protected function enablePermanentSupervision(Request $request, Supervisor $supervisor): void
@@ -300,20 +331,73 @@ abstract class Controller
 
     private function hasMobilePermanentSupervision(Request $request): bool
     {
+        return $this->resolveMobilePermanentSupervisor($request) !== null;
+    }
+
+    private function resolveMobilePermanentSupervisor(Request $request): ?Supervisor
+    {
         $token = trim((string) $request->header(self::MOBILE_PERMANENT_SUPERVISION_HEADER, ''));
         if (! preg_match('/^[a-f0-9]{64}$/', $token)) {
-            return false;
+            return null;
         }
 
         $authorization = Cache::get($this->mobilePermanentSupervisionCacheKey($token));
         if (! is_array($authorization) || (int) ($authorization['user_id'] ?? 0) !== (int) auth()->id()) {
-            return false;
+            return null;
         }
 
         return Supervisor::query()
             ->whereKey((int) ($authorization['supervisor_id'] ?? 0))
             ->where('is_active', true)
-            ->exists();
+            ->first();
+    }
+
+    /**
+     * Vérifie que le superviseur validé possède l'habilitation requise pour
+     * l'opération ciblée par la requête (ou par $overrideRouteName /
+     * $overridePath, utilisés pour rejouer l'opération d'origine mise en
+     * attente — voir SupervisionController::approve()). Aucune restriction
+     * n'est appliquée si l'opération n'est pas référencée dans le catalogue
+     * App\Support\SupervisorOperation.
+     *
+     * En cas de refus, l'opération est bloquée (exception ou HTTP 403) et
+     * l'échec est journalisé ; l'employé peut réessayer avec un autre
+     * superviseur ou abandonner l'action.
+     */
+    private function ensureHabilitated(
+        Supervisor $supervisor,
+        Request $request,
+        ?string $overrideRouteName = null,
+        ?string $overridePath = null
+    ): void {
+        $routeName = $overrideRouteName ?? $request->route()?->getName();
+        $path = $overridePath ?? $request->path();
+
+        $operation = SupervisorOperation::resolve($routeName, $path);
+
+        if ($operation === null || $supervisor->hasHabilitation($operation)) {
+            return;
+        }
+
+        ActivityLogger::log(
+            'auth.supervisor_denied',
+            'Bypass refusé — superviseur #' . $supervisor->supervisor_number . ' non habilité pour « ' . SupervisorOperation::label($operation) . ' » — ' . ActivityLogger::routeLabel($routeName, $path),
+            null,
+            null,
+            [
+                'supervisor_number' => $supervisor->supervisor_number,
+                'operation'         => $operation,
+                'action'            => ActivityLogger::routeLabel($routeName, $path),
+            ]
+        );
+
+        if ($request->expectsJson()) {
+            abort(403, self::HABILITATION_DENIED_MESSAGE);
+        }
+
+        throw ValidationException::withMessages([
+            'supervisor_pin' => self::HABILITATION_DENIED_MESSAGE,
+        ]);
     }
 
     private function mobilePermanentSupervisionCacheKey(string $token): string
