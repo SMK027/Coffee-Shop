@@ -6,6 +6,7 @@ use App\Models\InternalNote;
 use App\Models\Setting;
 use App\Models\Supervisor;
 use App\Models\User;
+use App\Support\SupervisorOperation;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -27,6 +28,7 @@ class LostCredentialTest extends TestCase
             'superadmin_id' => $admin->id,
             'holder_admin_id' => $holder->id,
             'is_active' => true,
+            'permissions' => [SupervisorOperation::LOST_CREDENTIALS],
         ]);
 
         $this->withoutMiddleware(PreventRequestForgery::class)->actingAs($admin)

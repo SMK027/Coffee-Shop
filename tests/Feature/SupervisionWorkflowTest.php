@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\PaymentMethod;
 use App\Models\Supervisor;
 use App\Models\User;
+use App\Support\SupervisorOperation;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -46,6 +47,7 @@ class SupervisionWorkflowTest extends TestCase
             'password' => Hash::make('5678'),
             'superadmin_id' => $superAdmin->id,
             'is_active' => true,
+            'permissions' => [SupervisorOperation::SUPERVISORS],
         ]);
 
         // Étape 1 : demande de suppression de SUP001 sans identifiants superviseur -> redirection challenge
@@ -88,6 +90,7 @@ class SupervisionWorkflowTest extends TestCase
             'password' => Hash::make('1234'),
             'superadmin_id' => $superAdmin->id,
             'is_active' => true,
+            'permissions' => [SupervisorOperation::SUPERVISORS],
         ]);
 
         $response1 = $this->withoutMiddleware(PreventRequestForgery::class)
@@ -191,6 +194,7 @@ class SupervisionWorkflowTest extends TestCase
             'password' => Hash::make('1234'),
             'superadmin_id' => $superAdmin->id,
             'is_active' => true,
+            'permissions' => [SupervisorOperation::USERS],
         ]);
 
         $this->withoutMiddleware(PreventRequestForgery::class)->actingAs($superAdmin)
@@ -216,6 +220,7 @@ class SupervisionWorkflowTest extends TestCase
             'password' => Hash::make('1234'),
             'superadmin_id' => $superAdmin->id,
             'is_active' => true,
+            'permissions' => [SupervisorOperation::USERS],
         ]);
 
         $this->withoutMiddleware(PreventRequestForgery::class)->actingAs($superAdmin)

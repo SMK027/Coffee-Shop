@@ -5,8 +5,10 @@ namespace Tests\Feature;
 use App\Models\Setting;
 use App\Models\Supervisor;
 use App\Models\User;
+use App\Support\SupervisorOperation;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class FeatureToggleTest extends TestCase
@@ -31,13 +33,20 @@ class FeatureToggleTest extends TestCase
     public function test_superadmin_can_update_features_with_permanent_supervision(): void
     {
         $superAdmin = User::factory()->create(['global_role' => 'superadmin']);
+        $supervisor = Supervisor::create([
+            'supervisor_number' => 'SUP001',
+            'password' => Hash::make('1234'),
+            'superadmin_id' => $superAdmin->id,
+            'is_active' => true,
+            'permissions' => [SupervisorOperation::SHOP_SETTINGS],
+        ]);
 
         $response = $this->withoutMiddleware(PreventRequestForgery::class)
             ->actingAs($superAdmin)
             ->withSession([
                 'supervision.permanent' => [
                     'user_id' => $superAdmin->id,
-                    'supervisor_id' => 1,
+                    'supervisor_id' => $supervisor->id,
                     'enabled_at' => time(),
                 ],
             ])

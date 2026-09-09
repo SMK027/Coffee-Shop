@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\InternalNote;
 use App\Models\Supervisor;
 use App\Models\User;
+use App\Support\SupervisorOperation;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -61,6 +62,7 @@ class InternalNoteTest extends TestCase
             'password' => Hash::make('1234'),
             'superadmin_id' => $admin->id,
             'is_active' => true,
+            'permissions' => [SupervisorOperation::INTERNAL_NOTES],
         ]);
 
         $this->withoutMiddleware(PreventRequestForgery::class)
@@ -135,6 +137,7 @@ class InternalNoteTest extends TestCase
             'password' => Hash::make('1234'),
             'superadmin_id' => $author->id,
             'is_active' => true,
+            'permissions' => [SupervisorOperation::INTERNAL_NOTES],
         ]);
         $note = InternalNote::create([
             'author_id' => $author->id,
