@@ -41,6 +41,7 @@ class SupervisorController extends Controller
                     'holder_admin_id' => $s->holder_admin_id,
                     'holder_admin_name' => $s->holderAdmin?->name,
                     'relation_type' => $relationType,
+                    'permissions' => $s->permissions ?? [],
                     'created_at' => $s->created_at?->toDateTimeString(),
                 ];
             });
