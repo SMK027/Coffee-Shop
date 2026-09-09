@@ -8,6 +8,7 @@ use App\Models\Setting;
 use App\Models\Supervisor;
 use App\Models\User;
 use App\Services\ActivityLogger;
+use App\Support\SupervisorOperation;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
 use BaconQrCode\Renderer\ImageRenderer;
 use BaconQrCode\Renderer\RendererStyle\RendererStyle;
@@ -100,6 +101,8 @@ class SupervisorController extends Controller
             'holder_admin_id'   => ['nullable', 'integer', 'exists:users,id'],
             'is_manual_temporary' => ['nullable', 'boolean'],
             'temporary_expires_at' => ['nullable', 'date', 'after:now'],
+            'permissions'           => ['nullable', 'array'],
+            'permissions.*'         => ['string', Rule::in(array_keys(SupervisorOperation::options()))],
         ], [
             'supervisor_number.alpha_dash' => 'Le numéro de superviseur ne peut contenir que des lettres, chiffres, tirets et underscores.',
             'supervisor_pin.regex'         => 'Le PIN doit contenir entre 4 et 6 chiffres.',
@@ -153,6 +156,7 @@ class SupervisorController extends Controller
             'temporary_expires_at' => $isManualTemporary ? $validated['temporary_expires_at'] : null,
             'superadmin_id'     => $owner->id,
             'holder_admin_id'   => $holderId,
+            'permissions'       => array_values(array_unique($validated['permissions'] ?? [])),
         ]);
 
         ActivityLogger::log(
@@ -164,6 +168,7 @@ class SupervisorController extends Controller
                 'supervisor_number' => $supervisor->supervisor_number,
                 'responsable'       => $owner->name,
                 'detenteur'         => $holderId ? User::find($holderId)?->name : null,
+                'habilitations'     => $supervisor->permissions,
             ]
         );
 
@@ -241,6 +246,8 @@ class SupervisorController extends Controller
             'holder_admin_id'   => ['nullable', 'integer', 'exists:users,id'],
             'reactivate_after_pin_reset' => ['nullable', 'boolean'],
             'temporary_expires_at' => ['nullable', 'date', 'after:now'],
+            'permissions'           => ['nullable', 'array'],
+            'permissions.*'         => ['string', Rule::in(array_keys(SupervisorOperation::options()))],
         ], [
             'supervisor_number.alpha_dash' => 'Le numéro de superviseur ne peut contenir que des lettres, chiffres, tirets et underscores.',
             'supervisor_pin.regex'         => 'Le PIN doit contenir entre 4 et 6 chiffres.',
@@ -279,6 +286,7 @@ class SupervisorController extends Controller
 
         $supervisor->supervisor_number = $validated['supervisor_number'];
         $supervisor->holder_admin_id = $holderId;
+        $supervisor->permissions = array_values(array_unique($validated['permissions'] ?? []));
         if ($supervisor->is_manual_temporary) {
             $supervisor->temporary_expires_at = $validated['temporary_expires_at'];
         }
@@ -308,7 +316,12 @@ class SupervisorController extends Controller
             'Superviseur #' . $supervisor->supervisor_number . ' mis à jour',
             'supervisor',
             $supervisor->id,
-            ['supervisor_number' => $supervisor->supervisor_number, 'actif' => $supervisor->is_active, 'detenteur' => $holderId ? User::find($holderId)?->name : null]
+            [
+                'supervisor_number' => $supervisor->supervisor_number,
+                'actif'             => $supervisor->is_active,
+                'detenteur'         => $holderId ? User::find($holderId)?->name : null,
+                'habilitations'     => $supervisor->permissions,
+            ]
         );
 
         return redirect()->route('employee.supervisors.index')

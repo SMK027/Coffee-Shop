@@ -52,4 +52,21 @@
         </div>
         @endif
     </div>
+
+    <div class="border-t border-stone-100 pt-5">
+        <p class="text-sm font-medium text-stone-700 mb-1.5">Habilitations</p>
+        <p class="text-xs text-stone-400 mb-3">Opérations que ce superviseur est autorisé à débloquer par bypass. Aucune case cochée = aucune opération sensible autorisée.</p>
+        <div class="grid sm:grid-cols-2 gap-x-5 gap-y-2.5">
+            @php $selectedPermissions = old('permissions', $supervisor->permissions ?? []); @endphp
+            @foreach(\App\Support\SupervisorOperation::options() as $key => $label)
+                <label class="flex items-start gap-2.5 cursor-pointer">
+                    <input type="checkbox" name="permissions[]" value="{{ $key }}"
+                           {{ in_array($key, $selectedPermissions ?? [], true) ? 'checked' : '' }}
+                           class="mt-0.5 rounded border-stone-300 text-amber-600 focus:ring-amber-500">
+                    <span class="text-sm text-stone-700">{{ $label }}</span>
+                </label>
+            @endforeach
+        </div>
+        @error('permissions')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+    </div>
 </div>

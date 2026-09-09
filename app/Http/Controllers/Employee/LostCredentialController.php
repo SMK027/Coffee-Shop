@@ -126,6 +126,7 @@ class LostCredentialController extends Controller
             'temporary_expires_at' => $endsAt,
             'superadmin_id' => $lostSupervisor->superadmin_id,
             'holder_admin_id' => $lostSupervisor->holder_admin_id,
+            'permissions' => $lostSupervisor->permissions,
         ]);
         $temporary->setRelation('replacedSupervisor', $lostSupervisor);
         $temporary->setAttribute('plain_pin', $pin);

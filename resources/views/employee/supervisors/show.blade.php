@@ -34,6 +34,21 @@
             </div>
         </dl>
 
+        <div>
+            <h3 class="text-sm font-semibold text-stone-700 mb-2">Habilitations</h3>
+            @if(empty($supervisor->permissions))
+                <p class="text-sm text-stone-500 italic">Aucune — ce superviseur ne peut débloquer aucune opération sensible.</p>
+            @else
+                <ul class="flex flex-wrap gap-2">
+                    @foreach($supervisor->permissions as $permission)
+                        <li class="inline-flex px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 text-xs border border-amber-200">
+                            {{ \App\Support\SupervisorOperation::label($permission) }}
+                        </li>
+                    @endforeach
+                </ul>
+            @endif
+        </div>
+
         <div class="border border-stone-200 rounded-lg p-4 bg-stone-50">
             <p class="text-sm text-stone-600 mb-3">QR code de bypass superviseur</p>
             <div class="bg-white border border-stone-200 rounded-lg p-3 overflow-x-auto flex justify-center">
