@@ -46,7 +46,7 @@
                 </div>
 
                 @if($isEditableWeek)
-                    <button type="button" onclick="document.getElementById('planning-edit-panel').classList.toggle('hidden')"
+                    <button type="button" onclick="var p = document.getElementById('planning-edit-panel'); p.classList.toggle('hidden'); if (!p.classList.contains('hidden')) { p.scrollIntoView({behavior: 'smooth', block: 'start'}); }"
                             class="bg-amber-700 hover:bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
                         Modifier le planning
                     </button>
