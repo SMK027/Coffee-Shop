@@ -249,10 +249,34 @@ abstract class Controller
         }
     }
 
+    /**
+     * Comme requireSuperAdminOrSupervisor(), mais sans bypass superadmin
+     * implicite ni mode superviseur permanent : une validation superviseur
+     * réelle est toujours exigée. Par défaut, si aucun identifiant n'est
+     * fourni dans la requête, l'opération est différée (redirection vers
+     * l'écran de validation) exactement comme pour les autres actions
+     * sensibles de l'application — $allowDeferred=false permet d'exiger une
+     * validation immédiate quand le différé n'a pas de sens (ex. connexion
+     * QR avant authentification de l'employé, cf. Auth\QrLoginController).
+     */
     protected function requireStrictSupervisorValidation(
         Request $request,
-        string $message = 'Validation superviseur requise.'
+        string $message = 'Validation superviseur requise.',
+        bool $allowDeferred = true
     ): Supervisor {
+        $bypassSupervisor = $this->consumeSupervisionBypass($request);
+        if ($bypassSupervisor !== null) {
+            return $bypassSupervisor;
+        }
+
+        if ($allowDeferred && ! $this->requestHasSupervisorCredentials($request) && ! $request->expectsJson()) {
+            $this->storePendingSupervision($request, $message);
+
+            throw new HttpResponseException(
+                redirect()->route('employee.supervision.challenge')
+            );
+        }
+
         $supervisor = $this->validateSupervisorCredentials($request, $message, false);
 
         if (! $supervisor) {

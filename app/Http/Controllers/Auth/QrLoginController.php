@@ -63,10 +63,14 @@ class QrLoginController extends Controller
             ]);
         }
 
-        // Authentification superviseur obligatoire, sans dérogation possible (mode permanent inapplicable ici).
+        // Authentification superviseur obligatoire, immédiate (pas de différé) :
+        // l'employé n'est pas encore connecté à ce stade, or l'écran de validation
+        // différée (employee.supervision.challenge) est protégé par le middleware
+        // auth+employee et donc inaccessible tant que la connexion n'a pas abouti.
         $this->requireStrictSupervisorValidation(
             $request,
-            'Une authentification superviseur est requise pour se connecter par QR code.'
+            'Une authentification superviseur est requise pour se connecter par QR code.',
+            allowDeferred: false
         );
 
         Auth::guard('web')->login($user);
