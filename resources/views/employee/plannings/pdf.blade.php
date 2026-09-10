@@ -111,6 +111,11 @@
             color: #b91c1c;
             font-weight: bold;
         }
+
+        .badge-meeting {
+            color: #1d4ed8;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -157,6 +162,11 @@
                                     <div class="event">
                                         @if($shift->type === \App\Models\ScheduleShift::TYPE_WORK)
                                             <span class="event-time">{{ substr($shift->start_time, 0, 5) }}-{{ substr($shift->end_time, 0, 5) }}</span>
+                                        @elseif($shift->type === \App\Models\ScheduleShift::TYPE_MEETING)
+                                            <span class="badge-meeting">
+                                                {{ $shift->typeLabel() }}
+                                                ({{ substr($shift->start_time, 0, 5) }}-{{ substr($shift->end_time, 0, 5) }})
+                                            </span>
                                         @else
                                             <span class="{{ $shift->type === \App\Models\ScheduleShift::TYPE_LEAVE ? 'badge-leave' : 'badge-absence' }}">
                                                 {{ $shift->typeLabel() }}

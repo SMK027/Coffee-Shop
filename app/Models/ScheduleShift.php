@@ -10,12 +10,17 @@ class ScheduleShift extends Model
     public const TYPE_WORK = 'work';
     public const TYPE_LEAVE = 'leave';
     public const TYPE_ABSENCE = 'absence';
+    public const TYPE_MEETING = 'meeting';
 
-    public const TYPES = [self::TYPE_WORK, self::TYPE_LEAVE, self::TYPE_ABSENCE];
+    public const TYPES = [self::TYPE_WORK, self::TYPE_LEAVE, self::TYPE_ABSENCE, self::TYPE_MEETING];
+
+    /** Types qui occupent la journée de façon exclusive : un seul d'entre eux par jour et par salarié. */
+    public const EXCLUSIVE_TYPES = [self::TYPE_WORK, self::TYPE_LEAVE, self::TYPE_ABSENCE];
 
     public const LABELS = [
         self::TYPE_LEAVE => 'Congé',
         self::TYPE_ABSENCE => 'Absence',
+        self::TYPE_MEETING => 'Réunion / formation',
     ];
 
     protected $fillable = [

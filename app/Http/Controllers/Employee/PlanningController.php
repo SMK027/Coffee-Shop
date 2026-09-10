@@ -123,6 +123,7 @@ class PlanningController extends Controller
             ])->values(),
             'openRanges' => $openRanges,
             'openingHoursMargin' => self::OPENING_HOURS_MARGIN_MINUTES,
+            'bypassOpeningHours' => $selectedUser->isModerator(),
         ]);
     }
 
@@ -136,10 +137,13 @@ class PlanningController extends Controller
             'events' => ['nullable', 'array'],
             'events.*.type' => ['required', Rule::in(ScheduleShift::TYPES)],
             'events.*.date' => ['required', 'date'],
-            'events.*.start_time' => ['nullable', 'required_if:events.*.type,' . ScheduleShift::TYPE_WORK, 'date_format:H:i'],
-            'events.*.end_time' => ['nullable', 'required_if:events.*.type,' . ScheduleShift::TYPE_WORK, 'date_format:H:i', 'after:events.*.start_time'],
+            'events.*.start_time' => ['nullable', 'required_if:events.*.type,' . ScheduleShift::TYPE_WORK . ',' . ScheduleShift::TYPE_MEETING, 'date_format:H:i'],
+            'events.*.end_time' => ['nullable', 'required_if:events.*.type,' . ScheduleShift::TYPE_WORK . ',' . ScheduleShift::TYPE_MEETING, 'date_format:H:i', 'after:events.*.start_time'],
             'events.*.title' => ['nullable', 'string', 'max:120'],
         ]);
+
+        $employee = User::find($validated['user_id']);
+        $bypassOpeningHours = $employee?->isModerator() ?? false;
 
         $weekStart = Carbon::parse($validated['week_start'])->startOfWeek(Carbon::MONDAY);
         $weekEnd = $weekStart->copy()->endOfWeek(Carbon::SUNDAY);
@@ -148,6 +152,27 @@ class PlanningController extends Controller
             throw ValidationException::withMessages([
                 'week_start' => 'Les plannings passés ne sont pas modifiables.',
             ]);
+        }
+
+        foreach (collect($validated['events'] ?? [])->groupBy('date') as $date => $dayEvents) {
+            $exclusiveTypes = $dayEvents->pluck('type')
+                ->filter(fn ($type) => in_array($type, ScheduleShift::EXCLUSIVE_TYPES, true))
+                ->unique();
+
+            if ($exclusiveTypes->count() > 1) {
+                throw ValidationException::withMessages([
+                    'events' => 'Le ' . Carbon::parse($date)->format('d/m/Y') . ' cumule plusieurs types d\'activité (travail, congé, absence) sur la même journée.',
+                ]);
+            }
+
+            $hasMeeting = $dayEvents->contains('type', ScheduleShift::TYPE_MEETING);
+            $hasLeaveOrAbsence = $dayEvents->contains(fn ($event) => in_array($event['type'], [ScheduleShift::TYPE_LEAVE, ScheduleShift::TYPE_ABSENCE], true));
+
+            if ($hasMeeting && $hasLeaveOrAbsence) {
+                throw ValidationException::withMessages([
+                    'events' => 'Une réunion ou une formation ne peut pas être ajoutée un jour de congé ou d\'absence (' . Carbon::parse($date)->format('d/m/Y') . ').',
+                ]);
+            }
         }
 
         foreach ($validated['events'] ?? [] as $event) {
@@ -170,7 +195,7 @@ class PlanningController extends Controller
                 ]);
             }
 
-            if ($event['type'] === ScheduleShift::TYPE_WORK) {
+            if (in_array($event['type'], [ScheduleShift::TYPE_WORK, ScheduleShift::TYPE_MEETING], true) && ! $bypassOpeningHours) {
                 $range = Setting::openRangeForDate($eventDate);
 
                 if (! $range) {
@@ -231,8 +256,6 @@ class PlanningController extends Controller
                 ]);
             }
         });
-
-        $employee = User::find($validated['user_id']);
 
         ActivityLogger::log(
             'planning.updated',

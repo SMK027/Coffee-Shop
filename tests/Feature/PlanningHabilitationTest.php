@@ -349,7 +349,8 @@ class PlanningHabilitationTest extends TestCase
     public function test_a_work_shift_outside_the_opening_hours_margin_is_rejected(): void
     {
         $admin = User::factory()->create(['global_role' => 'admin']);
-        $employee = User::factory()->create(['global_role' => 'moderator']);
+        // Un compte non-modérateur reste soumis aux horaires d'ouverture.
+        $employee = User::factory()->create(['global_role' => 'admin']);
         Supervisor::create([
             'supervisor_number' => 'PLN109',
             'password' => Hash::make('1234'),
@@ -385,7 +386,8 @@ class PlanningHabilitationTest extends TestCase
     public function test_a_work_shift_is_rejected_on_an_exceptionally_closed_day(): void
     {
         $admin = User::factory()->create(['global_role' => 'admin']);
-        $employee = User::factory()->create(['global_role' => 'moderator']);
+        // Un compte non-modérateur reste soumis aux horaires d'ouverture.
+        $employee = User::factory()->create(['global_role' => 'admin']);
         Supervisor::create([
             'supervisor_number' => 'PLN110',
             'password' => Hash::make('1234'),
@@ -482,7 +484,8 @@ class PlanningHabilitationTest extends TestCase
     public function test_an_exceptional_opening_still_enforces_its_own_hours(): void
     {
         $admin = User::factory()->create(['global_role' => 'admin']);
-        $employee = User::factory()->create(['global_role' => 'moderator']);
+        // Un compte non-modérateur reste soumis aux horaires d'ouverture.
+        $employee = User::factory()->create(['global_role' => 'admin']);
         Supervisor::create([
             'supervisor_number' => 'PLN112',
             'password' => Hash::make('1234'),
@@ -517,6 +520,258 @@ class PlanningHabilitationTest extends TestCase
                         'date' => $weekStart->toDateString(),
                         'start_time' => '08:00',
                         'end_time' => '09:00',
+                    ],
+                ],
+            ])
+            ->assertSessionHasErrors('events');
+
+        $this->assertDatabaseMissing(ScheduleShift::class, ['user_id' => $employee->id]);
+    }
+
+    public function test_a_moderator_account_can_have_work_hours_saved_even_when_the_shop_is_closed(): void
+    {
+        $admin = User::factory()->create(['global_role' => 'admin']);
+        $employee = User::factory()->create(['global_role' => 'moderator']);
+        Supervisor::create([
+            'supervisor_number' => 'PLN113',
+            'password' => Hash::make('1234'),
+            'superadmin_id' => $admin->id,
+            'is_active' => true,
+            'permissions' => [SupervisorOperation::PLANNING_EDIT],
+        ]);
+
+        $weekStart = now()->startOfWeek(Carbon::MONDAY);
+
+        $hours = Setting::getHours();
+        $hours['exceptions'][] = [
+            'date' => $weekStart->toDateString(),
+            'label' => 'Fermeture exceptionnelle',
+            'open' => false,
+        ];
+        Setting::set(Setting::KEY_SHOP_HOURS, json_encode($hours));
+
+        $this->withoutMiddleware(PreventRequestForgery::class)
+            ->actingAs($admin)
+            ->post(route('employee.plannings.update'), [
+                'user_id' => $employee->id,
+                'week_start' => $weekStart->toDateString(),
+                'supervisor_number' => 'PLN113',
+                'supervisor_pin' => '1234',
+                'events' => [
+                    [
+                        'type' => ScheduleShift::TYPE_WORK,
+                        'date' => $weekStart->toDateString(),
+                        'start_time' => '02:00',
+                        'end_time' => '04:00',
+                        'title' => 'Préparation nocturne',
+                    ],
+                ],
+            ])
+            ->assertRedirect(route('employee.plannings.index', [
+                'user_id' => $employee->id,
+                'week' => $weekStart->toDateString(),
+            ]));
+
+        $this->assertDatabaseHas(ScheduleShift::class, [
+            'user_id' => $employee->id,
+            'title' => 'Préparation nocturne',
+        ]);
+    }
+
+    public function test_work_and_leave_cannot_be_saved_on_the_same_day(): void
+    {
+        $admin = User::factory()->create(['global_role' => 'admin']);
+        $employee = User::factory()->create(['global_role' => 'moderator']);
+        Supervisor::create([
+            'supervisor_number' => 'PLN114',
+            'password' => Hash::make('1234'),
+            'superadmin_id' => $admin->id,
+            'is_active' => true,
+            'permissions' => [SupervisorOperation::PLANNING_EDIT],
+        ]);
+
+        $weekStart = now()->startOfWeek(Carbon::MONDAY);
+
+        $this->withoutMiddleware(PreventRequestForgery::class)
+            ->actingAs($admin)
+            ->post(route('employee.plannings.update'), [
+                'user_id' => $employee->id,
+                'week_start' => $weekStart->toDateString(),
+                'supervisor_number' => 'PLN114',
+                'supervisor_pin' => '1234',
+                'events' => [
+                    [
+                        'type' => ScheduleShift::TYPE_WORK,
+                        'date' => $weekStart->toDateString(),
+                        'start_time' => '09:00',
+                        'end_time' => '12:00',
+                    ],
+                    [
+                        'type' => ScheduleShift::TYPE_LEAVE,
+                        'date' => $weekStart->toDateString(),
+                    ],
+                ],
+            ])
+            ->assertSessionHasErrors('events');
+
+        $this->assertDatabaseMissing(ScheduleShift::class, ['user_id' => $employee->id]);
+    }
+
+    public function test_leave_and_absence_cannot_be_saved_on_the_same_day(): void
+    {
+        $admin = User::factory()->create(['global_role' => 'admin']);
+        $employee = User::factory()->create(['global_role' => 'moderator']);
+        Supervisor::create([
+            'supervisor_number' => 'PLN115',
+            'password' => Hash::make('1234'),
+            'superadmin_id' => $admin->id,
+            'is_active' => true,
+            'permissions' => [SupervisorOperation::PLANNING_EDIT],
+        ]);
+
+        $weekStart = now()->startOfWeek(Carbon::MONDAY);
+
+        $this->withoutMiddleware(PreventRequestForgery::class)
+            ->actingAs($admin)
+            ->post(route('employee.plannings.update'), [
+                'user_id' => $employee->id,
+                'week_start' => $weekStart->toDateString(),
+                'supervisor_number' => 'PLN115',
+                'supervisor_pin' => '1234',
+                'events' => [
+                    [
+                        'type' => ScheduleShift::TYPE_LEAVE,
+                        'date' => $weekStart->toDateString(),
+                    ],
+                    [
+                        'type' => ScheduleShift::TYPE_ABSENCE,
+                        'date' => $weekStart->toDateString(),
+                        'start_time' => '09:00',
+                        'end_time' => '12:00',
+                    ],
+                ],
+            ])
+            ->assertSessionHasErrors('events');
+
+        $this->assertDatabaseMissing(ScheduleShift::class, ['user_id' => $employee->id]);
+    }
+
+    public function test_a_meeting_can_be_added_alongside_a_work_shift_on_the_same_day(): void
+    {
+        $admin = User::factory()->create(['global_role' => 'admin']);
+        $employee = User::factory()->create(['global_role' => 'moderator']);
+        Supervisor::create([
+            'supervisor_number' => 'PLN116',
+            'password' => Hash::make('1234'),
+            'superadmin_id' => $admin->id,
+            'is_active' => true,
+            'permissions' => [SupervisorOperation::PLANNING_EDIT],
+        ]);
+
+        $weekStart = now()->startOfWeek(Carbon::MONDAY);
+
+        $this->withoutMiddleware(PreventRequestForgery::class)
+            ->actingAs($admin)
+            ->post(route('employee.plannings.update'), [
+                'user_id' => $employee->id,
+                'week_start' => $weekStart->toDateString(),
+                'supervisor_number' => 'PLN116',
+                'supervisor_pin' => '1234',
+                'events' => [
+                    [
+                        'type' => ScheduleShift::TYPE_WORK,
+                        'date' => $weekStart->toDateString(),
+                        'start_time' => '09:00',
+                        'end_time' => '17:00',
+                    ],
+                    [
+                        'type' => ScheduleShift::TYPE_MEETING,
+                        'date' => $weekStart->toDateString(),
+                        'start_time' => '10:00',
+                        'end_time' => '11:00',
+                        'title' => 'Réunion hebdomadaire',
+                    ],
+                ],
+            ])
+            ->assertRedirect(route('employee.plannings.index', [
+                'user_id' => $employee->id,
+                'week' => $weekStart->toDateString(),
+            ]));
+
+        $this->assertDatabaseHas(ScheduleShift::class, [
+            'user_id' => $employee->id,
+            'type' => ScheduleShift::TYPE_MEETING,
+            'title' => 'Réunion hebdomadaire',
+        ]);
+    }
+
+    public function test_a_meeting_cannot_be_added_on_a_leave_day(): void
+    {
+        $admin = User::factory()->create(['global_role' => 'admin']);
+        $employee = User::factory()->create(['global_role' => 'moderator']);
+        Supervisor::create([
+            'supervisor_number' => 'PLN117',
+            'password' => Hash::make('1234'),
+            'superadmin_id' => $admin->id,
+            'is_active' => true,
+            'permissions' => [SupervisorOperation::PLANNING_EDIT],
+        ]);
+
+        $weekStart = now()->startOfWeek(Carbon::MONDAY);
+
+        $this->withoutMiddleware(PreventRequestForgery::class)
+            ->actingAs($admin)
+            ->post(route('employee.plannings.update'), [
+                'user_id' => $employee->id,
+                'week_start' => $weekStart->toDateString(),
+                'supervisor_number' => 'PLN117',
+                'supervisor_pin' => '1234',
+                'events' => [
+                    [
+                        'type' => ScheduleShift::TYPE_LEAVE,
+                        'date' => $weekStart->toDateString(),
+                    ],
+                    [
+                        'type' => ScheduleShift::TYPE_MEETING,
+                        'date' => $weekStart->toDateString(),
+                        'start_time' => '10:00',
+                        'end_time' => '11:00',
+                    ],
+                ],
+            ])
+            ->assertSessionHasErrors('events');
+
+        $this->assertDatabaseMissing(ScheduleShift::class, ['user_id' => $employee->id]);
+    }
+
+    public function test_a_meeting_outside_opening_hours_is_rejected_for_non_moderator_accounts(): void
+    {
+        $admin = User::factory()->create(['global_role' => 'admin']);
+        // Un compte non-modérateur reste soumis aux horaires d'ouverture, y compris pour les réunions.
+        $employee = User::factory()->create(['global_role' => 'admin']);
+        Supervisor::create([
+            'supervisor_number' => 'PLN118',
+            'password' => Hash::make('1234'),
+            'superadmin_id' => $admin->id,
+            'is_active' => true,
+            'permissions' => [SupervisorOperation::PLANNING_EDIT],
+        ]);
+
+        $weekStart = now()->startOfWeek(Carbon::MONDAY);
+
+        $this->withoutMiddleware(PreventRequestForgery::class)
+            ->actingAs($admin)
+            ->post(route('employee.plannings.update'), [
+                'user_id' => $employee->id,
+                'week_start' => $weekStart->toDateString(),
+                'supervisor_number' => 'PLN118',
+                'supervisor_pin' => '1234',
+                'events' => [
+                    [
+                        'type' => ScheduleShift::TYPE_MEETING,
+                        'date' => $weekStart->toDateString(),
+                        'start_time' => '05:00',
+                        'end_time' => '06:00',
                     ],
                 ],
             ])

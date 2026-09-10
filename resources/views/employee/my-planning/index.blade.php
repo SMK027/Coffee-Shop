@@ -40,6 +40,16 @@
                                         <p class="text-xs text-amber-700">{{ $shift->title }}</p>
                                     @endif
                                 </div>
+                            @elseif($shift->type === \App\Models\ScheduleShift::TYPE_MEETING)
+                                <div class="bg-blue-50 border border-blue-100 text-blue-800 rounded-lg px-2 py-1.5">
+                                    <p class="text-xs font-semibold">
+                                        {{ $shift->typeLabel() }}
+                                        ({{ substr($shift->start_time, 0, 5) }} – {{ substr($shift->end_time, 0, 5) }})
+                                    </p>
+                                    @if($shift->title)
+                                        <p class="text-xs opacity-80">{{ $shift->title }}</p>
+                                    @endif
+                                </div>
                             @else
                                 <div class="{{ $shift->type === \App\Models\ScheduleShift::TYPE_LEAVE ? 'bg-green-50 border-green-100 text-green-800' : 'bg-red-50 border-red-100 text-red-800' }} border rounded-lg px-2 py-1.5">
                                     <p class="text-xs font-semibold">

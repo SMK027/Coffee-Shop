@@ -23,9 +23,17 @@
         </div>
 
         <p class="text-xs text-stone-500 mb-3">
-            Cliquez-glissez sur la grille pour ajouter un créneau de travail, cliquez sur une case de la ligne « Journée »
-            pour poser un congé ou une absence, cliquez sur un événement existant pour le modifier ou le supprimer.
+            Cliquez-glissez sur la grille pour ajouter un créneau de travail ou une réunion/formation, cliquez sur une case de
+            la ligne « Journée » pour poser un congé ou une absence, cliquez sur un événement existant pour le modifier ou le
+            supprimer. Un congé, une absence et un service ne peuvent pas cohabiter le même jour.
         </p>
+
+        @if($bypassOpeningHours)
+            <div class="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-xs text-blue-700 mb-3">
+                Ce salarié dispose du statut modérateur : les horaires peuvent être saisis même en dehors des heures
+                d'ouverture de la boutique.
+            </div>
+        @endif
 
         <div id="planning-calendar" class="mb-5"></div>
 
@@ -53,6 +61,7 @@
                 <label for="event-type" class="block text-xs font-medium text-stone-600 mb-1">Type</label>
                 <select id="event-type" class="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
                     <option value="work">Travail</option>
+                    <option value="meeting">Réunion / formation</option>
                     <option value="leave">Congé</option>
                     <option value="absence">Absence</option>
                 </select>
@@ -100,6 +109,7 @@
         const weekStart = @js($weekStart->toDateString());
         const openRanges = @js($openRanges);
         const openingHoursMargin = @js($openingHoursMargin);
+        const bypassOpeningHours = @js($bypassOpeningHours);
 
         function pad(n) { return String(n).padStart(2, '0'); }
         function toDateStr(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
@@ -122,7 +132,7 @@
             };
         }
 
-        const businessHours = Object.keys(openRanges).reduce(function (acc, dateStr) {
+        const businessHours = bypassOpeningHours ? [] : Object.keys(openRanges).reduce(function (acc, dateStr) {
             const range = openRanges[dateStr];
             if (range) {
                 const dow = new Date(dateStr + 'T00:00:00').getDay();
@@ -131,12 +141,20 @@
             return acc;
         }, []);
 
+        const EXCLUSIVE_TYPES = ['work', 'leave', 'absence'];
+
         function typeLabel(type) {
-            return type === 'leave' ? 'Congé' : (type === 'absence' ? 'Absence' : 'Travail');
+            if (type === 'leave') return 'Congé';
+            if (type === 'absence') return 'Absence';
+            if (type === 'meeting') return 'Réunion / formation';
+            return 'Travail';
         }
 
         function colorFor(type) {
-            return type === 'leave' ? '#16a34a' : (type === 'absence' ? '#dc2626' : '#b45309');
+            if (type === 'leave') return '#16a34a';
+            if (type === 'absence') return '#dc2626';
+            if (type === 'meeting') return '#2563eb';
+            return '#b45309';
         }
 
         function displayTitle(type, rawTitle) {
@@ -174,7 +192,7 @@
             businessHours: businessHours,
             selectAllow: function (info) {
                 // La ligne "Journée" (congés/absences) n'est pas soumise aux horaires d'ouverture.
-                if (info.allDay) return true;
+                if (info.allDay || bypassOpeningHours) return true;
 
                 const dateStr = info.startStr.slice(0, 10);
                 const bounds = allowedBoundsFor(dateStr);
@@ -223,7 +241,7 @@
                 fullDayCheckbox.checked = true;
                 fullDayCheckbox.disabled = true;
                 timeWrapper.classList.add('hidden');
-            } else if (type === 'work') {
+            } else if (type === 'work' || type === 'meeting') {
                 fullDayCheckbox.checked = false;
                 fullDayCheckbox.disabled = true;
                 timeWrapper.classList.remove('hidden');
@@ -274,6 +292,29 @@
             editingEvent = null;
         }
 
+        // Un congé, une absence et un service sont mutuellement exclusifs sur une même journée.
+        // Une réunion/formation ne peut pas cohabiter avec un congé ou une absence.
+        function dayConsistencyError(type, dateStr, excludeEvent) {
+            const dayTypes = calendar.getEvents()
+                .filter(function (ev) { return ev !== excludeEvent && toDateStr(ev.start) === dateStr; })
+                .map(function (ev) { return ev.extendedProps.type; });
+            dayTypes.push(type);
+
+            const exclusivePresent = dayTypes.filter(function (t) { return EXCLUSIVE_TYPES.indexOf(t) !== -1; });
+            const uniqueExclusive = exclusivePresent.filter(function (t, i) { return exclusivePresent.indexOf(t) === i; });
+            if (uniqueExclusive.length > 1) {
+                return 'Un congé, une absence et un service ne peuvent pas cohabiter le même jour.';
+            }
+
+            const hasMeeting = dayTypes.indexOf('meeting') !== -1;
+            const hasLeaveOrAbsence = dayTypes.indexOf('leave') !== -1 || dayTypes.indexOf('absence') !== -1;
+            if (hasMeeting && hasLeaveOrAbsence) {
+                return 'Une réunion ou une formation ne peut pas être ajoutée un jour de congé ou d\'absence.';
+            }
+
+            return null;
+        }
+
         saveBtn.addEventListener('click', function () {
             const type = typeSelect.value;
             const isFullDay = fullDayCheckbox.checked;
@@ -289,10 +330,16 @@
                 return;
             }
 
-            if (type === 'work') {
+            const conflictMessage = dayConsistencyError(type, currentDate, editingEvent);
+            if (conflictMessage) {
+                showError(conflictMessage);
+                return;
+            }
+
+            if ((type === 'work' || type === 'meeting') && !bypassOpeningHours) {
                 const bounds = allowedBoundsFor(currentDate);
                 if (!bounds) {
-                    showError('La boutique est fermée ce jour-là : aucun service ne peut y être planifié.');
+                    showError('La boutique est fermée ce jour-là : aucun horaire ne peut y être planifié.');
                     return;
                 }
                 if (toMinutes(start) < bounds.start || toMinutes(end) > bounds.end) {
