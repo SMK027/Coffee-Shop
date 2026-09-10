@@ -22,21 +22,7 @@
 
             <form action="{{ route('employee.supervision.permanent.enable') }}" method="POST" class="bg-white rounded-xl shadow-sm border border-stone-100 p-5 space-y-4">
                 @csrf
-                @include('employee.shared.supervisor-qr-scanner', ['scannerId' => 'permanent-supervision'])
-                <div class="grid sm:grid-cols-2 gap-4">
-                    <div>
-                        <label for="supervisor_number" class="block text-sm font-medium text-stone-700 mb-1">Identifiant superviseur</label>
-                        <input type="text" name="supervisor_number" id="supervisor_number" value="{{ old('supervisor_number') }}"
-                               class="w-full border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
-                        @error('supervisor_number')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
-                    </div>
-                    <div>
-                        <label for="supervisor_pin" class="block text-sm font-medium text-stone-700 mb-1">PIN superviseur</label>
-                        <input type="password" name="supervisor_pin" id="supervisor_pin" maxlength="6" minlength="4" inputmode="numeric" pattern="\d{4,6}"
-                               class="w-full border border-stone-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
-                        @error('supervisor_pin')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
-                    </div>
-                </div>
+                @include('employee.shared.supervisor-auth-fields')
                 <button type="submit" class="bg-amber-700 hover:bg-amber-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium transition-colors">
                     Activer le mode
                 </button>

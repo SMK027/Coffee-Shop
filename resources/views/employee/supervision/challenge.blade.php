@@ -28,6 +28,10 @@
                 </div>
             </div>
 
+            @if(\App\Models\Setting::isFeatureEnabled(\App\Models\Setting::KEY_FEATURE_SECURITY_KEYS))
+                @include('partials.supervisor-security-key', ['widgetId' => 'challenge-security-key'])
+            @endif
+
             <div class="flex gap-3">
                 <button type="submit"
                         class="bg-amber-700 hover:bg-amber-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium transition-colors">
@@ -40,5 +44,9 @@
             </div>
         </form>
     </div>
+
+    @if(\App\Models\Setting::isFeatureEnabled(\App\Models\Setting::KEY_FEATURE_SECURITY_KEYS))
+        @include('partials.webauthn-helper')
+    @endif
 
 </x-employee-layout>

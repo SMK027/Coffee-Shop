@@ -105,23 +105,7 @@
                     <p class="text-sm font-semibold text-amber-800 mb-1">Validation superviseur obligatoire</p>
                     <p class="text-xs text-amber-700 mb-4">La modification du planning exige une authentification superviseur supplémentaire.</p>
 
-                    @include('employee.shared.supervisor-qr-scanner', ['scannerId' => 'planning-edit-supervisor'])
-
-                    <div class="grid sm:grid-cols-2 gap-4 mt-4">
-                        <div>
-                            <label for="planning_edit_supervisor_number" class="block text-sm font-medium text-amber-900 mb-1">Identifiant superviseur</label>
-                            <input type="text" name="supervisor_number" id="planning_edit_supervisor_number"
-                                   value="{{ old('supervisor_number') }}"
-                                   class="w-full border border-amber-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
-                            @error('supervisor_number')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
-                        </div>
-                        <div>
-                            <label for="planning_edit_supervisor_pin" class="block text-sm font-medium text-amber-900 mb-1">PIN superviseur</label>
-                            <input type="password" name="supervisor_pin" id="planning_edit_supervisor_pin" maxlength="6" minlength="4" inputmode="numeric" pattern="\d{4,6}"
-                                   class="w-full border border-amber-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
-                            @error('supervisor_pin')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
-                        </div>
-                    </div>
+                    @include('employee.shared.supervisor-auth-fields')
 
                     <div class="flex justify-end mt-4">
                         <button type="submit"
@@ -182,23 +166,7 @@
                     <p class="text-xs text-amber-700">La génération du planning au format PDF exige une authentification superviseur supplémentaire.</p>
                 </div>
 
-                @include('employee.shared.supervisor-qr-scanner', ['scannerId' => 'planning-pdf-supervisor'])
-
-                <div class="grid sm:grid-cols-2 gap-4">
-                    <div>
-                        <label for="planning_pdf_supervisor_number" class="block text-sm font-medium text-amber-900 mb-1">Identifiant superviseur</label>
-                        <input type="text" name="supervisor_number" id="planning_pdf_supervisor_number"
-                               value="{{ old('supervisor_number') }}"
-                               class="w-full border border-amber-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
-                        @error('supervisor_number')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
-                    </div>
-                    <div>
-                        <label for="planning_pdf_supervisor_pin" class="block text-sm font-medium text-amber-900 mb-1">PIN superviseur</label>
-                        <input type="password" name="supervisor_pin" id="planning_pdf_supervisor_pin" maxlength="6" minlength="4" inputmode="numeric" pattern="\d{4,6}"
-                               class="w-full border border-amber-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
-                        @error('supervisor_pin')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
-                    </div>
-                </div>
+                @include('employee.shared.supervisor-auth-fields')
             </div>
 
             <div class="flex justify-end">
