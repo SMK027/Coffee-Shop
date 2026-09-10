@@ -27,6 +27,8 @@ use App\Http\Controllers\Employee\InternalNoteController;
 use App\Http\Controllers\Employee\LostCredentialController;
 use App\Http\Controllers\Employee\ActivityLogController;
 use App\Http\Controllers\Employee\CardOfferController;
+use App\Http\Controllers\Employee\PlanningController;
+use App\Http\Controllers\Employee\MyPlanningController;
 use App\Http\Controllers\Auth\EmployeePasswordResetController;
 use App\Http\Controllers\ProfileController;
 use App\Models\Setting;
@@ -237,6 +239,15 @@ Route::prefix('espace-employe')->name('employee.')->middleware(['auth', 'employe
     Route::delete('/employes/{user}', [UserController::class, 'destroy'])->name('users.destroy');
     Route::post('/employes/{user}/reset-mdp', [UserController::class, 'sendResetLink'])->name('users.reset-link');
     Route::patch('/employes/{user}/activation', [UserController::class, 'toggleActivation'])->name('users.toggle-activation');
+
+    // Plannings (gestion, admin uniquement)
+    Route::get('/plannings', [PlanningController::class, 'index'])->name('plannings.index');
+    Route::post('/plannings/modifier', [PlanningController::class, 'edit'])->name('plannings.edit');
+    Route::post('/plannings', [PlanningController::class, 'update'])->name('plannings.update');
+    Route::post('/plannings/pdf', [PlanningController::class, 'generatePdf'])->name('plannings.pdf');
+
+    // Mon planning (lecture seule, tout salarié)
+    Route::get('/mon-planning', [MyPlanningController::class, 'index'])->name('my-planning.index');
 
     // Gestion des superviseurs (super admin uniquement)
     Route::get('/superviseurs', [SupervisorController::class, 'index'])->name('supervisors.index');

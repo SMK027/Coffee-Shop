@@ -1,0 +1,199 @@
+<x-employee-layout title="Plannings salariés">
+
+    @if(session('success'))
+        <div class="mb-4 bg-green-50 border border-green-200 rounded-lg px-4 py-3 text-sm text-green-700">
+            {{ session('success') }}
+        </div>
+    @endif
+    @if(session('error'))
+        <div class="mb-4 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
+            {{ session('error') }}
+        </div>
+    @endif
+
+    <div class="bg-white rounded-xl shadow-sm border border-stone-100 p-4 mb-4 flex flex-wrap items-end gap-4">
+        <form method="GET" action="{{ route('employee.plannings.index') }}" class="flex flex-col">
+            <label for="planning-user-select" class="text-xs font-medium text-stone-500 mb-1">Salarié</label>
+            <select name="user_id" id="planning-user-select" onchange="this.form.submit()"
+                    class="border border-stone-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none min-w-[220px]">
+                @foreach($employees as $employee)
+                    <option value="{{ $employee->id }}" {{ $selectedUser && (int) $selectedUser->id === (int) $employee->id ? 'selected' : '' }}>
+                        {{ $employee->name }}
+                    </option>
+                @endforeach
+            </select>
+            <input type="hidden" name="week" value="{{ $weekStart->toDateString() }}">
+        </form>
+
+        <div class="flex items-center gap-2">
+            <a href="{{ route('employee.plannings.index', ['user_id' => $selectedUser?->id, 'week' => $weekStart->copy()->subWeek()->toDateString()]) }}"
+               class="bg-stone-100 hover:bg-stone-200 text-stone-700 px-3 py-2 rounded-lg text-sm font-medium transition-colors">
+                ← Semaine précédente
+            </a>
+            <span class="text-sm font-medium text-stone-700 px-2">
+                Semaine du {{ $weekStart->format('d/m/Y') }} au {{ $weekEnd->format('d/m/Y') }}
+            </span>
+            <a href="{{ route('employee.plannings.index', ['user_id' => $selectedUser?->id, 'week' => $weekStart->copy()->addWeek()->toDateString()]) }}"
+               class="bg-stone-100 hover:bg-stone-200 text-stone-700 px-3 py-2 rounded-lg text-sm font-medium transition-colors">
+                Semaine suivante →
+            </a>
+        </div>
+    </div>
+
+    @if($selectedUser)
+        <div class="bg-white rounded-xl shadow-sm border border-stone-100 p-4 mb-4">
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+                <h2 class="text-base font-semibold text-stone-800">Planning de {{ $selectedUser->name }}</h2>
+
+                @if($isEditableWeek)
+                    <button type="button" onclick="document.getElementById('planning-edit-panel').classList.toggle('hidden')"
+                            class="bg-amber-700 hover:bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                        Modifier le planning
+                    </button>
+                @else
+                    <span class="text-xs text-stone-400 italic">Semaine passée — lecture seule</span>
+                @endif
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-7 gap-2">
+                @foreach($days as $day)
+                    <div class="border border-stone-100 rounded-lg overflow-hidden">
+                        <div class="bg-stone-50 px-3 py-2 border-b border-stone-100">
+                            <p class="text-xs font-semibold text-stone-700">{{ ucfirst($day->translatedFormat('l')) }}</p>
+                            <p class="text-xs text-stone-400">{{ $day->format('d/m') }}</p>
+                        </div>
+                        <div class="p-2 space-y-1.5 min-h-[64px]">
+                            @forelse($events->get($day->toDateString(), collect()) as $shift)
+                                <div class="bg-amber-50 border border-amber-100 rounded-lg px-2 py-1.5">
+                                    <p class="text-xs font-medium text-amber-900">
+                                        {{ substr($shift->start_time, 0, 5) }} – {{ substr($shift->end_time, 0, 5) }}
+                                    </p>
+                                    @if($shift->title)
+                                        <p class="text-xs text-amber-700">{{ $shift->title }}</p>
+                                    @endif
+                                </div>
+                            @empty
+                                <p class="text-xs text-stone-300 italic">—</p>
+                            @endforelse
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+
+        @if($isEditableWeek)
+            <div id="planning-edit-panel" class="hidden bg-amber-50 border border-amber-200 rounded-xl p-5 mb-4 space-y-4">
+                <form method="POST" action="{{ route('employee.plannings.edit') }}">
+                    @csrf
+                    <input type="hidden" name="user_id" value="{{ $selectedUser->id }}">
+                    <input type="hidden" name="week" value="{{ $weekStart->toDateString() }}">
+
+                    <p class="text-sm font-semibold text-amber-800 mb-1">Validation superviseur obligatoire</p>
+                    <p class="text-xs text-amber-700 mb-4">La modification du planning exige une authentification superviseur supplémentaire.</p>
+
+                    @include('employee.shared.supervisor-qr-scanner', ['scannerId' => 'planning-edit-supervisor'])
+
+                    <div class="grid sm:grid-cols-2 gap-4 mt-4">
+                        <div>
+                            <label for="planning_edit_supervisor_number" class="block text-sm font-medium text-amber-900 mb-1">Identifiant superviseur</label>
+                            <input type="text" name="supervisor_number" id="planning_edit_supervisor_number"
+                                   value="{{ old('supervisor_number') }}"
+                                   class="w-full border border-amber-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
+                            @error('supervisor_number')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                        </div>
+                        <div>
+                            <label for="planning_edit_supervisor_pin" class="block text-sm font-medium text-amber-900 mb-1">PIN superviseur</label>
+                            <input type="password" name="supervisor_pin" id="planning_edit_supervisor_pin" maxlength="6" minlength="4" inputmode="numeric" pattern="\d{4,6}"
+                                   class="w-full border border-amber-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
+                            @error('supervisor_pin')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end mt-4">
+                        <button type="submit"
+                                class="bg-amber-700 hover:bg-amber-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium transition-colors">
+                            Continuer vers l'édition
+                        </button>
+                    </div>
+                </form>
+            </div>
+        @endif
+    @else
+        <div class="bg-white rounded-xl shadow-sm border border-stone-100 p-10 text-center text-stone-500 text-sm">
+            Aucun salarié disponible.
+        </div>
+    @endif
+
+    @if($employees->isNotEmpty())
+        <form action="{{ route('employee.plannings.pdf') }}" method="POST" class="bg-white rounded-xl shadow-sm border border-stone-100 p-5 space-y-5">
+            @csrf
+            <input type="hidden" name="week_start" value="{{ $weekStart->toDateString() }}">
+
+            <div>
+                <h2 class="text-base font-semibold text-stone-800">Générer le planning au format PDF</h2>
+                <p class="text-xs text-stone-500 mt-1">
+                    Sélectionnez un salarié pour un planning individuel, ou plusieurs pour un tableau de service — semaine du {{ $weekStart->format('d/m/Y') }} au {{ $weekEnd->format('d/m/Y') }}.
+                </p>
+                @error('selected_users')<p class="text-red-500 text-xs mt-2">{{ $message }}</p>@enderror
+            </div>
+
+            <div class="overflow-x-auto border border-stone-100 rounded-lg">
+                <table class="w-full text-sm">
+                    <thead class="bg-stone-50 border-b border-stone-100">
+                        <tr>
+                            <th class="px-4 py-2.5 text-left font-medium text-stone-600">Inclure</th>
+                            <th class="px-4 py-2.5 text-left font-medium text-stone-600">Salarié</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-stone-50">
+                        @foreach($employees as $employee)
+                            <tr>
+                                <td class="px-4 py-3 align-top">
+                                    <input type="checkbox"
+                                           name="selected_users[]"
+                                           value="{{ $employee->id }}"
+                                           {{ $selectedUser && (int) $selectedUser->id === (int) $employee->id ? 'checked' : '' }}
+                                           class="rounded border-stone-300 text-amber-600 focus:ring-amber-500">
+                                </td>
+                                <td class="px-4 py-3 align-top text-stone-800">{{ $employee->name }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-4">
+                <div class="space-y-1">
+                    <p class="text-sm font-semibold text-amber-800">Validation superviseur obligatoire</p>
+                    <p class="text-xs text-amber-700">La génération du planning au format PDF exige une authentification superviseur supplémentaire.</p>
+                </div>
+
+                @include('employee.shared.supervisor-qr-scanner', ['scannerId' => 'planning-pdf-supervisor'])
+
+                <div class="grid sm:grid-cols-2 gap-4">
+                    <div>
+                        <label for="planning_pdf_supervisor_number" class="block text-sm font-medium text-amber-900 mb-1">Identifiant superviseur</label>
+                        <input type="text" name="supervisor_number" id="planning_pdf_supervisor_number"
+                               value="{{ old('supervisor_number') }}"
+                               class="w-full border border-amber-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
+                        @error('supervisor_number')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                    </div>
+                    <div>
+                        <label for="planning_pdf_supervisor_pin" class="block text-sm font-medium text-amber-900 mb-1">PIN superviseur</label>
+                        <input type="password" name="supervisor_pin" id="planning_pdf_supervisor_pin" maxlength="6" minlength="4" inputmode="numeric" pattern="\d{4,6}"
+                               class="w-full border border-amber-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
+                        @error('supervisor_pin')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end">
+                <button type="submit"
+                        class="bg-amber-700 hover:bg-amber-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium transition-colors">
+                    Générer le PDF
+                </button>
+            </div>
+        </form>
+    @endif
+
+</x-employee-layout>
