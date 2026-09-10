@@ -9,7 +9,9 @@ use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\QrLoginController;
 use App\Http\Controllers\Auth\RegisteredUserController;
+use App\Http\Controllers\Auth\SecurityKeyLoginController;
 use App\Http\Controllers\Auth\VerifyEmailController;
+use App\Http\Controllers\SupervisorSecurityKeyController;
 use App\Models\Setting;
 use Illuminate\Support\Facades\Route;
 
@@ -33,6 +35,17 @@ Route::middleware('guest')->group(function () {
             ->name('login.qr.store');
     });
 
+    Route::middleware('feature:' . Setting::KEY_FEATURE_SECURITY_KEYS)->group(function () {
+        Route::get('login/cle-de-securite', [SecurityKeyLoginController::class, 'show'])
+            ->name('login.security-key');
+
+        Route::post('login/cle-de-securite/options', [SecurityKeyLoginController::class, 'options'])
+            ->name('login.security-key.options');
+
+        Route::post('login/cle-de-securite', [SecurityKeyLoginController::class, 'store'])
+            ->name('login.security-key.store');
+    });
+
     Route::get('forgot-password', [PasswordResetLinkController::class, 'create'])
         ->name('password.request');
 
@@ -44,6 +57,14 @@ Route::middleware('guest')->group(function () {
 
     Route::post('reset-password', [NewPasswordController::class, 'store'])
         ->name('password.store');
+});
+
+// Défi WebAuthn d'approbation superviseur par clé de sécurité : utilisé aussi
+// bien avant authentification (ex. connexion par clé de sécurité) que depuis
+// l'espace employé, partout où une validation superviseur est déjà exigée.
+Route::middleware('feature:' . Setting::KEY_FEATURE_SECURITY_KEYS)->group(function () {
+    Route::post('supervision/cle-de-securite/options', [SupervisorSecurityKeyController::class, 'options'])
+        ->name('supervisor-security-key.options');
 });
 
 Route::middleware('auth')->group(function () {

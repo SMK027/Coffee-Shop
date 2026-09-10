@@ -55,6 +55,11 @@
                     📷 Connexion par QR code
                 </a>
             @endif
+            @if(\App\Models\Setting::isFeatureEnabled(\App\Models\Setting::KEY_FEATURE_SECURITY_KEYS))
+                <a href="{{ route('login.security-key') }}" class="mt-2 block text-center text-amber-700 hover:text-amber-600 text-sm font-medium transition-colors">
+                    🔑 Connexion par clé de sécurité
+                </a>
+            @endif
         </div>
 
         <div class="text-center mt-6">
