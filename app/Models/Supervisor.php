@@ -59,6 +59,11 @@ class Supervisor extends Model
         return $this->belongsTo(self::class, 'replaces_supervisor_id');
     }
 
+    public function securityKeys(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(SupervisorSecurityKey::class);
+    }
+
     public function bypassToken(): string
     {
         $payload = $this->supervisor_number . '|' . $this->password;

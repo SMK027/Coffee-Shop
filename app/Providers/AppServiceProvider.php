@@ -6,10 +6,18 @@ use App\Services\ActivityLogger;
 use Illuminate\Auth\Events\Failed as AuthFailed;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
+use Laravel\Passkeys\Passkeys;
 
 class AppServiceProvider extends ServiceProvider
 {
-    public function register(): void {}
+    public function register(): void
+    {
+        // Les ceremonies WebAuthn (clés de sécurité) sont pilotées par nos
+        // propres contrôleurs (auth employé custom, middleware espace-employe,
+        // habilitation superviseur) plutôt que par les routes/middlewares par
+        // défaut du package (guard "web" nu, password.confirm inexistant ici).
+        Passkeys::ignoreRoutes();
+    }
 
     public function boot(): void
     {

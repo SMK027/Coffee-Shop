@@ -41,6 +41,7 @@ class Setting extends Model
     public const KEY_FEATURE_DAILY_REPORTS     = 'feature_daily_reports';
     public const KEY_FEATURE_SUPERVISOR_BOARDS = 'feature_supervisor_boards';
     public const KEY_FEATURE_QUICK_LOGIN_BOARDS = 'feature_quick_login_boards';
+    public const KEY_FEATURE_SECURITY_KEYS     = 'feature_security_keys';
 
     public const FEATURES = [
         self::KEY_FEATURE_QUICK_LOGIN       => 'Connexion rapide par QR code',
@@ -51,6 +52,7 @@ class Setting extends Model
         self::KEY_FEATURE_DAILY_REPORTS     => 'Génération de récapitulatifs journaliers',
         self::KEY_FEATURE_SUPERVISOR_BOARDS => 'Émission de planches de superviseurs',
         self::KEY_FEATURE_QUICK_LOGIN_BOARDS => 'Émission de planches de connexion rapide',
+        self::KEY_FEATURE_SECURITY_KEYS     => 'Connexion par clé de sécurité physique',
     ];
 
     public const DEFAULTS = [
@@ -68,6 +70,7 @@ class Setting extends Model
         self::KEY_FEATURE_DAILY_REPORTS     => '1',
         self::KEY_FEATURE_SUPERVISOR_BOARDS => '1',
         self::KEY_FEATURE_QUICK_LOGIN_BOARDS => '1',
+        self::KEY_FEATURE_SECURITY_KEYS     => '1',
     ];
 
     /**

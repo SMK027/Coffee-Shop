@@ -48,7 +48,7 @@ final class SupervisorOperation
         self::LOST_CREDENTIALS => 'Signalement d\'identifiants perdus',
         self::SUPERVISION_PERMANENT => 'Activation du mode superviseur permanent',
         self::PDF_BOARD => 'Génération de planches PDF de connexion',
-        self::QR_LOGIN => 'Connexion par QR code',
+        self::QR_LOGIN => 'Connexion par QR code ou clé de sécurité physique',
         self::PLANNING_EDIT => 'Modification des plannings salariés',
         self::PLANNING_PDF => 'Génération des plannings au format PDF',
     ];
@@ -107,6 +107,7 @@ final class SupervisorOperation
         'employee.supervisors.pdf-board' => self::PDF_BOARD,
 
         'login.qr.store' => self::QR_LOGIN,
+        'login.security-key.store' => self::QR_LOGIN,
 
         'employee.plannings.edit' => self::PLANNING_EDIT,
         'employee.plannings.update' => self::PLANNING_EDIT,
