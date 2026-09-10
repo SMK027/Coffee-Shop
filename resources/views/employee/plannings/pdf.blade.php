@@ -11,32 +11,44 @@
         body {
             font-family: DejaVu Sans, sans-serif;
             color: #292524;
-            font-size: 10px;
+            font-size: 11px;
             background: #ffffff;
         }
 
         .meta {
-            margin-bottom: 5mm;
-            font-size: 9px;
+            margin-bottom: 3mm;
+            font-size: 9.5px;
             color: #57534e;
             border-bottom: 0.4mm solid #d6d3d1;
             padding-bottom: 2mm;
         }
 
         .header {
-            margin-bottom: 6mm;
+            margin-bottom: 4mm;
         }
 
         .header h1 {
-            font-size: 16px;
+            font-size: 18px;
             margin: 0 0 1.5mm 0;
             color: #78350f;
         }
 
         .header p {
             margin: 0;
-            font-size: 10px;
+            font-size: 11px;
             color: #57534e;
+        }
+
+        .legend {
+            margin-bottom: 5mm;
+            font-size: 9px;
+            color: #57534e;
+        }
+
+        .legend .chip {
+            display: inline-block;
+            margin: 0 3mm 0 0;
+            padding: 0.8mm 2.2mm;
         }
 
         .employee-block {
@@ -45,7 +57,7 @@
         }
 
         .employee-name {
-            font-size: 12px;
+            font-size: 13px;
             font-weight: bold;
             color: #78350f;
             background: #fef3c7;
@@ -59,36 +71,36 @@
             border-collapse: collapse;
         }
 
+        thead {
+            display: table-header-group;
+        }
+
+        tbody tr {
+            page-break-inside: avoid;
+        }
+
         th, td {
             border: 0.3mm solid #d6d3d1;
-            padding: 1.8mm 2.2mm;
+            padding: 2.2mm 2.6mm;
             vertical-align: top;
             text-align: left;
         }
 
         th {
             background: #f5f5f4;
-            font-size: 8.5px;
+            font-size: 9.5px;
             text-transform: uppercase;
             color: #57534e;
         }
 
         .day-name {
             font-weight: bold;
-            font-size: 9px;
+            font-size: 10.5px;
         }
 
         .day-date {
-            font-size: 8px;
+            font-size: 9px;
             color: #78716c;
-        }
-
-        .event {
-            margin-bottom: 1mm;
-        }
-
-        .event-time {
-            font-weight: bold;
         }
 
         .empty {
@@ -97,24 +109,78 @@
         }
 
         .muted-total {
-            font-size: 8.5px;
+            font-size: 9.5px;
             color: #78716c;
             margin: 0 0 2mm 0;
         }
 
-        .badge-leave {
-            color: #15803d;
-            font-weight: bold;
+        .chip {
+            border-radius: 1.2mm;
+            border-width: 0.3mm;
+            border-style: solid;
+            padding: 1.2mm 1.8mm;
+            margin-bottom: 1.2mm;
         }
 
-        .badge-absence {
-            color: #b91c1c;
+        .chip-time {
             font-weight: bold;
+            font-size: 10px;
         }
 
-        .badge-meeting {
-            color: #1d4ed8;
+        .chip-label {
             font-weight: bold;
+            font-size: 9.5px;
+        }
+
+        .chip-title {
+            font-size: 9px;
+            margin-top: 0.5mm;
+        }
+
+        .chip-work {
+            background: #fffbeb;
+            border-color: #fde68a;
+            color: #78350f;
+        }
+
+        .chip-meeting {
+            background: #eff6ff;
+            border-color: #bfdbfe;
+            color: #1e40af;
+        }
+
+        .chip-leave {
+            background: #f0fdf4;
+            border-color: #bbf7d0;
+            color: #166534;
+        }
+
+        .chip-absence {
+            background: #fef2f2;
+            border-color: #fecaca;
+            color: #991b1b;
+        }
+
+        /* Tableau de service : une ligne par salarié, plus facile à lire d'un coup d'œil. */
+        .team-board .employee-col {
+            width: 15%;
+            font-weight: bold;
+            color: #78350f;
+            background: #fafaf9;
+        }
+
+        .team-board .total-col {
+            width: 9%;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+
+        .team-board tbody tr:nth-child(even) td {
+            background: #fafaf9;
+        }
+
+        .team-board tbody tr:nth-child(even) td.employee-col {
+            background: #f5f5f4;
         }
     </style>
 </head>
@@ -136,58 +202,77 @@
         @endif
     </div>
 
-    @foreach($schedules as $schedule)
-        <div class="employee-block">
-            @if($title !== 'Planning individuel')
-                <p class="employee-name">{{ $schedule['employee']->name }}</p>
-            @endif
-            <p class="muted-total">Total travaillé : {{ $schedule['totalWorkedLabel'] }}</p>
+    <div class="legend">
+        <span class="chip chip-work">Travail</span>
+        <span class="chip chip-meeting">Réunion / formation</span>
+        <span class="chip chip-leave">Congé</span>
+        <span class="chip chip-absence">Absence</span>
+    </div>
 
-            <table>
-                <thead>
+    @if($title === 'Planning individuel')
+        @foreach($schedules as $schedule)
+            <div class="employee-block">
+                <p class="muted-total">Total travaillé : {{ $schedule['totalWorkedLabel'] }}</p>
+
+                <table>
+                    <thead>
+                        <tr>
+                            @foreach($days as $day)
+                                <th>
+                                    <span class="day-name">{{ ucfirst($day->translatedFormat('l')) }}</span><br>
+                                    <span class="day-date">{{ $day->format('d/m') }}</span>
+                                </th>
+                            @endforeach
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            @foreach($days as $day)
+                                <td>
+                                    @forelse($schedule['events']->get($day->toDateString(), collect()) as $shift)
+                                        @include('employee.plannings.pdf-event', ['shift' => $shift])
+                                    @empty
+                                        <span class="empty">—</span>
+                                    @endforelse
+                                </td>
+                            @endforeach
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        @endforeach
+    @else
+        <table class="team-board">
+            <thead>
+                <tr>
+                    <th class="employee-col">Salarié</th>
+                    @foreach($days as $day)
+                        <th>
+                            <span class="day-name">{{ ucfirst($day->translatedFormat('l')) }}</span><br>
+                            <span class="day-date">{{ $day->format('d/m') }}</span>
+                        </th>
+                    @endforeach
+                    <th class="total-col">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($schedules as $schedule)
                     <tr>
-                        @foreach($days as $day)
-                            <th>
-                                <span class="day-name">{{ ucfirst($day->translatedFormat('l')) }}</span><br>
-                                <span class="day-date">{{ $day->format('d/m') }}</span>
-                            </th>
-                        @endforeach
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
+                        <td class="employee-col">{{ $schedule['employee']->name }}</td>
                         @foreach($days as $day)
                             <td>
                                 @forelse($schedule['events']->get($day->toDateString(), collect()) as $shift)
-                                    <div class="event">
-                                        @if($shift->type === \App\Models\ScheduleShift::TYPE_WORK)
-                                            <span class="event-time">{{ substr($shift->start_time, 0, 5) }}-{{ substr($shift->end_time, 0, 5) }}</span>
-                                        @elseif($shift->type === \App\Models\ScheduleShift::TYPE_MEETING)
-                                            <span class="badge-meeting">
-                                                {{ $shift->typeLabel() }}
-                                                ({{ substr($shift->start_time, 0, 5) }}-{{ substr($shift->end_time, 0, 5) }})
-                                            </span>
-                                        @else
-                                            <span class="{{ $shift->type === \App\Models\ScheduleShift::TYPE_LEAVE ? 'badge-leave' : 'badge-absence' }}">
-                                                {{ $shift->typeLabel() }}
-                                                @if(! $shift->isFullDay())
-                                                    ({{ substr($shift->start_time, 0, 5) }}-{{ substr($shift->end_time, 0, 5) }})
-                                                @endif
-                                            </span>
-                                        @endif
-                                        @if($shift->title)
-                                            <br>{{ $shift->title }}
-                                        @endif
-                                    </div>
+                                    @include('employee.plannings.pdf-event', ['shift' => $shift])
                                 @empty
                                     <span class="empty">—</span>
                                 @endforelse
                             </td>
                         @endforeach
+                        <td class="total-col">{{ $schedule['totalWorkedLabel'] }}</td>
                     </tr>
-                </tbody>
-            </table>
-        </div>
-    @endforeach
+                @endforeach
+            </tbody>
+        </table>
+    @endif
 </body>
 </html>

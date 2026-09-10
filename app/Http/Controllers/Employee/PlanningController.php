@@ -353,7 +353,9 @@ class PlanningController extends Controller
         $options->set('isHtml5ParserEnabled', true);
         $dompdf = new Dompdf($options);
         $dompdf->loadHtml($html, 'UTF-8');
-        $dompdf->setPaper('A4', 'portrait');
+        // Le tableau de service (plusieurs salariés) est plus lisible en paysage : chaque salarié
+        // tient sur une seule ligne avec les 7 jours côte à côte.
+        $dompdf->setPaper('A4', $employees->count() > 1 ? 'landscape' : 'portrait');
         $dompdf->render();
 
         $filename = 'planning-' . $weekStart->format('Ymd') . '-' . now()->format('His') . '.pdf';
