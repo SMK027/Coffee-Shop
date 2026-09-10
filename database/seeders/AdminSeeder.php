@@ -6,6 +6,7 @@ use App\Models\CardOffer;
 use App\Models\LoyaltyCard;
 use App\Models\Supervisor;
 use App\Models\User;
+use App\Support\SupervisorOperation;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -54,6 +55,7 @@ class AdminSeeder extends Seeder
                 'password'      => Hash::make('1234'),
                 'is_active'     => true,
                 'superadmin_id' => $superadmin->id,
+                'permissions'   => array_keys(SupervisorOperation::options()),
             ]
         );
 
