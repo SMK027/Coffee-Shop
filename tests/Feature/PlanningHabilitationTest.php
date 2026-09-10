@@ -99,6 +99,7 @@ class PlanningHabilitationTest extends TestCase
                 'week_start' => $weekStart->toDateString(),
                 'events' => [
                     [
+                        'type' => ScheduleShift::TYPE_WORK,
                         'date' => $weekStart->toDateString(),
                         'start_time' => '09:00',
                         'end_time' => '12:00',
@@ -117,6 +118,108 @@ class PlanningHabilitationTest extends TestCase
             'title' => 'Service matin',
         ]);
         $this->assertDatabaseHas(ActivityLog::class, ['action' => 'planning.updated']);
+    }
+
+    public function test_a_full_day_leave_can_be_saved_without_hours(): void
+    {
+        $admin = User::factory()->create(['global_role' => 'admin']);
+        $employee = User::factory()->create(['global_role' => 'moderator']);
+        Supervisor::create([
+            'supervisor_number' => 'PLN104',
+            'password' => Hash::make('1234'),
+            'superadmin_id' => $admin->id,
+            'is_active' => true,
+            'permissions' => [SupervisorOperation::PLANNING_EDIT],
+        ]);
+
+        $weekStart = now()->startOfWeek(Carbon::MONDAY);
+
+        $this->withoutMiddleware(PreventRequestForgery::class)
+            ->actingAs($admin)
+            ->post(route('employee.plannings.update'), [
+                'user_id' => $employee->id,
+                'week_start' => $weekStart->toDateString(),
+                'supervisor_number' => 'PLN104',
+                'supervisor_pin' => '1234',
+                'events' => [
+                    [
+                        'type' => ScheduleShift::TYPE_LEAVE,
+                        'date' => $weekStart->toDateString(),
+                        'title' => 'Congés payés',
+                    ],
+                ],
+            ])
+            ->assertRedirect(route('employee.plannings.index', [
+                'user_id' => $employee->id,
+                'week' => $weekStart->toDateString(),
+            ]));
+
+        $this->assertDatabaseHas(ScheduleShift::class, [
+            'user_id' => $employee->id,
+            'type' => ScheduleShift::TYPE_LEAVE,
+            'date' => $weekStart->toDateString(),
+            'start_time' => null,
+            'end_time' => null,
+            'title' => 'Congés payés',
+        ]);
+    }
+
+    public function test_a_leave_with_hours_is_rejected(): void
+    {
+        $admin = User::factory()->create(['global_role' => 'admin']);
+        $employee = User::factory()->create(['global_role' => 'moderator']);
+        Supervisor::create([
+            'supervisor_number' => 'PLN105',
+            'password' => Hash::make('1234'),
+            'superadmin_id' => $admin->id,
+            'is_active' => true,
+            'permissions' => [SupervisorOperation::PLANNING_EDIT],
+        ]);
+
+        $weekStart = now()->startOfWeek(Carbon::MONDAY);
+
+        $this->withoutMiddleware(PreventRequestForgery::class)
+            ->actingAs($admin)
+            ->post(route('employee.plannings.update'), [
+                'user_id' => $employee->id,
+                'week_start' => $weekStart->toDateString(),
+                'supervisor_number' => 'PLN105',
+                'supervisor_pin' => '1234',
+                'events' => [
+                    [
+                        'type' => ScheduleShift::TYPE_LEAVE,
+                        'date' => $weekStart->toDateString(),
+                        'start_time' => '09:00',
+                        'end_time' => '12:00',
+                    ],
+                ],
+            ])
+            ->assertSessionHasErrors('events');
+
+        $this->assertDatabaseMissing(ScheduleShift::class, ['user_id' => $employee->id]);
+    }
+
+    public function test_employee_search_returns_matching_employees(): void
+    {
+        $admin = User::factory()->create(['global_role' => 'admin']);
+        User::factory()->create(['global_role' => 'moderator', 'name' => 'Alice Martin']);
+        User::factory()->create(['global_role' => 'moderator', 'name' => 'Bob Dupont']);
+
+        $response = $this->actingAs($admin)
+            ->getJson(route('employee.plannings.employees.search', ['q' => 'Alice']));
+
+        $response->assertOk();
+        $response->assertJsonCount(1);
+        $response->assertJsonFragment(['name' => 'Alice Martin']);
+    }
+
+    public function test_moderator_cannot_use_employee_search(): void
+    {
+        $moderator = User::factory()->create(['global_role' => 'moderator']);
+
+        $this->actingAs($moderator)
+            ->getJson(route('employee.plannings.employees.search', ['q' => 'a']))
+            ->assertForbidden();
     }
 
     public function test_saving_a_past_week_is_rejected(): void
