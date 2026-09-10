@@ -251,19 +251,35 @@ abstract class Controller
 
     /**
      * Comme requireSuperAdminOrSupervisor(), mais sans bypass superadmin
-     * implicite ni mode superviseur permanent : une validation superviseur
-     * réelle est toujours exigée. Par défaut, si aucun identifiant n'est
-     * fourni dans la requête, l'opération est différée (redirection vers
-     * l'écran de validation) exactement comme pour les autres actions
-     * sensibles de l'application — $allowDeferred=false permet d'exiger une
-     * validation immédiate quand le différé n'a pas de sens (ex. connexion
-     * QR avant authentification de l'employé, cf. Auth\QrLoginController).
+     * implicite : une validation superviseur réelle est toujours exigée à
+     * un moment ou à un autre. Deux axes réglables indépendamment :
+     * - $allowDeferred=false exige une validation immédiate quand le
+     *   différé n'a pas de sens (ex. connexion QR avant authentification de
+     *   l'employé, cf. Auth\QrLoginController) ;
+     * - $allowPermanentBypass=false ignore le mode superviseur permanent
+     *   même s'il est actif, pour les actions qui doivent justement exiger
+     *   une validation fraîche (activer/prolonger ce mode lui-même, cf.
+     *   SupervisionController::enablePermanent()).
+     * Par défaut, les deux sont autorisés : si le mode superviseur permanent
+     * est actif, il s'applique ici exactement comme pour les opérations
+     * "non strictes" ; sinon, à défaut d'identifiants dans la requête,
+     * l'opération est différée (redirection vers l'écran de validation).
      */
     protected function requireStrictSupervisorValidation(
         Request $request,
         string $message = 'Validation superviseur requise.',
-        bool $allowDeferred = true
+        bool $allowDeferred = true,
+        bool $allowPermanentBypass = true
     ): Supervisor {
+        if ($allowPermanentBypass) {
+            $permanentSupervisor = $this->resolvePermanentSupervisor($request);
+            if ($permanentSupervisor !== null) {
+                $this->ensureHabilitated($permanentSupervisor, $request);
+
+                return $permanentSupervisor;
+            }
+        }
+
         $bypassSupervisor = $this->consumeSupervisionBypass($request);
         if ($bypassSupervisor !== null) {
             return $bypassSupervisor;

@@ -22,9 +22,12 @@ class SupervisionController extends Controller
     {
         abort_unless(auth()->user()->isSuperAdmin(), 403);
 
+        // Le mode permanent ne doit pas pouvoir se prolonger lui-même sans
+        // validation fraîche : bypass permanent explicitement désactivé ici.
         $supervisor = $this->requireStrictSupervisorValidation(
             $request,
-            'L’activation du mode superviseur permanent exige une authentification superviseur.'
+            'L’activation du mode superviseur permanent exige une authentification superviseur.',
+            allowPermanentBypass: false
         );
 
         $this->enablePermanentSupervision($request, $supervisor);

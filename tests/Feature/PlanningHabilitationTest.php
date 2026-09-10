@@ -268,6 +268,38 @@ class PlanningHabilitationTest extends TestCase
         $this->assertDatabaseHas(ActivityLog::class, ['action' => 'auth.supervisor_denied']);
     }
 
+    public function test_active_permanent_supervision_bypasses_planning_pdf_validation(): void
+    {
+        $superAdmin = User::factory()->create(['global_role' => 'superadmin']);
+        $employee = User::factory()->create(['global_role' => 'moderator']);
+        $supervisor = Supervisor::create([
+            'supervisor_number' => 'PLN106',
+            'password' => Hash::make('1234'),
+            'superadmin_id' => $superAdmin->id,
+            'is_active' => true,
+            'permissions' => [SupervisorOperation::PLANNING_PDF],
+        ]);
+
+        $weekStart = now()->startOfWeek(Carbon::MONDAY)->toDateString();
+
+        $response = $this->withoutMiddleware(PreventRequestForgery::class)
+            ->actingAs($superAdmin)
+            ->withSession([
+                'supervision.permanent' => [
+                    'user_id' => $superAdmin->id,
+                    'supervisor_id' => $supervisor->id,
+                    'enabled_at' => time(),
+                ],
+            ])
+            ->post(route('employee.plannings.pdf'), [
+                'selected_users' => [$employee->id],
+                'week_start' => $weekStart,
+            ]);
+
+        $response->assertOk();
+        $response->assertHeader('Content-Type', 'application/pdf');
+    }
+
     public function test_supervisor_with_planning_pdf_habilitation_can_generate_the_pdf(): void
     {
         $admin = User::factory()->create(['global_role' => 'admin']);

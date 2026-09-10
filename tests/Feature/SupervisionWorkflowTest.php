@@ -31,6 +31,64 @@ class SupervisionWorkflowTest extends TestCase
         $this->assertDatabaseMissing(PaymentMethod::class, ['slug' => 'payment-test']);
     }
 
+    public function test_permanent_supervision_bypasses_strict_pdf_generation(): void
+    {
+        \App\Models\Setting::set(\App\Models\Setting::KEY_FEATURE_QUICK_LOGIN_BOARDS, '1');
+
+        $superAdmin = User::factory()->create(['global_role' => 'superadmin']);
+        $employee = User::factory()->create(['global_role' => 'moderator']);
+        $supervisor = Supervisor::create([
+            'supervisor_number' => 'SUP200',
+            'password' => Hash::make('1234'),
+            'superadmin_id' => $superAdmin->id,
+            'is_active' => true,
+            'permissions' => [SupervisorOperation::PDF_BOARD],
+        ]);
+
+        $response = $this->withoutMiddleware(PreventRequestForgery::class)
+            ->actingAs($superAdmin)
+            ->withSession([
+                'supervision.permanent' => [
+                    'user_id' => $superAdmin->id,
+                    'supervisor_id' => $supervisor->id,
+                    'enabled_at' => time(),
+                ],
+            ])
+            ->post(route('employee.users.pdf-board'), [
+                'selected_users' => [$employee->id],
+            ]);
+
+        $response->assertOk();
+        $response->assertHeader('Content-Type', 'application/pdf');
+    }
+
+    public function test_enabling_permanent_supervision_requires_fresh_validation_even_if_already_active(): void
+    {
+        $superAdmin = User::factory()->create(['global_role' => 'superadmin']);
+        $supervisor = Supervisor::create([
+            'supervisor_number' => 'SUP201',
+            'password' => Hash::make('1234'),
+            'superadmin_id' => $superAdmin->id,
+            'is_active' => true,
+            'permissions' => [SupervisorOperation::SUPERVISION_PERMANENT],
+        ]);
+
+        $response = $this->withoutMiddleware(PreventRequestForgery::class)
+            ->actingAs($superAdmin)
+            ->withSession([
+                'supervision.permanent' => [
+                    'user_id' => $superAdmin->id,
+                    'supervisor_id' => $supervisor->id,
+                    'enabled_at' => time(),
+                ],
+            ])
+            ->post(route('employee.supervision.permanent.enable'), []);
+
+        // Le mode déjà actif ne dispense pas d'une validation fraîche pour le reconduire :
+        // sans identifiants fournis, l'opération est différée comme n'importe quelle autre.
+        $response->assertRedirect(route('employee.supervision.challenge'));
+    }
+
     public function test_supervisor_deletion_via_challenge_workflow(): void
     {
         \App\Models\Setting::set(\App\Models\Setting::KEY_SUPERVISOR_MANAGEMENT_ALLOWED_IPS, '127.0.0.1');
