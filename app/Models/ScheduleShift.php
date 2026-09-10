@@ -14,9 +14,6 @@ class ScheduleShift extends Model
 
     public const TYPES = [self::TYPE_WORK, self::TYPE_LEAVE, self::TYPE_ABSENCE, self::TYPE_MEETING];
 
-    /** Types qui occupent la journée de façon exclusive : un seul d'entre eux par jour et par salarié. */
-    public const EXCLUSIVE_TYPES = [self::TYPE_WORK, self::TYPE_LEAVE, self::TYPE_ABSENCE];
-
     public const LABELS = [
         self::TYPE_LEAVE => 'Congé',
         self::TYPE_ABSENCE => 'Absence',

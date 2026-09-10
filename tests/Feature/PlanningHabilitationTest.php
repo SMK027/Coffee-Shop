@@ -656,6 +656,99 @@ class PlanningHabilitationTest extends TestCase
         $this->assertDatabaseMissing(ScheduleShift::class, ['user_id' => $employee->id]);
     }
 
+    public function test_a_partial_absence_can_coexist_with_a_work_shift_on_the_same_day(): void
+    {
+        $admin = User::factory()->create(['global_role' => 'admin']);
+        $employee = User::factory()->create(['global_role' => 'moderator']);
+        Supervisor::create([
+            'supervisor_number' => 'PLN119',
+            'password' => Hash::make('1234'),
+            'superadmin_id' => $admin->id,
+            'is_active' => true,
+            'permissions' => [SupervisorOperation::PLANNING_EDIT],
+        ]);
+
+        $weekStart = now()->startOfWeek(Carbon::MONDAY);
+
+        $this->withoutMiddleware(PreventRequestForgery::class)
+            ->actingAs($admin)
+            ->post(route('employee.plannings.update'), [
+                'user_id' => $employee->id,
+                'week_start' => $weekStart->toDateString(),
+                'supervisor_number' => 'PLN119',
+                'supervisor_pin' => '1234',
+                'events' => [
+                    [
+                        'type' => ScheduleShift::TYPE_WORK,
+                        'date' => $weekStart->toDateString(),
+                        'start_time' => '09:00',
+                        'end_time' => '17:00',
+                    ],
+                    [
+                        'type' => ScheduleShift::TYPE_ABSENCE,
+                        'date' => $weekStart->toDateString(),
+                        'start_time' => '14:00',
+                        'end_time' => '15:00',
+                        'title' => 'Rendez-vous médical',
+                    ],
+                ],
+            ])
+            ->assertRedirect(route('employee.plannings.index', [
+                'user_id' => $employee->id,
+                'week' => $weekStart->toDateString(),
+            ]));
+
+        $this->assertDatabaseHas(ScheduleShift::class, [
+            'user_id' => $employee->id,
+            'type' => ScheduleShift::TYPE_WORK,
+            'date' => $weekStart->toDateString(),
+        ]);
+        $this->assertDatabaseHas(ScheduleShift::class, [
+            'user_id' => $employee->id,
+            'type' => ScheduleShift::TYPE_ABSENCE,
+            'title' => 'Rendez-vous médical',
+        ]);
+    }
+
+    public function test_a_full_day_absence_cannot_coexist_with_a_work_shift_on_the_same_day(): void
+    {
+        $admin = User::factory()->create(['global_role' => 'admin']);
+        $employee = User::factory()->create(['global_role' => 'moderator']);
+        Supervisor::create([
+            'supervisor_number' => 'PLN120',
+            'password' => Hash::make('1234'),
+            'superadmin_id' => $admin->id,
+            'is_active' => true,
+            'permissions' => [SupervisorOperation::PLANNING_EDIT],
+        ]);
+
+        $weekStart = now()->startOfWeek(Carbon::MONDAY);
+
+        $this->withoutMiddleware(PreventRequestForgery::class)
+            ->actingAs($admin)
+            ->post(route('employee.plannings.update'), [
+                'user_id' => $employee->id,
+                'week_start' => $weekStart->toDateString(),
+                'supervisor_number' => 'PLN120',
+                'supervisor_pin' => '1234',
+                'events' => [
+                    [
+                        'type' => ScheduleShift::TYPE_WORK,
+                        'date' => $weekStart->toDateString(),
+                        'start_time' => '09:00',
+                        'end_time' => '17:00',
+                    ],
+                    [
+                        'type' => ScheduleShift::TYPE_ABSENCE,
+                        'date' => $weekStart->toDateString(),
+                    ],
+                ],
+            ])
+            ->assertSessionHasErrors('events');
+
+        $this->assertDatabaseMissing(ScheduleShift::class, ['user_id' => $employee->id]);
+    }
+
     public function test_a_meeting_can_be_added_alongside_a_work_shift_on_the_same_day(): void
     {
         $admin = User::factory()->create(['global_role' => 'admin']);

@@ -155,20 +155,29 @@ class PlanningController extends Controller
         }
 
         foreach (collect($validated['events'] ?? [])->groupBy('date') as $date => $dayEvents) {
-            $exclusiveTypes = $dayEvents->pluck('type')
-                ->filter(fn ($type) => in_array($type, ScheduleShift::EXCLUSIVE_TYPES, true))
-                ->unique();
+            $hasLeave = $dayEvents->contains('type', ScheduleShift::TYPE_LEAVE);
+            $hasWork = $dayEvents->contains('type', ScheduleShift::TYPE_WORK);
+            $hasAnyAbsence = $dayEvents->contains('type', ScheduleShift::TYPE_ABSENCE);
+            $hasFullDayAbsence = $dayEvents->contains(fn ($event) => $event['type'] === ScheduleShift::TYPE_ABSENCE && empty($event['start_time'] ?? null));
 
-            if ($exclusiveTypes->count() > 1) {
+            // Un congé occupe la journée entière : aucune autre activité ne peut cohabiter avec lui.
+            if ($hasLeave && ($hasWork || $hasAnyAbsence)) {
                 throw ValidationException::withMessages([
-                    'events' => 'Le ' . Carbon::parse($date)->format('d/m/Y') . ' cumule plusieurs types d\'activité (travail, congé, absence) sur la même journée.',
+                    'events' => 'Le ' . Carbon::parse($date)->format('d/m/Y') . ' cumule un congé avec une autre activité sur la même journée.',
+                ]);
+            }
+
+            // Une absence partielle peut cohabiter avec un service, mais une absence d'une
+            // journée entière ne le peut pas.
+            if ($hasFullDayAbsence && $hasWork) {
+                throw ValidationException::withMessages([
+                    'events' => 'Le ' . Carbon::parse($date)->format('d/m/Y') . ' cumule une absence d\'une journée entière avec un service.',
                 ]);
             }
 
             $hasMeeting = $dayEvents->contains('type', ScheduleShift::TYPE_MEETING);
-            $hasLeaveOrAbsence = $dayEvents->contains(fn ($event) => in_array($event['type'], [ScheduleShift::TYPE_LEAVE, ScheduleShift::TYPE_ABSENCE], true));
 
-            if ($hasMeeting && $hasLeaveOrAbsence) {
+            if ($hasMeeting && ($hasLeave || $hasAnyAbsence)) {
                 throw ValidationException::withMessages([
                     'events' => 'Une réunion ou une formation ne peut pas être ajoutée un jour de congé ou d\'absence (' . Carbon::parse($date)->format('d/m/Y') . ').',
                 ]);

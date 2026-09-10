@@ -25,7 +25,8 @@
         <p class="text-xs text-stone-500 mb-3">
             Cliquez-glissez sur la grille pour ajouter un créneau de travail ou une réunion/formation, cliquez sur une case de
             la ligne « Journée » pour poser un congé ou une absence, cliquez sur un événement existant pour le modifier ou le
-            supprimer. Un congé, une absence et un service ne peuvent pas cohabiter le même jour.
+            supprimer. Un congé occupe toute la journée et ne peut cohabiter avec rien d'autre. Une absence partielle peut
+            cohabiter avec un service, mais une absence d'une journée entière ne le peut pas.
         </p>
 
         @if($bypassOpeningHours)
@@ -140,8 +141,6 @@
             }
             return acc;
         }, []);
-
-        const EXCLUSIVE_TYPES = ['work', 'leave', 'absence'];
 
         function typeLabel(type) {
             if (type === 'leave') return 'Congé';
@@ -292,23 +291,31 @@
             editingEvent = null;
         }
 
-        // Un congé, une absence et un service sont mutuellement exclusifs sur une même journée.
-        // Une réunion/formation ne peut pas cohabiter avec un congé ou une absence.
-        function dayConsistencyError(type, dateStr, excludeEvent) {
-            const dayTypes = calendar.getEvents()
+        // Un congé occupe la journée entière : rien d'autre ne peut cohabiter avec lui. Une
+        // absence partielle peut cohabiter avec un service, mais une absence d'une journée
+        // entière ne le peut pas. Une réunion/formation ne peut pas cohabiter avec un congé ou
+        // une absence (partielle ou entière).
+        function dayConsistencyError(type, isFullDay, dateStr, excludeEvent) {
+            const dayEvents = calendar.getEvents()
                 .filter(function (ev) { return ev !== excludeEvent && toDateStr(ev.start) === dateStr; })
-                .map(function (ev) { return ev.extendedProps.type; });
-            dayTypes.push(type);
+                .map(function (ev) { return { type: ev.extendedProps.type, fullDay: ev.allDay }; });
+            dayEvents.push({ type: type, fullDay: isFullDay });
 
-            const exclusivePresent = dayTypes.filter(function (t) { return EXCLUSIVE_TYPES.indexOf(t) !== -1; });
-            const uniqueExclusive = exclusivePresent.filter(function (t, i) { return exclusivePresent.indexOf(t) === i; });
-            if (uniqueExclusive.length > 1) {
-                return 'Un congé, une absence et un service ne peuvent pas cohabiter le même jour.';
+            const hasLeave = dayEvents.some(function (e) { return e.type === 'leave'; });
+            const hasWork = dayEvents.some(function (e) { return e.type === 'work'; });
+            const hasAnyAbsence = dayEvents.some(function (e) { return e.type === 'absence'; });
+            const hasFullDayAbsence = dayEvents.some(function (e) { return e.type === 'absence' && e.fullDay; });
+            const hasMeeting = dayEvents.some(function (e) { return e.type === 'meeting'; });
+
+            if (hasLeave && (hasWork || hasAnyAbsence)) {
+                return 'Un congé ne peut pas cohabiter avec une autre activité le même jour.';
             }
 
-            const hasMeeting = dayTypes.indexOf('meeting') !== -1;
-            const hasLeaveOrAbsence = dayTypes.indexOf('leave') !== -1 || dayTypes.indexOf('absence') !== -1;
-            if (hasMeeting && hasLeaveOrAbsence) {
+            if (hasFullDayAbsence && hasWork) {
+                return 'Une absence d\'une journée entière ne peut pas cohabiter avec un service le même jour.';
+            }
+
+            if (hasMeeting && (hasLeave || hasAnyAbsence)) {
                 return 'Une réunion ou une formation ne peut pas être ajoutée un jour de congé ou d\'absence.';
             }
 
@@ -330,7 +337,7 @@
                 return;
             }
 
-            const conflictMessage = dayConsistencyError(type, currentDate, editingEvent);
+            const conflictMessage = dayConsistencyError(type, isFullDay, currentDate, editingEvent);
             if (conflictMessage) {
                 showError(conflictMessage);
                 return;
