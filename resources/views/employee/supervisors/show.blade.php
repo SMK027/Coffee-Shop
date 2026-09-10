@@ -63,6 +63,111 @@
             <p class="text-xs text-stone-500 mt-3">Format court signé pour un affichage compact et un scan mobile plus fiable.</p>
         </div>
 
+        @if(\App\Models\Setting::isFeatureEnabled(\App\Models\Setting::KEY_FEATURE_SECURITY_KEYS))
+            <div class="border border-stone-200 rounded-lg p-4 bg-stone-50 space-y-4" id="supervisor-security-keys">
+                <div>
+                    <h3 class="text-sm font-semibold text-stone-700">Clés de sécurité</h3>
+                    <p class="text-xs text-stone-500 mt-1">Permet d'approuver une opération sensible avec une clé physique plutôt qu'avec le PIN.</p>
+                </div>
+
+                @if($supervisor->securityKeys->isNotEmpty())
+                    <ul class="divide-y divide-stone-200 bg-white rounded-lg border border-stone-200">
+                        @foreach($supervisor->securityKeys as $securityKey)
+                            <li class="p-3 flex items-center justify-between gap-3">
+                                <div>
+                                    <p class="text-sm font-medium text-stone-800">{{ $securityKey->name ?: 'Clé sans nom' }}</p>
+                                    <p class="text-xs text-stone-400">Enregistrée le {{ $securityKey->created_at->format('d/m/Y') }}</p>
+                                </div>
+                                <form action="{{ route('employee.supervisors.security-keys.destroy', [$supervisor, $securityKey]) }}" method="POST" onsubmit="return confirm('Supprimer cette clé de sécurité ?');">
+                                    @csrf @method('DELETE')
+                                    <button type="submit" class="text-xs text-red-600 hover:text-red-800">Supprimer</button>
+                                </form>
+                            </li>
+                        @endforeach
+                    </ul>
+                @else
+                    <p class="text-xs text-stone-400 italic">Aucune clé de sécurité enregistrée pour ce superviseur.</p>
+                @endif
+
+                @error('credential')<p class="text-xs text-red-600">{{ $message }}</p>@enderror
+                @error('supervisor_pin')<p class="text-xs text-red-600">{{ $message }}</p>@enderror
+
+                <form method="POST" action="{{ route('employee.supervisors.security-keys.store', $supervisor) }}" id="register-supervisor-key-form" class="grid sm:grid-cols-3 gap-3 items-end">
+                    @csrf
+                    <input type="hidden" name="credential" id="new-supervisor-security-key-credential">
+                    <div>
+                        <label class="block text-xs font-medium text-stone-600 mb-1">Nom de la clé (optionnel)</label>
+                        <input type="text" id="supervisor_security_key_name_input" name="name"
+                               class="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-stone-600 mb-1">PIN du superviseur</label>
+                        <input type="password" id="supervisor_security_key_pin_input" maxlength="6" minlength="4" inputmode="numeric" pattern="\d{4,6}"
+                               class="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm">
+                    </div>
+                    <button type="button" id="register-supervisor-security-key"
+                            class="bg-amber-700 hover:bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                        Enregistrer une clé
+                    </button>
+                </form>
+                <p id="register-supervisor-security-key-status" class="text-xs text-stone-500"></p>
+            </div>
+
+            @include('partials.webauthn-helper')
+            <script>
+            (function () {
+                const pinInput = document.getElementById('supervisor_security_key_pin_input');
+                const nameInput = document.getElementById('supervisor_security_key_name_input');
+                const credentialInput = document.getElementById('new-supervisor-security-key-credential');
+                const form = document.getElementById('register-supervisor-key-form');
+                const registerBtn = document.getElementById('register-supervisor-security-key');
+                const status = document.getElementById('register-supervisor-security-key-status');
+                const optionsUrl = @json(route('employee.supervisors.security-keys.options', $supervisor));
+
+                registerBtn.addEventListener('click', async () => {
+                    const pin = pinInput.value.trim();
+                    if (!/^\d{4,6}$/.test(pin)) {
+                        status.textContent = 'Saisissez le PIN du superviseur (4 à 6 chiffres).';
+                        status.className = 'text-xs text-red-600';
+                        return;
+                    }
+
+                    status.textContent = 'Vérification du PIN...';
+                    status.className = 'text-xs text-stone-500';
+
+                    try {
+                        const response = await fetch(optionsUrl, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '{{ csrf_token() }}',
+                            },
+                            body: JSON.stringify({ supervisor_pin: pin }),
+                        });
+
+                        if (!response.ok) {
+                            status.textContent = 'PIN superviseur incorrect.';
+                            status.className = 'text-xs text-red-600';
+                            return;
+                        }
+
+                        status.textContent = 'Suivez les instructions de votre navigateur...';
+
+                        const optionsJson = await response.json();
+                        const credentialJson = await window.WebAuthnHelper.register(optionsJson);
+
+                        credentialInput.value = JSON.stringify(credentialJson);
+                        form.submit();
+                    } catch (error) {
+                        status.textContent = "Impossible d'enregistrer cette clé de sécurité (annulé ou non compatible).";
+                        status.className = 'text-xs text-red-600';
+                    }
+                });
+            })();
+            </script>
+        @endif
+
         @if(! $isSuperAdmin)
             <div class="border border-red-200 rounded-lg p-4 bg-red-50 space-y-4">
                 <div>

@@ -29,6 +29,8 @@ use App\Http\Controllers\Employee\ActivityLogController;
 use App\Http\Controllers\Employee\CardOfferController;
 use App\Http\Controllers\Employee\PlanningController;
 use App\Http\Controllers\Employee\MyPlanningController;
+use App\Http\Controllers\Employee\SecurityKeyController;
+use App\Http\Controllers\Employee\SupervisorSecurityKeyController;
 use App\Http\Controllers\Auth\EmployeePasswordResetController;
 use App\Http\Controllers\ProfileController;
 use App\Models\Setting;
@@ -263,10 +265,28 @@ Route::prefix('espace-employe')->name('employee.')->middleware(['auth', 'employe
     Route::patch('/superviseurs/{supervisor}/activation', [SupervisorController::class, 'toggleActivation'])->name('supervisors.toggle-activation');
     Route::delete('/superviseurs/{supervisor}', [SupervisorController::class, 'destroy'])->name('supervisors.destroy');
 
+    Route::middleware('feature:' . Setting::KEY_FEATURE_SECURITY_KEYS)->group(function () {
+        Route::post('/superviseurs/{supervisor}/cle-de-securite/options', [SupervisorSecurityKeyController::class, 'options'])
+            ->name('supervisors.security-keys.options');
+        Route::post('/superviseurs/{supervisor}/cle-de-securite', [SupervisorSecurityKeyController::class, 'store'])
+            ->name('supervisors.security-keys.store');
+        Route::delete('/superviseurs/{supervisor}/cle-de-securite/{securityKey}', [SupervisorSecurityKeyController::class, 'destroy'])
+            ->name('supervisors.security-keys.destroy');
+    });
+
     // Profil
     Route::get('/profil', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profil', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profil', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    Route::middleware('feature:' . Setting::KEY_FEATURE_SECURITY_KEYS)->group(function () {
+        Route::post('/profil/cle-de-securite/options', [SecurityKeyController::class, 'options'])
+            ->name('profile.security-keys.options');
+        Route::post('/profil/cle-de-securite', [SecurityKeyController::class, 'store'])
+            ->name('profile.security-keys.store');
+        Route::delete('/profil/cle-de-securite/{passkey}', [SecurityKeyController::class, 'destroy'])
+            ->name('profile.security-keys.destroy');
+    });
 
     // Journal d'activité (admins)
     Route::get('/journal', [ActivityLogController::class, 'index'])->name('activity-logs.index');
