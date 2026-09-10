@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Employee;
 
 use App\Http\Controllers\Controller;
 use App\Models\ScheduleShift;
+use App\Models\Setting;
 use App\Models\User;
 use App\Services\ActivityLogger;
 use Dompdf\Dompdf;
@@ -19,6 +20,7 @@ class PlanningController extends Controller
     private const EDIT_UNLOCK_SESSION_KEY = 'planning.edit_unlock';
     private const EDIT_UNLOCK_TTL_SECONDS = 1800;
     private const EMPLOYEE_ROLES = ['superadmin', 'admin', 'moderator'];
+    private const OPENING_HOURS_MARGIN_MINUTES = 30;
 
     public function index(Request $request)
     {
@@ -104,6 +106,9 @@ class PlanningController extends Controller
 
         $events = $this->eventsFor($selectedUser->id, $weekStart, $weekEnd)->flatten(1);
 
+        $openRanges = collect($this->weekDays($weekStart))
+            ->mapWithKeys(fn (Carbon $day) => [$day->toDateString() => Setting::openRangeForDate($day)]);
+
         return view('employee.plannings.edit', [
             'selectedUser' => $selectedUser,
             'weekStart' => $weekStart,
@@ -116,6 +121,8 @@ class PlanningController extends Controller
                 'end_time' => $shift->end_time ? substr((string) $shift->end_time, 0, 5) : null,
                 'title' => $shift->title,
             ])->values(),
+            'openRanges' => $openRanges,
+            'openingHoursMargin' => self::OPENING_HOURS_MARGIN_MINUTES,
         ]);
     }
 
@@ -161,6 +168,32 @@ class PlanningController extends Controller
                 throw ValidationException::withMessages([
                     'events' => 'Une plage horaire doit avoir une heure de début et une heure de fin.',
                 ]);
+            }
+
+            if ($event['type'] === ScheduleShift::TYPE_WORK) {
+                $range = Setting::openRangeForDate($eventDate);
+
+                if (! $range) {
+                    throw ValidationException::withMessages([
+                        'events' => 'La boutique est fermée le ' . $eventDate->format('d/m/Y') . ', aucun service ne peut y être planifié.',
+                    ]);
+                }
+
+                [$fromHour, $fromMinute] = array_map('intval', explode(':', $range['from']));
+                [$toHour, $toMinute] = array_map('intval', explode(':', $range['to']));
+                $openBound = $eventDate->copy()->setTime($fromHour, $fromMinute)->subMinutes(self::OPENING_HOURS_MARGIN_MINUTES);
+                $closeBound = $eventDate->copy()->setTime($toHour, $toMinute)->addMinutes(self::OPENING_HOURS_MARGIN_MINUTES);
+
+                [$startHour, $startMinute] = array_map('intval', explode(':', $event['start_time']));
+                [$endHour, $endMinute] = array_map('intval', explode(':', $event['end_time']));
+                $shiftStart = $eventDate->copy()->setTime($startHour, $startMinute);
+                $shiftEnd = $eventDate->copy()->setTime($endHour, $endMinute);
+
+                if ($shiftStart->lt($openBound) || $shiftEnd->gt($closeBound)) {
+                    throw ValidationException::withMessages([
+                        'events' => 'Le créneau du ' . $eventDate->format('d/m/Y') . ' dépasse les horaires d\'ouverture (marge de 30 minutes tolérée).',
+                    ]);
+                }
             }
         }
 

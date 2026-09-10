@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\ActivityLog;
 use App\Models\ScheduleShift;
+use App\Models\Setting;
 use App\Models\Supervisor;
 use App\Models\User;
 use App\Support\SupervisorOperation;
@@ -298,6 +299,230 @@ class PlanningHabilitationTest extends TestCase
 
         $response->assertOk();
         $response->assertHeader('Content-Type', 'application/pdf');
+    }
+
+    public function test_a_work_shift_within_the_opening_hours_margin_is_accepted(): void
+    {
+        $admin = User::factory()->create(['global_role' => 'admin']);
+        $employee = User::factory()->create(['global_role' => 'moderator']);
+        Supervisor::create([
+            'supervisor_number' => 'PLN108',
+            'password' => Hash::make('1234'),
+            'superadmin_id' => $admin->id,
+            'is_active' => true,
+            'permissions' => [SupervisorOperation::PLANNING_EDIT],
+        ]);
+
+        // Horaires par défaut du lundi : 07:00 – 19:00. La marge de 30 minutes autorise donc
+        // un service commençant à 06:30 et se terminant à 19:30.
+        $weekStart = now()->startOfWeek(Carbon::MONDAY);
+
+        $this->withoutMiddleware(PreventRequestForgery::class)
+            ->actingAs($admin)
+            ->post(route('employee.plannings.update'), [
+                'user_id' => $employee->id,
+                'week_start' => $weekStart->toDateString(),
+                'supervisor_number' => 'PLN108',
+                'supervisor_pin' => '1234',
+                'events' => [
+                    [
+                        'type' => ScheduleShift::TYPE_WORK,
+                        'date' => $weekStart->toDateString(),
+                        'start_time' => '06:30',
+                        'end_time' => '19:30',
+                        'title' => 'Ouverture',
+                    ],
+                ],
+            ])
+            ->assertRedirect(route('employee.plannings.index', [
+                'user_id' => $employee->id,
+                'week' => $weekStart->toDateString(),
+            ]));
+
+        $this->assertDatabaseHas(ScheduleShift::class, [
+            'user_id' => $employee->id,
+            'date' => $weekStart->toDateString(),
+            'title' => 'Ouverture',
+        ]);
+    }
+
+    public function test_a_work_shift_outside_the_opening_hours_margin_is_rejected(): void
+    {
+        $admin = User::factory()->create(['global_role' => 'admin']);
+        $employee = User::factory()->create(['global_role' => 'moderator']);
+        Supervisor::create([
+            'supervisor_number' => 'PLN109',
+            'password' => Hash::make('1234'),
+            'superadmin_id' => $admin->id,
+            'is_active' => true,
+            'permissions' => [SupervisorOperation::PLANNING_EDIT],
+        ]);
+
+        // Le lundi ouvre à 07:00 : un service débutant à 06:00 dépasse la marge de 30 minutes.
+        $weekStart = now()->startOfWeek(Carbon::MONDAY);
+
+        $this->withoutMiddleware(PreventRequestForgery::class)
+            ->actingAs($admin)
+            ->post(route('employee.plannings.update'), [
+                'user_id' => $employee->id,
+                'week_start' => $weekStart->toDateString(),
+                'supervisor_number' => 'PLN109',
+                'supervisor_pin' => '1234',
+                'events' => [
+                    [
+                        'type' => ScheduleShift::TYPE_WORK,
+                        'date' => $weekStart->toDateString(),
+                        'start_time' => '06:00',
+                        'end_time' => '12:00',
+                    ],
+                ],
+            ])
+            ->assertSessionHasErrors('events');
+
+        $this->assertDatabaseMissing(ScheduleShift::class, ['user_id' => $employee->id]);
+    }
+
+    public function test_a_work_shift_is_rejected_on_an_exceptionally_closed_day(): void
+    {
+        $admin = User::factory()->create(['global_role' => 'admin']);
+        $employee = User::factory()->create(['global_role' => 'moderator']);
+        Supervisor::create([
+            'supervisor_number' => 'PLN110',
+            'password' => Hash::make('1234'),
+            'superadmin_id' => $admin->id,
+            'is_active' => true,
+            'permissions' => [SupervisorOperation::PLANNING_EDIT],
+        ]);
+
+        $weekStart = now()->startOfWeek(Carbon::MONDAY);
+
+        $hours = Setting::getHours();
+        $hours['exceptions'][] = [
+            'date' => $weekStart->toDateString(),
+            'label' => 'Fermeture exceptionnelle',
+            'open' => false,
+        ];
+        Setting::set(Setting::KEY_SHOP_HOURS, json_encode($hours));
+
+        $this->withoutMiddleware(PreventRequestForgery::class)
+            ->actingAs($admin)
+            ->post(route('employee.plannings.update'), [
+                'user_id' => $employee->id,
+                'week_start' => $weekStart->toDateString(),
+                'supervisor_number' => 'PLN110',
+                'supervisor_pin' => '1234',
+                'events' => [
+                    [
+                        'type' => ScheduleShift::TYPE_WORK,
+                        'date' => $weekStart->toDateString(),
+                        'start_time' => '09:00',
+                        'end_time' => '12:00',
+                    ],
+                ],
+            ])
+            ->assertSessionHasErrors('events');
+
+        $this->assertDatabaseMissing(ScheduleShift::class, ['user_id' => $employee->id]);
+    }
+
+    public function test_an_exceptional_opening_allows_a_work_shift_on_a_normally_closed_day(): void
+    {
+        $admin = User::factory()->create(['global_role' => 'admin']);
+        $employee = User::factory()->create(['global_role' => 'moderator']);
+        Supervisor::create([
+            'supervisor_number' => 'PLN111',
+            'password' => Hash::make('1234'),
+            'superadmin_id' => $admin->id,
+            'is_active' => true,
+            'permissions' => [SupervisorOperation::PLANNING_EDIT],
+        ]);
+
+        $weekStart = now()->startOfWeek(Carbon::MONDAY);
+
+        $hours = Setting::getHours();
+        $hours['regular']['monday'] = ['open' => false, 'from' => null, 'to' => null];
+        $hours['exceptions'][] = [
+            'date' => $weekStart->toDateString(),
+            'label' => 'Ouverture exceptionnelle',
+            'open' => true,
+            'from' => '10:00',
+            'to' => '14:00',
+        ];
+        Setting::set(Setting::KEY_SHOP_HOURS, json_encode($hours));
+
+        $this->withoutMiddleware(PreventRequestForgery::class)
+            ->actingAs($admin)
+            ->post(route('employee.plannings.update'), [
+                'user_id' => $employee->id,
+                'week_start' => $weekStart->toDateString(),
+                'supervisor_number' => 'PLN111',
+                'supervisor_pin' => '1234',
+                'events' => [
+                    [
+                        'type' => ScheduleShift::TYPE_WORK,
+                        'date' => $weekStart->toDateString(),
+                        'start_time' => '10:00',
+                        'end_time' => '13:00',
+                        'title' => 'Vente spéciale',
+                    ],
+                ],
+            ])
+            ->assertRedirect(route('employee.plannings.index', [
+                'user_id' => $employee->id,
+                'week' => $weekStart->toDateString(),
+            ]));
+
+        $this->assertDatabaseHas(ScheduleShift::class, [
+            'user_id' => $employee->id,
+            'date' => $weekStart->toDateString(),
+            'title' => 'Vente spéciale',
+        ]);
+    }
+
+    public function test_an_exceptional_opening_still_enforces_its_own_hours(): void
+    {
+        $admin = User::factory()->create(['global_role' => 'admin']);
+        $employee = User::factory()->create(['global_role' => 'moderator']);
+        Supervisor::create([
+            'supervisor_number' => 'PLN112',
+            'password' => Hash::make('1234'),
+            'superadmin_id' => $admin->id,
+            'is_active' => true,
+            'permissions' => [SupervisorOperation::PLANNING_EDIT],
+        ]);
+
+        $weekStart = now()->startOfWeek(Carbon::MONDAY);
+
+        $hours = Setting::getHours();
+        $hours['regular']['monday'] = ['open' => false, 'from' => null, 'to' => null];
+        $hours['exceptions'][] = [
+            'date' => $weekStart->toDateString(),
+            'label' => 'Ouverture exceptionnelle',
+            'open' => true,
+            'from' => '10:00',
+            'to' => '14:00',
+        ];
+        Setting::set(Setting::KEY_SHOP_HOURS, json_encode($hours));
+
+        $this->withoutMiddleware(PreventRequestForgery::class)
+            ->actingAs($admin)
+            ->post(route('employee.plannings.update'), [
+                'user_id' => $employee->id,
+                'week_start' => $weekStart->toDateString(),
+                'supervisor_number' => 'PLN112',
+                'supervisor_pin' => '1234',
+                'events' => [
+                    [
+                        'type' => ScheduleShift::TYPE_WORK,
+                        'date' => $weekStart->toDateString(),
+                        'start_time' => '08:00',
+                        'end_time' => '09:00',
+                    ],
+                ],
+            ])
+            ->assertSessionHasErrors('events');
+
+        $this->assertDatabaseMissing(ScheduleShift::class, ['user_id' => $employee->id]);
     }
 
     public function test_supervisor_with_planning_pdf_habilitation_can_generate_the_pdf(): void

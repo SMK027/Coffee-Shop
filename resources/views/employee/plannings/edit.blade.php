@@ -98,10 +98,38 @@
     (function () {
         const initialEvents = @js($initialEvents);
         const weekStart = @js($weekStart->toDateString());
+        const openRanges = @js($openRanges);
+        const openingHoursMargin = @js($openingHoursMargin);
 
         function pad(n) { return String(n).padStart(2, '0'); }
         function toDateStr(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
         function toTimeStr(d) { return pad(d.getHours()) + ':' + pad(d.getMinutes()); }
+
+        function toMinutes(hhmm) {
+            const parts = hhmm.split(':').map(Number);
+            return parts[0] * 60 + parts[1];
+        }
+
+        // Bornes horaires autorisées (en minutes depuis minuit) pour une date donnée, marge de
+        // tolérance incluse. Retourne null si la boutique est fermée ce jour-là (fermeture
+        // régulière ou exceptionnelle) : aucun service ne peut alors y être planifié.
+        function allowedBoundsFor(dateStr) {
+            const range = openRanges[dateStr];
+            if (!range) return null;
+            return {
+                start: toMinutes(range.from) - openingHoursMargin,
+                end: toMinutes(range.to) + openingHoursMargin,
+            };
+        }
+
+        const businessHours = Object.keys(openRanges).reduce(function (acc, dateStr) {
+            const range = openRanges[dateStr];
+            if (range) {
+                const dow = new Date(dateStr + 'T00:00:00').getDay();
+                acc.push({ daysOfWeek: [dow], startTime: range.from, endTime: range.to });
+            }
+            return acc;
+        }, []);
 
         function typeLabel(type) {
             return type === 'leave' ? 'Congé' : (type === 'absence' ? 'Absence' : 'Travail');
@@ -143,6 +171,19 @@
             height: 'auto',
             selectable: true,
             editable: true,
+            businessHours: businessHours,
+            selectAllow: function (info) {
+                // La ligne "Journée" (congés/absences) n'est pas soumise aux horaires d'ouverture.
+                if (info.allDay) return true;
+
+                const dateStr = info.startStr.slice(0, 10);
+                const bounds = allowedBoundsFor(dateStr);
+                if (!bounds) return false;
+
+                const startMin = info.start.getHours() * 60 + info.start.getMinutes();
+                const endMin = info.end.getHours() * 60 + info.end.getMinutes();
+                return startMin >= bounds.start && endMin <= bounds.end;
+            },
             events: initialEvents.map(function (e) {
                 return buildEventInput(e.type, e.date, e.start_time, e.end_time, e.title);
             }),
@@ -246,6 +287,18 @@
             if (!isFullDay && end <= start) {
                 showError('L\'heure de fin doit être après l\'heure de début.');
                 return;
+            }
+
+            if (type === 'work') {
+                const bounds = allowedBoundsFor(currentDate);
+                if (!bounds) {
+                    showError('La boutique est fermée ce jour-là : aucun service ne peut y être planifié.');
+                    return;
+                }
+                if (toMinutes(start) < bounds.start || toMinutes(end) > bounds.end) {
+                    showError('Le créneau doit rester dans les horaires d\'ouverture (marge de 30 minutes tolérée).');
+                    return;
+                }
             }
 
             const rawTitle = titleInput.value.trim();

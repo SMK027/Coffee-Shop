@@ -258,6 +258,43 @@ class Setting extends Model
         return self::timeInRange($now, $regular['from'] ?? '00:00', $regular['to'] ?? '23:59', $marginMinutes);
     }
 
+    /**
+     * Retourne la plage horaire effective (ouverture/fermeture) pour une date donnée, en tenant
+     * compte des exceptions (fermeture ou ouverture exceptionnelle) avant de retomber sur les
+     * horaires réguliers du jour de semaine correspondant. Retourne null si la boutique est fermée
+     * ce jour-là.
+     *
+     * @return array{from: string, to: string}|null
+     */
+    public static function openRangeForDate(\Carbon\Carbon $date): ?array
+    {
+        $hours = self::getHours();
+        $dateStr = $date->toDateString();
+        $day = strtolower($date->format('l'));
+
+        foreach ($hours['exceptions'] as $exception) {
+            if (($exception['date'] ?? '') === $dateStr) {
+                if (!($exception['open'] ?? false)) {
+                    return null;
+                }
+                return [
+                    'from' => $exception['from'] ?? '00:00',
+                    'to' => $exception['to'] ?? '23:59',
+                ];
+            }
+        }
+
+        $regular = $hours['regular'][$day] ?? ['open' => false];
+        if (!($regular['open'] ?? false)) {
+            return null;
+        }
+
+        return [
+            'from' => $regular['from'] ?? '00:00',
+            'to' => $regular['to'] ?? '23:59',
+        ];
+    }
+
     private static function timeInRange(\Carbon\Carbon $now, string $from, string $to, int $marginMinutes): bool
     {
         [$fh, $fm] = array_map('intval', explode(':', $from));
