@@ -153,12 +153,14 @@ Route::prefix('espace-employe')->name('employee.')->middleware(['auth', 'employe
 
     // Récapitulatifs journaliers
     Route::get('/recapitulatifs', [DailyReportController::class, 'index'])->name('daily-reports.index');
-    Route::get('/recapitulatifs/{dailyReport}', [DailyReportController::class, 'show'])->name('daily-reports.show');
 
     Route::middleware('feature:' . Setting::KEY_FEATURE_DAILY_REPORTS)->group(function () {
         Route::get('/recapitulatifs/nouveau', [DailyReportController::class, 'create'])->name('daily-reports.create');
         Route::post('/recapitulatifs', [DailyReportController::class, 'store'])->name('daily-reports.store');
     });
+
+    // La route à paramètre doit être déclarée après "/nouveau" pour ne pas l'intercepter.
+    Route::get('/recapitulatifs/{dailyReport}', [DailyReportController::class, 'show'])->name('daily-reports.show');
 
     // Gestion du menu
     Route::get('/boissons', [DrinkController::class, 'index'])->name('drinks.index');
