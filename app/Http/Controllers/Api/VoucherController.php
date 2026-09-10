@@ -96,12 +96,15 @@ class VoucherController extends Controller
             $restrictedName = $name;
         }
 
-        // Superadmin handling or supervisor validation for regular admins/moderators
+        // La validation superviseur (avec vérification d'habilitation) est
+        // toujours exigée, y compris pour un super administrateur : seule
+        // l'identité attribuée à l'émission du bon diffère selon le rôle.
+        $supervisor = $this->requireSuperAdminOrSupervisor($request, 'Validation du superviseur requise.');
+
         if (auth()->user()->isSuperAdmin()) {
             $superadminId = auth()->id();
             $superadminName = auth()->user()->name;
         } else {
-            $supervisor = $this->requireSuperAdminOrSupervisor($request, 'Validation du superviseur requise.');
             if (! $supervisor?->superadmin) {
                 return response()->json(['message' => 'Superviseur invalide.'], 422);
             }
@@ -309,9 +312,11 @@ class VoucherController extends Controller
     /**
      * Supprime un bon d'achat.
      */
-    public function destroy(Voucher $voucher): JsonResponse
+    public function destroy(Request $request, Voucher $voucher): JsonResponse
     {
         abort_unless(auth()->user()?->isAdmin() || auth()->user()?->isModerator(), 403);
+
+        $this->requireSuperAdminOrSupervisor($request, 'Validation du superviseur requise.');
 
         $voucher->delete();
 

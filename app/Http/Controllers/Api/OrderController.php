@@ -434,9 +434,7 @@ class OrderController extends Controller
             return response()->json(['message' => 'La commande doit être annulée pour être supprimée.'], 403);
         }
 
-        if (! $user?->isSuperAdmin()) {
-            $this->requireSuperAdminOrSupervisor($request, 'Action réservée aux super administrateurs ou à un superviseur valide.');
-        }
+        $this->requireSuperAdminOrSupervisor($request, 'Action réservée aux super administrateurs ou à un superviseur valide.');
 
         DB::transaction(function () use ($order, $user) {
             $order->load('loyaltyCard', 'loyaltyDiscounts', 'voucher');
@@ -495,7 +493,7 @@ class OrderController extends Controller
         }
 
         $currentStatus = $order->orderStatus;
-        if ($currentStatus?->is_terminal && !Auth::user()?->isSuperAdmin()) {
+        if ($currentStatus?->is_terminal) {
             $this->requireSuperAdminOrSupervisor($request, 'Validation superviseur requise pour changer ce statut.');
         }
 
