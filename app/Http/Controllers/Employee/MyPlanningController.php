@@ -26,6 +26,9 @@ class MyPlanningController extends Controller
             'weekEnd' => $weekEnd,
             'events' => $events,
             'days' => collect(range(0, 6))->map(fn ($i) => $weekStart->copy()->addDays($i))->all(),
+            'totalWorkedLabel' => ScheduleShift::formatDuration(
+                ScheduleShift::totalWorkedMinutes($events->flatten(1))
+            ),
         ]);
     }
 

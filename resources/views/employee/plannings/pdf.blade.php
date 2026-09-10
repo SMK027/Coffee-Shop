@@ -95,6 +95,22 @@
             color: #a8a29e;
             font-style: italic;
         }
+
+        .muted-total {
+            font-size: 8.5px;
+            color: #78716c;
+            margin: 0 0 2mm 0;
+        }
+
+        .badge-leave {
+            color: #15803d;
+            font-weight: bold;
+        }
+
+        .badge-absence {
+            color: #b91c1c;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -107,7 +123,12 @@
     </div>
 
     <div class="meta">
-        Document généré le {{ $generatedAt->format('d/m/Y H:i') }}
+        Document généré le {{ $generatedAt->format('d/m/Y H:i') }}<br>
+        Émis par le superviseur #{{ $issuedBySupervisor->supervisor_number }}
+        @php($issuerName = $issuedBySupervisor->holderAdmin?->name ?? $issuedBySupervisor->superadmin?->name)
+        @if($issuerName)
+            ({{ $issuerName }})
+        @endif
     </div>
 
     @foreach($schedules as $schedule)
@@ -115,6 +136,7 @@
             @if($title !== 'Planning individuel')
                 <p class="employee-name">{{ $schedule['employee']->name }}</p>
             @endif
+            <p class="muted-total">Total travaillé : {{ $schedule['totalWorkedLabel'] }}</p>
 
             <table>
                 <thead>
@@ -133,7 +155,16 @@
                             <td>
                                 @forelse($schedule['events']->get($day->toDateString(), collect()) as $shift)
                                     <div class="event">
-                                        <span class="event-time">{{ substr($shift->start_time, 0, 5) }}-{{ substr($shift->end_time, 0, 5) }}</span>
+                                        @if($shift->type === \App\Models\ScheduleShift::TYPE_WORK)
+                                            <span class="event-time">{{ substr($shift->start_time, 0, 5) }}-{{ substr($shift->end_time, 0, 5) }}</span>
+                                        @else
+                                            <span class="{{ $shift->type === \App\Models\ScheduleShift::TYPE_LEAVE ? 'badge-leave' : 'badge-absence' }}">
+                                                {{ $shift->typeLabel() }}
+                                                @if(! $shift->isFullDay())
+                                                    ({{ substr($shift->start_time, 0, 5) }}-{{ substr($shift->end_time, 0, 5) }})
+                                                @endif
+                                            </span>
+                                        @endif
                                         @if($shift->title)
                                             <br>{{ $shift->title }}
                                         @endif

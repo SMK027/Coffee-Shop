@@ -242,6 +242,7 @@ Route::prefix('espace-employe')->name('employee.')->middleware(['auth', 'employe
 
     // Plannings (gestion, admin uniquement)
     Route::get('/plannings', [PlanningController::class, 'index'])->name('plannings.index');
+    Route::get('/plannings/employes/recherche', [PlanningController::class, 'searchEmployees'])->name('plannings.employees.search');
     Route::post('/plannings/modifier', [PlanningController::class, 'edit'])->name('plannings.edit');
     Route::post('/plannings', [PlanningController::class, 'update'])->name('plannings.update');
     Route::post('/plannings/pdf', [PlanningController::class, 'generatePdf'])->name('plannings.pdf');

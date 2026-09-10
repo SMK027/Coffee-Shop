@@ -12,17 +12,14 @@
     @endif
 
     <div class="bg-white rounded-xl shadow-sm border border-stone-100 p-4 mb-4 flex flex-wrap items-end gap-4">
-        <form method="GET" action="{{ route('employee.plannings.index') }}" class="flex flex-col">
-            <label for="planning-user-select" class="text-xs font-medium text-stone-500 mb-1">Salarié</label>
-            <select name="user_id" id="planning-user-select" onchange="this.form.submit()"
-                    class="border border-stone-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none min-w-[220px]">
-                @foreach($employees as $employee)
-                    <option value="{{ $employee->id }}" {{ $selectedUser && (int) $selectedUser->id === (int) $employee->id ? 'selected' : '' }}>
-                        {{ $employee->name }}
-                    </option>
-                @endforeach
-            </select>
+        <form method="GET" action="{{ route('employee.plannings.index') }}" id="planning-employee-form" class="flex flex-col relative">
+            <label for="planning-employee-search" class="text-xs font-medium text-stone-500 mb-1">Salarié</label>
+            <input type="text" id="planning-employee-search" autocomplete="off" placeholder="Rechercher un salarié..."
+                   value="{{ $selectedUser?->name }}"
+                   class="border border-stone-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none min-w-[220px]">
+            <input type="hidden" name="user_id" id="planning-employee-id" value="{{ $selectedUser?->id }}">
             <input type="hidden" name="week" value="{{ $weekStart->toDateString() }}">
+            <ul id="planning-employee-dropdown" class="hidden absolute top-full left-0 mt-1 w-full bg-white border border-stone-200 rounded-lg shadow-lg z-10 max-h-64 overflow-y-auto"></ul>
         </form>
 
         <div class="flex items-center gap-2">
@@ -43,7 +40,10 @@
     @if($selectedUser)
         <div class="bg-white rounded-xl shadow-sm border border-stone-100 p-4 mb-4">
             <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
-                <h2 class="text-base font-semibold text-stone-800">Planning de {{ $selectedUser->name }}</h2>
+                <div>
+                    <h2 class="text-base font-semibold text-stone-800">Planning de {{ $selectedUser->name }}</h2>
+                    <p class="text-xs text-stone-500 mt-0.5">Total travaillé cette semaine : <span class="font-medium text-stone-700">{{ $totalWorkedLabel }}</span></p>
+                </div>
 
                 @if($isEditableWeek)
                     <button type="button" onclick="document.getElementById('planning-edit-panel').classList.toggle('hidden')"
@@ -64,14 +64,28 @@
                         </div>
                         <div class="p-2 space-y-1.5 min-h-[64px]">
                             @forelse($events->get($day->toDateString(), collect()) as $shift)
-                                <div class="bg-amber-50 border border-amber-100 rounded-lg px-2 py-1.5">
-                                    <p class="text-xs font-medium text-amber-900">
-                                        {{ substr($shift->start_time, 0, 5) }} – {{ substr($shift->end_time, 0, 5) }}
-                                    </p>
-                                    @if($shift->title)
-                                        <p class="text-xs text-amber-700">{{ $shift->title }}</p>
-                                    @endif
-                                </div>
+                                @if($shift->type === \App\Models\ScheduleShift::TYPE_WORK)
+                                    <div class="bg-amber-50 border border-amber-100 rounded-lg px-2 py-1.5">
+                                        <p class="text-xs font-medium text-amber-900">
+                                            {{ substr($shift->start_time, 0, 5) }} – {{ substr($shift->end_time, 0, 5) }}
+                                        </p>
+                                        @if($shift->title)
+                                            <p class="text-xs text-amber-700">{{ $shift->title }}</p>
+                                        @endif
+                                    </div>
+                                @else
+                                    <div class="{{ $shift->type === \App\Models\ScheduleShift::TYPE_LEAVE ? 'bg-green-50 border-green-100 text-green-800' : 'bg-red-50 border-red-100 text-red-800' }} border rounded-lg px-2 py-1.5">
+                                        <p class="text-xs font-semibold">
+                                            {{ $shift->typeLabel() }}
+                                            @if(! $shift->isFullDay())
+                                                ({{ substr($shift->start_time, 0, 5) }} – {{ substr($shift->end_time, 0, 5) }})
+                                            @endif
+                                        </p>
+                                        @if($shift->title)
+                                            <p class="text-xs opacity-80">{{ $shift->title }}</p>
+                                        @endif
+                                    </div>
+                                @endif
                             @empty
                                 <p class="text-xs text-stone-300 italic">—</p>
                             @endforelse
@@ -195,5 +209,61 @@
             </div>
         </form>
     @endif
+
+    <script>
+    (function () {
+        const form     = document.getElementById('planning-employee-form');
+        const search   = document.getElementById('planning-employee-search');
+        const hidden   = document.getElementById('planning-employee-id');
+        const dropdown = document.getElementById('planning-employee-dropdown');
+        const searchUrl = @json(route('employee.plannings.employees.search'));
+        let debounce;
+
+        function closeDropdown() {
+            dropdown.classList.add('hidden');
+            dropdown.innerHTML = '';
+        }
+
+        function render(results) {
+            dropdown.innerHTML = '';
+            if (!results.length) {
+                dropdown.innerHTML = '<li class="px-3 py-2.5 text-sm text-stone-400 italic">Aucun salarié trouvé</li>';
+                dropdown.classList.remove('hidden');
+                return;
+            }
+            results.forEach(u => {
+                const li = document.createElement('li');
+                li.className = 'px-3 py-2.5 cursor-pointer text-sm hover:bg-stone-50';
+                li.textContent = u.name;
+                li.addEventListener('click', () => {
+                    hidden.value = u.id;
+                    search.value = u.name;
+                    closeDropdown();
+                    form.submit();
+                });
+                dropdown.appendChild(li);
+            });
+            dropdown.classList.remove('hidden');
+        }
+
+        search.addEventListener('input', () => {
+            hidden.value = '';
+            const q = search.value.trim();
+            clearTimeout(debounce);
+            debounce = setTimeout(() => {
+                fetch(searchUrl + '?q=' + encodeURIComponent(q), {
+                    headers: { 'Accept': 'application/json' },
+                })
+                    .then(r => r.json())
+                    .then(render)
+                    .catch(closeDropdown);
+            }, 200);
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!form.contains(e.target)) closeDropdown();
+        });
+    })();
+    </script>
 
 </x-employee-layout>

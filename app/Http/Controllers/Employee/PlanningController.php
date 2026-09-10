@@ -36,6 +36,10 @@ class PlanningController extends Controller
             ? $this->eventsFor($selectedUser->id, $weekStart, $weekEnd)
             : collect();
 
+        $totalWorkedLabel = ScheduleShift::formatDuration(
+            ScheduleShift::totalWorkedMinutes($events->flatten(1))
+        );
+
         return view('employee.plannings.index', [
             'employees' => $employees,
             'selectedUser' => $selectedUser,
@@ -44,7 +48,28 @@ class PlanningController extends Controller
             'isEditableWeek' => $isEditableWeek,
             'events' => $events,
             'days' => $this->weekDays($weekStart),
+            'totalWorkedLabel' => $totalWorkedLabel,
         ]);
+    }
+
+    public function searchEmployees(Request $request)
+    {
+        abort_unless(auth()->user()->isAdmin(), 403);
+
+        $search = $request->string('q')->trim()->value();
+
+        $employees = $this->employeesQuery()
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                        ->orWhere('username', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%");
+                });
+            })
+            ->limit(10)
+            ->get(['id', 'name', 'global_role']);
+
+        return response()->json($employees);
     }
 
     public function edit(Request $request)
@@ -85,9 +110,10 @@ class PlanningController extends Controller
             'weekEnd' => $weekEnd,
             'days' => $this->weekDays($weekStart),
             'initialEvents' => $events->map(fn (ScheduleShift $shift) => [
+                'type' => $shift->type,
                 'date' => $shift->date->toDateString(),
-                'start_time' => substr((string) $shift->start_time, 0, 5),
-                'end_time' => substr((string) $shift->end_time, 0, 5),
+                'start_time' => $shift->start_time ? substr((string) $shift->start_time, 0, 5) : null,
+                'end_time' => $shift->end_time ? substr((string) $shift->end_time, 0, 5) : null,
                 'title' => $shift->title,
             ])->values(),
         ]);
@@ -101,9 +127,10 @@ class PlanningController extends Controller
             'user_id' => ['required', 'integer', Rule::in($this->employeesQuery()->pluck('id')->all())],
             'week_start' => ['required', 'date'],
             'events' => ['nullable', 'array'],
+            'events.*.type' => ['required', Rule::in(ScheduleShift::TYPES)],
             'events.*.date' => ['required', 'date'],
-            'events.*.start_time' => ['required', 'date_format:H:i'],
-            'events.*.end_time' => ['required', 'date_format:H:i', 'after:events.*.start_time'],
+            'events.*.start_time' => ['nullable', 'required_if:events.*.type,' . ScheduleShift::TYPE_WORK, 'date_format:H:i'],
+            'events.*.end_time' => ['nullable', 'required_if:events.*.type,' . ScheduleShift::TYPE_WORK, 'date_format:H:i', 'after:events.*.start_time'],
             'events.*.title' => ['nullable', 'string', 'max:120'],
         ]);
 
@@ -121,6 +148,18 @@ class PlanningController extends Controller
             if ($eventDate->lt($weekStart) || $eventDate->gt($weekEnd)) {
                 throw ValidationException::withMessages([
                     'events' => 'Un événement est en dehors de la semaine sélectionnée.',
+                ]);
+            }
+
+            if ($event['type'] === ScheduleShift::TYPE_LEAVE && (! empty($event['start_time'] ?? null) || ! empty($event['end_time'] ?? null))) {
+                throw ValidationException::withMessages([
+                    'events' => 'Un congé est toujours posé sur une journée entière, sans horaires.',
+                ]);
+            }
+
+            if (! empty($event['start_time'] ?? null) !== ! empty($event['end_time'] ?? null)) {
+                throw ValidationException::withMessages([
+                    'events' => 'Une plage horaire doit avoir une heure de début et une heure de fin.',
                 ]);
             }
         }
@@ -150,9 +189,10 @@ class PlanningController extends Controller
             foreach ($validated['events'] ?? [] as $event) {
                 ScheduleShift::create([
                     'user_id' => $validated['user_id'],
+                    'type' => $event['type'],
                     'date' => $event['date'],
-                    'start_time' => $event['start_time'],
-                    'end_time' => $event['end_time'],
+                    'start_time' => $event['start_time'] ?? null,
+                    'end_time' => $event['end_time'] ?? null,
                     'title' => $event['title'] ?? null,
                     'created_by_id' => auth()->id(),
                 ]);
@@ -192,10 +232,11 @@ class PlanningController extends Controller
             'selected_users.min' => 'Sélectionnez au moins un salarié.',
         ]);
 
-        $this->requireStrictSupervisorValidation(
+        $validatedSupervisor = $this->requireStrictSupervisorValidation(
             $request,
             'La génération du planning PDF exige une validation superviseur.'
         );
+        $validatedSupervisor->load(['holderAdmin:id,name', 'superadmin:id,name']);
 
         $weekStart = Carbon::parse($validated['week_start'])->startOfWeek(Carbon::MONDAY);
         $weekEnd = $weekStart->copy()->endOfWeek(Carbon::SUNDAY);
@@ -209,10 +250,17 @@ class PlanningController extends Controller
             ]);
         }
 
-        $schedules = $employees->map(fn (User $employee) => [
-            'employee' => $employee,
-            'events' => $this->eventsFor($employee->id, $weekStart, $weekEnd),
-        ]);
+        $schedules = $employees->map(function (User $employee) use ($weekStart, $weekEnd) {
+            $events = $this->eventsFor($employee->id, $weekStart, $weekEnd);
+
+            return [
+                'employee' => $employee,
+                'events' => $events,
+                'totalWorkedLabel' => ScheduleShift::formatDuration(
+                    ScheduleShift::totalWorkedMinutes($events->flatten(1))
+                ),
+            ];
+        });
 
         ActivityLogger::log(
             'planning.pdf_created',
@@ -222,6 +270,7 @@ class PlanningController extends Controller
             [
                 'employee_ids' => $employees->pluck('id')->all(),
                 'week_start' => $weekStart->toDateString(),
+                'validated_by_supervisor' => $validatedSupervisor->supervisor_number,
             ]
         );
 
@@ -232,6 +281,7 @@ class PlanningController extends Controller
             'weekEnd' => $weekEnd,
             'title' => $employees->count() === 1 ? 'Planning individuel' : 'Tableau de service',
             'generatedAt' => now(),
+            'issuedBySupervisor' => $validatedSupervisor,
         ])->render();
 
         $options = new Options();
