@@ -173,6 +173,12 @@ class ActivityLogger
         'employee.users.destroy'             => 'Suppression d\'un salarié',
         'employee.users.reset-link'          => 'Envoi d\'un lien de réinitialisation de mot de passe salarié',
         'employee.users.toggle-activation'   => 'Activation/désactivation d\'un salarié',
+        // Plannings
+        'employee.plannings.index'           => 'Consultation des plannings salariés',
+        'employee.plannings.edit'            => 'Passage en mode édition du planning salarié',
+        'employee.plannings.update'          => 'Modification du planning salarié',
+        'employee.plannings.pdf'             => 'Génération du planning au format PDF',
+        'employee.my-planning.index'         => 'Consultation de mon planning',
         // Superviseurs
         'employee.supervisors.index'           => 'Consultation des superviseurs',
         'employee.supervisors.create'          => 'Ouverture du formulaire de création d\'un superviseur',

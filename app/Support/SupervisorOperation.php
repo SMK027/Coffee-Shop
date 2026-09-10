@@ -29,6 +29,8 @@ final class SupervisorOperation
     public const SUPERVISION_PERMANENT = 'supervision_permanent';
     public const PDF_BOARD = 'pdf_board';
     public const QR_LOGIN = 'qr_login';
+    public const PLANNING_EDIT = 'planning_edit';
+    public const PLANNING_PDF = 'planning_pdf';
 
     /** Libellés affichés dans la page de gestion des superviseurs. */
     public const LABELS = [
@@ -47,6 +49,8 @@ final class SupervisorOperation
         self::SUPERVISION_PERMANENT => 'Activation du mode superviseur permanent',
         self::PDF_BOARD => 'Génération de planches PDF de connexion',
         self::QR_LOGIN => 'Connexion par QR code',
+        self::PLANNING_EDIT => 'Modification des plannings salariés',
+        self::PLANNING_PDF => 'Génération des plannings au format PDF',
     ];
 
     /** Correspondance nom de route web → opération. */
@@ -103,6 +107,10 @@ final class SupervisorOperation
         'employee.supervisors.pdf-board' => self::PDF_BOARD,
 
         'login.qr.store' => self::QR_LOGIN,
+
+        'employee.plannings.edit' => self::PLANNING_EDIT,
+        'employee.plannings.update' => self::PLANNING_EDIT,
+        'employee.plannings.pdf' => self::PLANNING_PDF,
     ];
 
     /**
