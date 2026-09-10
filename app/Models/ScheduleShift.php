@@ -48,13 +48,13 @@ class ScheduleShift extends Model
         return self::LABELS[$this->type] ?? null;
     }
 
-    /** Total en minutes des événements de type "travail" (congés/absences exclus). */
+    /** Total en minutes de toutes les activités planifiées (congés et absences exclus). */
     public static function totalWorkedMinutes(iterable $shifts): int
     {
         $minutes = 0;
 
         foreach ($shifts as $shift) {
-            if ($shift->type !== self::TYPE_WORK || $shift->start_time === null || $shift->end_time === null) {
+            if (in_array($shift->type, [self::TYPE_LEAVE, self::TYPE_ABSENCE], true) || $shift->start_time === null || $shift->end_time === null) {
                 continue;
             }
 
