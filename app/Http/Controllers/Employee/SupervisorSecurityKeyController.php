@@ -111,10 +111,7 @@ class SupervisorSecurityKeyController extends Controller
         }
 
         try {
-            $credential = WebAuthn::fromJson(
-                json_encode($validated['credential']) ?: '{}',
-                PublicKeyCredential::class
-            );
+            $credential = WebAuthn::fromJson($validated['credential'], PublicKeyCredential::class);
         } catch (\Throwable) {
             throw ValidationException::withMessages([
                 'credential' => 'Clé de sécurité invalide ou requête corrompue.',
