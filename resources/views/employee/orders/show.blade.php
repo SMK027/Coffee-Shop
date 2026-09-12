@@ -79,12 +79,13 @@
                         <form action="{{ route('employee.orders.items.store', $order) }}" method="POST" class="space-y-2">
                             @csrf
                             <div class="grid sm:grid-cols-[1fr_auto] gap-2">
-                                <select name="drink_id" class="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
-                                    <option value="">— Sélectionner une boisson —</option>
-                                    @foreach($availableDrinks as $drink)
-                                        <option value="{{ $drink->id }}">{{ $drink->name }} ({{ number_format($drink->price, 2, ',', ' ') }} €)</option>
-                                    @endforeach
-                                </select>
+                                <div class="relative">
+                                    <input type="hidden" name="drink_id" id="add-item-drink-id" value="">
+                                    <input type="text" id="add-item-drink-search"
+                                           class="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+                                           placeholder="Rechercher une boisson…" autocomplete="off">
+                                    <ul id="add-item-drink-dropdown" class="hidden absolute z-20 w-full bg-white border border-stone-200 rounded-lg shadow-lg mt-1 max-h-56 overflow-y-auto"></ul>
+                                </div>
                                 <input type="number" name="quantity" value="1" min="1" max="250"
                                        class="w-full sm:w-24 border border-stone-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
                                        placeholder="Qté">
@@ -104,6 +105,98 @@
                             </button>
                         </form>
                     </div>
+
+                    <script>
+                    (function () {
+                        const drinks = @js($availableDrinks->map(fn($d) => [
+                            'id' => $d->id,
+                            'name' => $d->name,
+                            'price' => (float) $d->price,
+                            'category' => $d->category->name ?? '',
+                        ]));
+
+                        const searchInput = document.getElementById('add-item-drink-search');
+                        const hiddenInput = document.getElementById('add-item-drink-id');
+                        const dropdown    = document.getElementById('add-item-drink-dropdown');
+                        if (!searchInput) return;
+
+                        let activeIdx = -1;
+                        let results = [];
+
+                        function filterDrinks(q) {
+                            const s = q.toLowerCase().trim();
+                            return s ? drinks.filter(d => d.name.toLowerCase().includes(s) || d.category.toLowerCase().includes(s)) : drinks;
+                        }
+
+                        function renderDropdown() {
+                            dropdown.innerHTML = '';
+                            if (!results.length) {
+                                dropdown.innerHTML = '<li class="px-3 py-2.5 text-sm text-stone-400 italic">Aucun résultat</li>';
+                                dropdown.classList.remove('hidden');
+                                return;
+                            }
+                            results.forEach((d, i) => {
+                                const li = document.createElement('li');
+                                li.className = ['flex items-center justify-between gap-3 px-3 py-2.5 cursor-pointer text-sm transition-colors',
+                                    i === activeIdx ? 'bg-amber-50' : 'hover:bg-stone-50'].join(' ');
+                                li.dataset.id = d.id;
+                                li.innerHTML = '<span class="min-w-0 flex items-center gap-1 flex-1 overflow-hidden"><span class="text-xs text-stone-400 flex-shrink-0">' + d.category + '</span><span class="ml-1 font-medium text-stone-800 truncate">' + d.name + '</span></span><span class="text-amber-700 font-semibold whitespace-nowrap text-xs flex-shrink-0 ml-2">' + d.price.toFixed(2).replace('.', ',') + ' €</span>';
+                                dropdown.appendChild(li);
+                            });
+                            dropdown.classList.remove('hidden');
+                        }
+
+                        function open() {
+                            results = hiddenInput.value ? drinks : filterDrinks(searchInput.value);
+                            activeIdx = -1;
+                            renderDropdown();
+                        }
+
+                        function close() {
+                            dropdown.classList.add('hidden');
+                            activeIdx = -1;
+                        }
+
+                        function pick(d) {
+                            hiddenInput.value = d.id;
+                            searchInput.value = d.category + ' · ' + d.name;
+                            searchInput.classList.remove('border-red-400', 'bg-red-50');
+                            close();
+                        }
+
+                        searchInput.addEventListener('focus', open);
+                        searchInput.addEventListener('input', function () {
+                            hiddenInput.value = '';
+                            results = filterDrinks(searchInput.value);
+                            activeIdx = -1;
+                            renderDropdown();
+                        });
+                        searchInput.addEventListener('keydown', function (e) {
+                            if (dropdown.classList.contains('hidden')) {
+                                if (e.key === 'ArrowDown') open();
+                                return;
+                            }
+                            if (e.key === 'ArrowDown') { e.preventDefault(); activeIdx = Math.min(activeIdx + 1, results.length - 1); renderDropdown(); }
+                            else if (e.key === 'ArrowUp') { e.preventDefault(); activeIdx = Math.max(activeIdx - 1, 0); renderDropdown(); }
+                            else if (e.key === 'Enter') { e.preventDefault(); if (activeIdx >= 0 && results[activeIdx]) pick(results[activeIdx]); }
+                            else if (e.key === 'Escape') { close(); if (!hiddenInput.value) searchInput.value = ''; }
+                        });
+                        dropdown.addEventListener('mousedown', function (e) { e.preventDefault(); });
+                        dropdown.addEventListener('click', function (e) {
+                            const li = e.target.closest('li[data-id]');
+                            if (li) {
+                                const d = drinks.find(x => x.id == li.dataset.id);
+                                if (d) pick(d);
+                            }
+                        });
+                        searchInput.addEventListener('blur', function () {
+                            setTimeout(function () {
+                                close();
+                                if (!hiddenInput.value) searchInput.value = '';
+                            }, 160);
+                        });
+                    })();
+                    </script>
                 @endif
                 <div class="mt-4 pt-4 border-t border-stone-100 space-y-1.5">
                         @php

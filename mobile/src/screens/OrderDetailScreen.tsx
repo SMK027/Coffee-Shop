@@ -60,6 +60,7 @@ export default function OrderDetailScreen() {
   const scannerLocked = React.useRef(false);
   const [addItemModalVisible, setAddItemModalVisible] = useState(false);
   const [availableDrinks, setAvailableDrinks] = useState<Drink[]>([]);
+  const [drinkSearch, setDrinkSearch] = useState('');
   const [selectedDrinkId, setSelectedDrinkId] = useState<number | null>(null);
   const [addItemQuantity, setAddItemQuantity] = useState(1);
   const [customLabel, setCustomLabel] = useState('');
@@ -253,6 +254,7 @@ export default function OrderDetailScreen() {
     setAddItemQuantity(1);
     setCustomLabel('');
     setCustomPrice('');
+    setDrinkSearch('');
     setAddItemModalVisible(true);
     if (availableDrinks.length === 0) {
       api.get('/drinks').then(({ data }) => {
@@ -260,6 +262,11 @@ export default function OrderDetailScreen() {
       });
     }
   };
+
+  const filteredAvailableDrinks = availableDrinks.filter((d) =>
+    d.name.toLowerCase().includes(drinkSearch.toLowerCase()) ||
+    (d.category?.name ?? '').toLowerCase().includes(drinkSearch.toLowerCase())
+  );
 
   const confirmAddItem = async () => {
     if (!selectedDrinkId && !(customLabel.trim() && parseFloat(customPrice.replace(',', '.')) > 0)) {
@@ -906,20 +913,31 @@ export default function OrderDetailScreen() {
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Ajouter un article</Text>
 
-            <ScrollView style={{ maxHeight: 240 }} horizontal={false}>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
-                {availableDrinks.map((drink) => (
+            <TextInput
+              style={styles.input}
+              placeholder="Rechercher une boisson…"
+              placeholderTextColor="#9ca3af"
+              value={drinkSearch}
+              onChangeText={setDrinkSearch}
+            />
+            <ScrollView style={{ maxHeight: 220, marginBottom: 12 }}>
+              {filteredAvailableDrinks.length === 0 ? (
+                <Text style={styles.noRefundItems}>Aucune boisson disponible.</Text>
+              ) : (
+                filteredAvailableDrinks.map((drink) => (
                   <TouchableOpacity
                     key={drink.id}
-                    style={[styles.methodChip, selectedDrinkId === drink.id && styles.methodChipActive]}
+                    style={[styles.drinkRow, selectedDrinkId === drink.id && styles.drinkRowActive]}
                     onPress={() => setSelectedDrinkId(selectedDrinkId === drink.id ? null : drink.id)}
                   >
-                    <Text style={[styles.methodChipText, selectedDrinkId === drink.id && styles.methodChipTextActive]}>
-                      {drink.name} ({drink.price.toFixed(2)} €)
-                    </Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.drinkRowName}>{drink.name}</Text>
+                      {drink.category && <Text style={styles.drinkRowCat}>{drink.category.name}</Text>}
+                    </View>
+                    <Text style={styles.drinkRowPrice}>{drink.price.toFixed(2)} €</Text>
                   </TouchableOpacity>
-                ))}
-              </View>
+                ))
+              )}
             </ScrollView>
 
             {selectedDrinkId && (
@@ -1059,6 +1077,11 @@ const styles = StyleSheet.create({
   refundDividerText: { fontSize: 11, fontWeight: '700', color: '#dc2626', textTransform: 'uppercase', letterSpacing: 0.5 },
   refundReasonText: { fontSize: 11, color: '#a8a29e', fontStyle: 'italic', marginTop: 1 },
   refundFieldLabel: { fontSize: 13, fontWeight: '600', color: '#78716c', marginBottom: 6, marginTop: 4 },
+  drinkRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, paddingHorizontal: 4, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
+  drinkRowActive: { backgroundColor: '#fef3c7' },
+  drinkRowName: { fontSize: 14, fontWeight: '700', color: '#111827' },
+  drinkRowCat: { fontSize: 12, color: '#9ca3af', marginTop: 1 },
+  drinkRowPrice: { fontSize: 14, fontWeight: '700', color: '#92400e' },
   methodChip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1.5, borderColor: '#d6d3d1', backgroundColor: '#fafaf9' },
   methodChipActive: { borderColor: '#92400e', backgroundColor: '#fef3c7' },
   methodChipText: { fontSize: 13, color: '#57534e' },
