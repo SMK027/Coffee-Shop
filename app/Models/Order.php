@@ -95,6 +95,47 @@ class Order extends Model
         return (float) $this->total_amount > 0 && $this->payments()->doesntExist();
     }
 
+    /**
+     * Indique si des articles peuvent encore être ajoutés ou retirés de la commande.
+     * Autorisé tant que le statut n'a pas changé depuis sa création (toujours "en
+     * attente") ; verrouillé dès le passage en préparation ou un statut ultérieur.
+     */
+    public function canEditItems(): bool
+    {
+        return $this->status === self::STATUS_PENDING;
+    }
+
+    /**
+     * Recalcule le total de la commande après ajout/retrait d'un article. Les
+     * remises déjà consommées (fidélité, offres personnalisées) restent figées à
+     * leur montant d'origine ; seule la réduction salarié (taux fixe) est
+     * recalculée, et le bon d'achat est replafonné pour ne jamais rendre le total
+     * négatif.
+     */
+    public function recalculateItemTotals(): void
+    {
+        $subtotal = $this->items()->where('is_refund', false)->get()
+            ->sum(fn (OrderItem $item) => $item->quantity * (float) $item->unit_price);
+
+        $afterLoyaltyAndOffers = max(0.0, $subtotal - (float) $this->loyalty_discount_amount - (float) $this->card_offer_discount);
+
+        $employeeDiscount = $this->is_employee_order
+            ? round($afterLoyaltyAndOffers * self::EMPLOYEE_DISCOUNT_RATE, 2)
+            : 0.0;
+
+        $afterEmployee = round(max(0.0, $afterLoyaltyAndOffers - $employeeDiscount), 2);
+
+        $voucherDiscount = round(min((float) $this->voucher_discount_amount, $afterEmployee), 2);
+
+        $total = round(max(0.0, $afterEmployee - $voucherDiscount), 2);
+
+        $this->update([
+            'discount_amount'         => $employeeDiscount,
+            'voucher_discount_amount' => $voucherDiscount,
+            'total_amount'            => $total,
+        ]);
+    }
+
     public function items(): HasMany
     {
         return $this->hasMany(OrderItem::class);

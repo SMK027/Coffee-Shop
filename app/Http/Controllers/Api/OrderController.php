@@ -513,6 +513,109 @@ class OrderController extends Controller
         ]);
     }
 
+    /**
+     * Ajoute un article à une commande encore en attente.
+     */
+    public function addItem(Request $request, Order $order): JsonResponse
+    {
+        if (! $order->canEditItems()) {
+            throw ValidationException::withMessages([
+                'items' => 'Cette commande n\'est plus modifiable : son statut a changé.',
+            ]);
+        }
+
+        $validated = $request->validate([
+            'drink_id'     => ['nullable', 'integer', 'exists:drinks,id'],
+            'custom_label' => ['nullable', 'string', 'max:150'],
+            'custom_price' => ['nullable', 'numeric', 'min:0.01', 'max:999.99'],
+            'quantity'     => ['required', 'integer', 'min:1', 'max:250'],
+        ]);
+
+        $hasDrink  = ! empty($validated['drink_id']);
+        $hasCustom = ! empty($validated['custom_label']) && isset($validated['custom_price']) && (float) $validated['custom_price'] > 0;
+
+        if (! $hasDrink && ! $hasCustom) {
+            throw ValidationException::withMessages([
+                'drink_id' => 'Veuillez sélectionner une boisson ou saisir un article libre.',
+            ]);
+        }
+
+        DB::transaction(function () use ($order, $validated, $hasDrink) {
+            if ($hasDrink) {
+                $drink = Drink::findOrFail($validated['drink_id']);
+                $order->items()->create([
+                    'drink_id'   => $drink->id,
+                    'quantity'   => $validated['quantity'],
+                    'unit_price' => $drink->price,
+                ]);
+            } else {
+                $price = round((float) $validated['custom_price'], 2);
+                $order->items()->create([
+                    'drink_id'     => null,
+                    'custom_label' => trim($validated['custom_label']),
+                    'custom_price' => $price,
+                    'quantity'     => $validated['quantity'],
+                    'unit_price'   => $price,
+                ]);
+            }
+
+            $order->fresh()->recalculateItemTotals();
+        });
+
+        ActivityLogger::log(
+            'order.item_added',
+            'Article ajouté à la commande #' . str_pad($order->id, 4, '0', STR_PAD_LEFT),
+            'order', $order->id
+        );
+
+        return response()->json([
+            'message' => 'Article ajouté à la commande.',
+            'order'   => $this->formatOrder($order->fresh()->load('items.drink', 'loyaltyCard', 'loyaltyDiscounts'), true),
+        ]);
+    }
+
+    /**
+     * Retire un article d'une commande encore en attente.
+     */
+    public function removeItem(Request $request, Order $order, OrderItem $orderItem): JsonResponse
+    {
+        abort_unless($orderItem->order_id === $order->id, 404);
+
+        if (! $order->canEditItems()) {
+            throw ValidationException::withMessages([
+                'items' => 'Cette commande n\'est plus modifiable : son statut a changé.',
+            ]);
+        }
+
+        if ($orderItem->is_refund) {
+            throw ValidationException::withMessages([
+                'items' => 'Cette ligne correspond à un remboursement et ne peut pas être retirée.',
+            ]);
+        }
+
+        if ($order->items()->where('is_refund', false)->count() <= 1) {
+            throw ValidationException::withMessages([
+                'items' => 'Impossible de retirer le dernier article : annulez la commande à la place.',
+            ]);
+        }
+
+        DB::transaction(function () use ($order, $orderItem) {
+            $orderItem->delete();
+            $order->fresh()->recalculateItemTotals();
+        });
+
+        ActivityLogger::log(
+            'order.item_removed',
+            'Article retiré de la commande #' . str_pad($order->id, 4, '0', STR_PAD_LEFT),
+            'order', $order->id
+        );
+
+        return response()->json([
+            'message' => 'Article retiré de la commande.',
+            'order'   => $this->formatOrder($order->fresh()->load('items.drink', 'loyaltyCard', 'loyaltyDiscounts'), true),
+        ]);
+    }
+
     public function refund(Request $request, Order $order): JsonResponse
     {
         abort_unless(Auth::user()?->isAdmin() || Auth::user()?->isModerator(), 403);
@@ -834,6 +937,7 @@ class OrderController extends Controller
             'customer_name'           => $order->display_name,
             'status'                  => $order->status,
             'status_label'            => $order->status_label,
+            'can_edit_items'          => $order->canEditItems(),
             'is_employee_order'       => (bool) $order->is_employee_order,
             'total_amount'            => (float) $order->total_amount,
             'discount_amount'         => (float) $order->discount_amount,

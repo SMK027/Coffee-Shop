@@ -52,6 +52,8 @@ Route::middleware('auth:api')->group(function () {
     Route::post('/orders/{order}/refund',    [OrderController::class, 'refund'])->middleware('feature:' . Setting::KEY_FEATURE_REFUNDS);
     Route::post('/orders/{order}/payments',  [OrderController::class, 'storePayments']);
     Route::delete('/orders/{order}',         [OrderController::class, 'destroy']);
+    Route::post('/orders/{order}/items',           [OrderController::class, 'addItem']);
+    Route::delete('/orders/{order}/items/{orderItem}', [OrderController::class, 'removeItem']);
 
     // Moyens de paiement
     Route::get('/payment-methods', [PaymentMethodController::class, 'index']);

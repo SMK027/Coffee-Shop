@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Employee;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\OrderStatus;
 use App\Models\Drink;
 use App\Models\LoyaltyCard;
@@ -73,7 +74,11 @@ class OrderController extends Controller
             )->values();
         }
 
-        return view('employee.orders.show', compact('order', 'statusLabels', 'availableTransitions'));
+        $availableDrinks = $order->canEditItems()
+            ? Drink::available()->with('category')->orderBy('category_id')->orderBy('sort_order')->get()
+            : collect();
+
+        return view('employee.orders.show', compact('order', 'statusLabels', 'availableTransitions', 'availableDrinks'));
     }
 
     /**
@@ -799,5 +804,92 @@ class OrderController extends Controller
         );
 
         return redirect()->back()->with('success', 'Statut de la commande mis à jour.');
+    }
+
+    /**
+     * Ajoute un article à une commande encore en attente.
+     */
+    public function addItem(Request $request, Order $order)
+    {
+        if (! $order->canEditItems()) {
+            return back()->withErrors(['items' => 'Cette commande n\'est plus modifiable : son statut a changé.']);
+        }
+
+        $validated = $request->validate([
+            'drink_id'     => ['nullable', 'integer', 'exists:drinks,id'],
+            'custom_label' => ['nullable', 'string', 'max:150'],
+            'custom_price' => ['nullable', 'numeric', 'min:0.01', 'max:999.99'],
+            'quantity'     => ['required', 'integer', 'min:1', 'max:250'],
+        ]);
+
+        $hasDrink  = ! empty($validated['drink_id']);
+        $hasCustom = ! empty($validated['custom_label']) && isset($validated['custom_price']) && (float) $validated['custom_price'] > 0;
+
+        if (! $hasDrink && ! $hasCustom) {
+            return back()->withErrors(['drink_id' => 'Veuillez sélectionner une boisson ou saisir un article libre.']);
+        }
+
+        DB::transaction(function () use ($order, $validated, $hasDrink) {
+            if ($hasDrink) {
+                $drink = Drink::findOrFail($validated['drink_id']);
+                $order->items()->create([
+                    'drink_id'   => $drink->id,
+                    'quantity'   => $validated['quantity'],
+                    'unit_price' => $drink->price,
+                ]);
+            } else {
+                $price = round((float) $validated['custom_price'], 2);
+                $order->items()->create([
+                    'drink_id'     => null,
+                    'custom_label' => trim($validated['custom_label']),
+                    'custom_price' => $price,
+                    'quantity'     => $validated['quantity'],
+                    'unit_price'   => $price,
+                ]);
+            }
+
+            $order->fresh()->recalculateItemTotals();
+        });
+
+        ActivityLogger::log(
+            'order.item_added',
+            'Article ajouté à la commande #' . str_pad($order->id, 4, '0', STR_PAD_LEFT),
+            'order', $order->id
+        );
+
+        return back()->with('success', 'Article ajouté à la commande.');
+    }
+
+    /**
+     * Retire un article d'une commande encore en attente.
+     */
+    public function removeItem(Request $request, Order $order, OrderItem $orderItem)
+    {
+        abort_unless($orderItem->order_id === $order->id, 404);
+
+        if (! $order->canEditItems()) {
+            return back()->withErrors(['items' => 'Cette commande n\'est plus modifiable : son statut a changé.']);
+        }
+
+        if ($orderItem->is_refund) {
+            return back()->withErrors(['items' => 'Cette ligne correspond à un remboursement et ne peut pas être retirée.']);
+        }
+
+        if ($order->items()->where('is_refund', false)->count() <= 1) {
+            return back()->withErrors(['items' => 'Impossible de retirer le dernier article : annulez la commande à la place.']);
+        }
+
+        DB::transaction(function () use ($order, $orderItem) {
+            $orderItem->delete();
+            $order->fresh()->recalculateItemTotals();
+        });
+
+        ActivityLogger::log(
+            'order.item_removed',
+            'Article retiré de la commande #' . str_pad($order->id, 4, '0', STR_PAD_LEFT),
+            'order', $order->id
+        );
+
+        return back()->with('success', 'Article retiré de la commande.');
     }
 }

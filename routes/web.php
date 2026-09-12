@@ -110,6 +110,8 @@ Route::prefix('espace-employe')->name('employee.')->middleware(['auth', 'employe
     Route::get('/commandes/{order}', [OrderController::class, 'show'])->name('orders.show');
     Route::patch('/commandes/{order}/statut', [OrderController::class, 'updateStatus'])->name('orders.status');
     Route::delete('/commandes/{order}', [OrderController::class, 'destroy'])->name('orders.destroy');
+    Route::post('/commandes/{order}/articles', [OrderController::class, 'addItem'])->name('orders.items.store');
+    Route::delete('/commandes/{order}/articles/{orderItem}', [OrderController::class, 'removeItem'])->name('orders.items.destroy');
 
     // Remboursements (super admin uniquement)
     Route::middleware('feature:' . Setting::KEY_FEATURE_REFUNDS)->group(function () {

@@ -22,7 +22,23 @@
         {{-- Détail commande --}}
         <div class="lg:col-span-2 space-y-4 sm:space-y-6">
         <div class="bg-white rounded-xl shadow-sm border border-stone-100 p-4 sm:p-6">
-                <h2 class="font-semibold text-stone-800 mb-4">Articles commandés</h2>
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="font-semibold text-stone-800">Articles commandés</h2>
+                    @if($order->canEditItems())
+                        <span class="text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-full px-2.5 py-1">Modifiable</span>
+                    @endif
+                </div>
+
+                @if($errors->any())
+                    <div class="mb-4 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
+                        <ul class="list-disc list-inside">
+                            @foreach($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
+
                 <div class="divide-y divide-stone-100">
                     @foreach($order->items as $item)
                     <div class="py-3 flex items-center justify-between {{ $item->is_refund ? 'bg-red-50 -mx-4 sm:-mx-6 px-4 sm:px-6' : '' }}">
@@ -37,13 +53,58 @@
                             </p>
                             <p class="text-xs {{ $item->is_refund ? 'text-red-500' : 'text-stone-500' }}">{{ number_format($item->unit_price, 2, ',', ' ') }} € l'unité</p>
                         </div>
-                        <div class="text-right">
-                            <p class="text-sm font-medium {{ $item->is_refund ? 'text-red-700' : 'text-stone-800' }}">x{{ $item->quantity }}</p>
-                            <p class="text-xs font-medium {{ $item->is_refund ? 'text-red-600' : 'text-stone-500' }}">{{ number_format($item->subtotal, 2, ',', ' ') }} €</p>
+                        <div class="flex items-center gap-3">
+                            <div class="text-right">
+                                <p class="text-sm font-medium {{ $item->is_refund ? 'text-red-700' : 'text-stone-800' }}">x{{ $item->quantity }}</p>
+                                <p class="text-xs font-medium {{ $item->is_refund ? 'text-red-600' : 'text-stone-500' }}">{{ number_format($item->subtotal, 2, ',', ' ') }} €</p>
+                            </div>
+                            @if($order->canEditItems() && !$item->is_refund)
+                                <form action="{{ route('employee.orders.items.destroy', [$order, $item]) }}" method="POST"
+                                      onsubmit="return confirm('Retirer cet article de la commande ?');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="text-red-500 hover:text-red-700 p-1" title="Retirer cet article">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                    </button>
+                                </form>
+                            @endif
                         </div>
                     </div>
                     @endforeach
                 </div>
+
+                @if($order->canEditItems())
+                    <div class="mt-4 pt-4 border-t border-stone-100">
+                        <p class="text-xs font-medium text-stone-600 mb-2">Ajouter un article</p>
+                        <form action="{{ route('employee.orders.items.store', $order) }}" method="POST" class="space-y-2">
+                            @csrf
+                            <div class="grid sm:grid-cols-[1fr_auto] gap-2">
+                                <select name="drink_id" class="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
+                                    <option value="">— Sélectionner une boisson —</option>
+                                    @foreach($availableDrinks as $drink)
+                                        <option value="{{ $drink->id }}">{{ $drink->name }} ({{ number_format($drink->price, 2, ',', ' ') }} €)</option>
+                                    @endforeach
+                                </select>
+                                <input type="number" name="quantity" value="1" min="1" max="250"
+                                       class="w-full sm:w-24 border border-stone-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+                                       placeholder="Qté">
+                            </div>
+                            <details class="text-xs text-stone-500">
+                                <summary class="cursor-pointer select-none">Ou ajouter un article libre</summary>
+                                <div class="grid sm:grid-cols-2 gap-2 mt-2">
+                                    <input type="text" name="custom_label" maxlength="150" placeholder="Libellé"
+                                           class="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
+                                    <input type="number" name="custom_price" step="0.01" min="0.01" max="999.99" placeholder="Prix unitaire (€)"
+                                           class="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
+                                </div>
+                            </details>
+                            <button type="submit"
+                                    class="w-full bg-amber-700 hover:bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                                Ajouter à la commande
+                            </button>
+                        </form>
+                    </div>
+                @endif
                 <div class="mt-4 pt-4 border-t border-stone-100 space-y-1.5">
                         @php
                         $cardOfferDiscount = (float) ($order->card_offer_discount ?? 0);

@@ -138,6 +138,7 @@ export interface Order {
   customer_name: string;
   status: string;
   status_label: string;
+  can_edit_items: boolean;
   is_employee_order: boolean;
   total_amount: number;
   discount_amount: number;

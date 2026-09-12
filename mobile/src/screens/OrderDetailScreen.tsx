@@ -14,7 +14,7 @@ import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/nativ
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
-import { Order, OrderStatus } from '../types';
+import { Order, OrderStatus, Drink } from '../types';
 import { PaymentMethod } from '../types';
 
 export default function OrderDetailScreen() {
@@ -58,6 +58,15 @@ export default function OrderDetailScreen() {
   const [scannerTarget, setScannerTarget] = useState<'status' | 'refund' | 'delete'>('status');
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const scannerLocked = React.useRef(false);
+  const [addItemModalVisible, setAddItemModalVisible] = useState(false);
+  const [availableDrinks, setAvailableDrinks] = useState<Drink[]>([]);
+  const [selectedDrinkId, setSelectedDrinkId] = useState<number | null>(null);
+  const [addItemQuantity, setAddItemQuantity] = useState(1);
+  const [customLabel, setCustomLabel] = useState('');
+  const [customPrice, setCustomPrice] = useState('');
+  const [addItemError, setAddItemError] = useState<string | null>(null);
+  const [addingItem, setAddingItem] = useState(false);
+  const [removingItemId, setRemovingItemId] = useState<number | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -238,6 +247,68 @@ export default function OrderDetailScreen() {
     }
   };
 
+  const openAddItemModal = () => {
+    setAddItemError(null);
+    setSelectedDrinkId(null);
+    setAddItemQuantity(1);
+    setCustomLabel('');
+    setCustomPrice('');
+    setAddItemModalVisible(true);
+    if (availableDrinks.length === 0) {
+      api.get('/drinks').then(({ data }) => {
+        setAvailableDrinks((data.drinks ?? []).filter((d: Drink) => d.available));
+      });
+    }
+  };
+
+  const confirmAddItem = async () => {
+    if (!selectedDrinkId && !(customLabel.trim() && parseFloat(customPrice.replace(',', '.')) > 0)) {
+      setAddItemError('Sélectionnez une boisson ou saisissez un article libre.');
+      return;
+    }
+
+    setAddingItem(true);
+    setAddItemError(null);
+    try {
+      const payload: Record<string, unknown> = { quantity: addItemQuantity };
+      if (selectedDrinkId) {
+        payload.drink_id = selectedDrinkId;
+      } else {
+        payload.custom_label = customLabel.trim();
+        payload.custom_price = parseFloat(customPrice.replace(',', '.'));
+      }
+
+      const { data } = await api.post(`/orders/${orderId}/items`, payload);
+      setOrder(data.order);
+      setAddItemModalVisible(false);
+    } catch (error: any) {
+      setAddItemError(error?.response?.data?.message || "Impossible d'ajouter cet article.");
+    } finally {
+      setAddingItem(false);
+    }
+  };
+
+  const removeItem = (itemId: number) => {
+    Alert.alert('Retirer cet article', 'Retirer cet article de la commande ?', [
+      { text: 'Annuler', style: 'cancel' },
+      {
+        text: 'Retirer',
+        style: 'destructive',
+        onPress: async () => {
+          setRemovingItemId(itemId);
+          try {
+            const { data } = await api.delete(`/orders/${orderId}/items/${itemId}`);
+            setOrder(data.order);
+          } catch (error: any) {
+            Alert.alert('Erreur', error?.response?.data?.message || "Impossible de retirer cet article.");
+          } finally {
+            setRemovingItemId(null);
+          }
+        },
+      },
+    ]);
+  };
+
   const openSupervisorScanner = async (target: 'status' | 'refund' | 'delete') => {
     if (!cameraPermission?.granted) {
       const result = await requestCameraPermission();
@@ -319,7 +390,14 @@ export default function OrderDetailScreen() {
       {order.handled_by && <Text style={styles.meta}>Pris en charge par {order.handled_by}</Text>}
 
       {/* Articles */}
-      <Text style={styles.sectionTitle}>Articles</Text>
+      <View style={styles.sectionTitleRow}>
+        <Text style={[styles.sectionTitle, { marginTop: 0, marginBottom: 0 }]}>Articles</Text>
+        {order.can_edit_items && (
+          <View style={styles.editableBadge}>
+            <Text style={styles.editableBadgeText}>Modifiable</Text>
+          </View>
+        )}
+      </View>
       <View style={styles.card}>
         {order.items?.map((item) => (
           <View key={item.id} style={styles.itemRow}>
@@ -327,9 +405,29 @@ export default function OrderDetailScreen() {
               {item.quantity}× {item.drink_name}
               {item.custom_label ? ` (${item.custom_label})` : ''}
             </Text>
-            <Text style={styles.itemPrice}>{item.subtotal.toFixed(2)} €</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <Text style={styles.itemPrice}>{item.subtotal.toFixed(2)} €</Text>
+              {order.can_edit_items && !item.is_refund && (
+                <TouchableOpacity
+                  onPress={() => removeItem(item.id)}
+                  disabled={removingItemId === item.id}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  {removingItemId === item.id ? (
+                    <ActivityIndicator size="small" color="#dc2626" />
+                  ) : (
+                    <Text style={styles.removeItemText}>✕</Text>
+                  )}
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
         ))}
+        {order.can_edit_items && (
+          <TouchableOpacity style={styles.addItemBtn} onPress={openAddItemModal}>
+            <Text style={styles.addItemBtnText}>+ Ajouter un article</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Récapitulatif financier */}
@@ -803,6 +901,88 @@ export default function OrderDetailScreen() {
         </View>
       </Modal>
 
+      <Modal visible={addItemModalVisible} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Ajouter un article</Text>
+
+            <ScrollView style={{ maxHeight: 240 }} horizontal={false}>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+                {availableDrinks.map((drink) => (
+                  <TouchableOpacity
+                    key={drink.id}
+                    style={[styles.methodChip, selectedDrinkId === drink.id && styles.methodChipActive]}
+                    onPress={() => setSelectedDrinkId(selectedDrinkId === drink.id ? null : drink.id)}
+                  >
+                    <Text style={[styles.methodChipText, selectedDrinkId === drink.id && styles.methodChipTextActive]}>
+                      {drink.name} ({drink.price.toFixed(2)} €)
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </ScrollView>
+
+            {selectedDrinkId && (
+              <View style={styles.refundQtyControls}>
+                <Text style={styles.refundFieldLabel}>Quantité</Text>
+                <TouchableOpacity
+                  style={styles.qtyBtn}
+                  onPress={() => setAddItemQuantity((q) => Math.max(1, q - 1))}
+                >
+                  <Text style={styles.qtyBtnText}>−</Text>
+                </TouchableOpacity>
+                <Text style={styles.qtyValue}>{addItemQuantity}</Text>
+                <TouchableOpacity
+                  style={styles.qtyBtn}
+                  onPress={() => setAddItemQuantity((q) => Math.min(250, q + 1))}
+                >
+                  <Text style={styles.qtyBtnText}>+</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {!selectedDrinkId && (
+              <>
+                <Text style={styles.refundFieldLabel}>Ou un article libre</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Libellé"
+                  placeholderTextColor="#9ca3af"
+                  value={customLabel}
+                  onChangeText={setCustomLabel}
+                />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Prix unitaire (€)"
+                  placeholderTextColor="#9ca3af"
+                  keyboardType="decimal-pad"
+                  value={customPrice}
+                  onChangeText={setCustomPrice}
+                />
+              </>
+            )}
+
+            {addItemError ? <Text style={styles.errorText}>{addItemError}</Text> : null}
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalCancelButton]}
+                onPress={() => setAddItemModalVisible(false)}
+                disabled={addingItem}
+              >
+                <Text style={styles.modalCancelText}>Annuler</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalConfirmButton]}
+                onPress={confirmAddItem}
+                disabled={addingItem}
+              >
+                {addingItem ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.modalConfirmText}>Ajouter</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <Modal visible={supervisorScannerVisible} animationType="slide" presentationStyle="fullScreen">
         <View style={{ flex: 1, backgroundColor: '#000' }}>
           <View style={{ paddingTop: 52, paddingHorizontal: 20, paddingBottom: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -834,6 +1014,12 @@ const styles = StyleSheet.create({
   tag: { fontSize: 13, color: '#6b7280', marginBottom: 2 },
   meta: { fontSize: 13, color: '#9ca3af', marginTop: 4 },
   sectionTitle: { fontSize: 13, fontWeight: '700', color: '#92400e', textTransform: 'uppercase', letterSpacing: 1, marginTop: 20, marginBottom: 8 },
+  sectionTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 20, marginBottom: 8 },
+  editableBadge: { backgroundColor: '#dcfce7', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 3 },
+  editableBadgeText: { fontSize: 11, fontWeight: '700', color: '#15803d' },
+  removeItemText: { fontSize: 16, color: '#dc2626', fontWeight: '700', paddingHorizontal: 2 },
+  addItemBtn: { marginTop: 10, paddingVertical: 10, borderRadius: 10, borderWidth: 1.5, borderColor: '#92400e', borderStyle: 'dashed', alignItems: 'center' },
+  addItemBtnText: { color: '#92400e', fontWeight: '700', fontSize: 14 },
   card: { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 },
   itemRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 5, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
   itemName: { fontSize: 15, color: '#374151', flex: 1 },
